@@ -247,7 +247,7 @@ html[lang=ar] .pt-app,html[lang=ckb] .pt-app {font-family:Tahoma,Arial,sans-seri
 .pt-model span { font-size: 9px; line-height: 11px; white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
 .pt-model svg { flex-shrink: 0; }
 .pt-cable { height: 42px; justify-content: center; }
-.pt-pdu-window { display: grid; grid-template-columns: 156px minmax(0,1fr); min-width: 0; background: white; border: 1px solid #999; }
+.pt-pdu-window { position: relative; display: grid; grid-template-columns: 156px minmax(0,1fr); min-width: 0; background: white; border: 1px solid #999; }
 .pt-scenario-controls { border-right: 1px solid #aaa; padding: 6px 4px; display: flex; flex-direction: column; justify-content: space-between; gap: 5px; }
 .pt-scenario-controls > div { display: flex; align-items: center; gap: 3px; }
 .pt-scenario-controls > div:nth-child(2) > button { flex: 1; }
@@ -260,6 +260,21 @@ html[lang=ar] .pt-app,html[lang=ckb] .pt-app {font-family:Tahoma,Arial,sans-seri
 .pt-pdu-table th { font-weight: normal; text-align: left; padding: 3px 6px; border-bottom: 1px solid #ccc; }
 .pt-pdu-table td { padding: 3px 6px; border-bottom: 1px solid #ddd; }
 .pt-pdu-table td button { display: flex; }
+.pt-pdu-tabs { border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+.pt-pdu-tabs > button { flex: 1; padding: 2px 1px; font-size: 10px; }
+.pt-pdu-tabs > button[aria-pressed="true"] { background: #cfe3e9; border-color: #6d909b; font-weight: 600; }
+.pt-event-controls { flex-wrap: wrap; }
+.pt-event-controls > button { flex: 1; padding: 3px 2px; font-size: 10px; }
+.pt-event-count { font-size: 10px; color: #444; width: 100%; text-align: center; }
+.pt-event-table { font-size: 10px; border-collapse: collapse; width: 100%; white-space: nowrap; }
+.pt-event-table th { font-weight: normal; text-align: left; padding: 3px 6px; border-bottom: 1px solid #ccc; }
+.pt-event-table td { padding: 3px 6px; border-bottom: 1px solid #ddd; }
+.pt-event-filters { position: absolute; right: 2px; bottom: calc(100% + 4px); z-index: 45; width: 248px; max-height: 250px; overflow: auto; background: #f4f4f4; border: 1px solid #808080; box-shadow: 2px -3px 12px #0004; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+.pt-event-filter-actions { display: flex; gap: 3px; }
+.pt-event-filter-actions > button { flex: 1; padding: 3px 2px; font-size: 10px; }
+.pt-event-filter-list { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; }
+.pt-event-filter-list label { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+.pt-event-filter-list input { margin: 0; }
 .pt-shelf-message { padding: 7px; font-size: 11px; line-height: 1.4; }
 .pt-simulation-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 8px; align-items: center; border-bottom: 1px solid #aaa; font-size: 11px; }
 .pt-status { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; gap: 10px; font-size: 11px; background: #fff; border-top: 1px solid #bbb; max-height: 48px; overflow: auto; }
@@ -312,6 +327,8 @@ html[lang=ar] .pt-app,html[lang=ckb] .pt-app {font-family:Tahoma,Arial,sans-seri
   .pt-button { min-height: 44px; }
   .pt-scenario-controls { padding: 2px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
   .pt-scenario-controls > div:first-child { grid-column: 1 / -1; }
+  .pt-scenario-controls > .pt-pdu-tabs { grid-column: 1 / -1; }
+  .pt-scenario-controls > .pt-pdu-tabs + div { grid-column: 1 / -1; }
   .pt-scenario-controls select { min-height: 32px; }
   .pt-scenario-controls > div:nth-child(2) { gap: 1px; }
   .pt-scenario-controls > .pt-button { white-space: normal; }
@@ -365,7 +382,7 @@ html[data-theme="dark"] :is(.pt-app,.pt-titlebar,.pt-menubar,.pt-main-toolbar,.p
   color: var(--cisco-text-main);
   border-color: var(--pt-border);
 }
-html[data-theme="dark"] :is(.pt-bottom,.pt-device-dock,.pt-categories,.pt-model-box,.pt-menu-popup,.pt-dialog,.pt-device-navigator,.pt-training-panel,.pt-training-dock,.pt-network-doctor,.pt-training-catalog,.pt-training-confirm,.pt-device-window,.pt-device-inspector,.pt-physical-workspace) {
+html[data-theme="dark"] :is(.pt-bottom,.pt-device-dock,.pt-categories,.pt-model-box,.pt-menu-popup,.pt-dialog,.pt-device-navigator,.pt-training-panel,.pt-training-dock,.pt-network-doctor,.pt-training-catalog,.pt-training-confirm,.pt-device-window,.pt-device-inspector,.pt-physical-workspace,.pt-event-filters) {
   background: var(--pt-surface);
   color: var(--cisco-text-main);
   border-color: var(--pt-border);
@@ -395,7 +412,9 @@ html[data-theme="dark"] :is(.pt-menu>button:hover,.pt-menu>button[aria-expanded=
   border-color: #63a8be;
 }
 html[data-theme="dark"] :is(.pt-training-tabs [aria-selected="true"],.pt-training-mobile-tabs [aria-pressed="true"]) {background:var(--pt-selected)!important;color:var(--cisco-text-main)}
-html[data-theme="dark"] :is(.pt-device-description,.pt-scenario-controls,.pt-pdu-table th,.pt-pdu-table td,.pt-task-list li,.pt-command-feedback,.pt-diagnostics,.pt-stp-observation td,.pt-stp-observation th,.pt-training-catalog li,.pt-device-list button,.pt-device-navigator p,.pt-dialog-footer,.pt-inspector-table th,.pt-inspector-table td) {border-color:var(--pt-border)}
+html[data-theme="dark"] :is(.pt-device-description,.pt-scenario-controls,.pt-pdu-table th,.pt-pdu-table td,.pt-event-table th,.pt-event-table td,.pt-task-list li,.pt-command-feedback,.pt-diagnostics,.pt-stp-observation td,.pt-stp-observation th,.pt-training-catalog li,.pt-device-list button,.pt-device-navigator p,.pt-dialog-footer,.pt-inspector-table th,.pt-inspector-table td) {border-color:var(--pt-border)}
+html[data-theme="dark"] :is(.pt-pdu-tabs>button[aria-pressed="true"],.pt-event-controls>button[aria-pressed="true"]) {background:var(--pt-selected);color:var(--cisco-text-main);border-color:#63a8be}
+html[data-theme="dark"] .pt-event-count {color:var(--cisco-text-muted)}
 html[data-theme="dark"] :is(.pt-command-feedback code,.pt-task-list span) {color:var(--pt-accent-text)}
 html[data-theme="dark"] .pt-fault-list>li {background:#3a2728;border-block-color:#865451;border-inline-start-color:#f28c80}
 html[data-theme="dark"] .pt-fault-count {color:#ffb5ab}

@@ -852,7 +852,7 @@ export function createPingPacket(source:NetworkDevice,devices:NetworkDevice[],li
   return createPingPackets(source,devices,links,targetIp)[0]??null
 }
 
-export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[], inFlightPackets: InFlightPacket[], previousTcpReceiveBuffers: TcpReassemblyBuffer[] = [], previousTcpOutstandingSegments: TcpOutstandingSegment[] = [], simulationTick = 1): SimulationStepResult {
+export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[], inFlightPackets: InFlightPacket[], previousTcpReceiveBuffers: TcpReassemblyBuffer[] = [], previousTcpOutstandingSegments: TcpOutstandingSegment[] = [], simulationTick = 1, collectEvents = false): SimulationStepResult {
   const packetQueueLimit = packetQueueLimitForTopology(links.length, inFlightPackets.length)
   const hsrpDevices=prepareHsrpTick(devices,links,simulationTick)
   const ospfControl = prepareOspfTick(hsrpDevices)
@@ -3181,5 +3181,28 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       subnetMask:probe.payload.dhcpSubnetMask,gateway:probe.payload.dhcpGateway,dnsServer:probe.payload.dhcpDnsServer,
       leaseDurationSeconds:probe.payload.dhcpLeaseDurationSeconds})
   }
-  return { updatedDevices, newInFlightPackets: remaining, newEvents: [], packetDeliveries, applicationResults, emailResults, dnsResults, udpResults, dhcpResults, tcpReceiveBuffers, tcpOutstandingSegments, discardedPackets, queueLimitReached }
+  const newEvents: SimulationEvent[] = []
+  if (collectEvents && packetDeliveries.length > 0) {
+    const deliveredPackets = new Map<string, InFlightPacket>()
+    for (const candidate of inFlightPackets.slice(0, packetQueueLimit)) deliveredPackets.set(candidate.id, candidate)
+    const recordedEventIds = new Set<string>()
+    for (const delivery of packetDeliveries) {
+      const packet = deliveredPackets.get(delivery.packetId)
+      if (!packet) continue
+      const id = `${delivery.packetId}:${delivery.status}`
+      if (recordedEventIds.has(id)) continue
+      recordedEventIds.add(id)
+      newEvents.push({
+        id,
+        timestamp: simulationTick,
+        sourceDeviceId: packet.fromDeviceId,
+        destDeviceId: delivery.receiverDeviceId,
+        protocol: packet.pdu.protocol,
+        summary: delivery.reason ?? (delivery.status === 'delivered' ? 'Frame delivered.' : 'Frame dropped.'),
+        pdu: packet.pdu,
+        status: delivery.status === 'delivered' ? 'received' : 'dropped',
+      })
+    }
+  }
+  return { updatedDevices, newInFlightPackets: remaining, newEvents, packetDeliveries, applicationResults, emailResults, dnsResults, udpResults, dhcpResults, tcpReceiveBuffers, tcpOutstandingSegments, discardedPackets, queueLimitReached }
 }

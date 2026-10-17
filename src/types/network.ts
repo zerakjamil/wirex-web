@@ -590,7 +590,8 @@ export interface NetworkAnnotation {
   borderColor?: string
 }
 
-export type PacketProtocol = 'ARP' | 'ICMP' | 'ICMPv6' | 'DHCP' | 'DHCPv6' | 'DNS' | 'UDP' | 'HTTP' | 'TCP' | 'OSPF' | 'RIP' | 'EIGRP' | 'GRE' | 'STP' | 'CAPWAP'
+export const PACKET_PROTOCOLS = ['ARP', 'ICMP', 'ICMPv6', 'DHCP', 'DHCPv6', 'DNS', 'UDP', 'HTTP', 'TCP', 'OSPF', 'RIP', 'EIGRP', 'GRE', 'STP', 'CAPWAP'] as const
+export type PacketProtocol = (typeof PACKET_PROTOCOLS)[number]
 
 export interface RipEntry { network: string; netmask: string; metric: number }
 export interface RipPacket { command: 'request' | 'response'; version: 1 | 2; entries: RipEntry[] }

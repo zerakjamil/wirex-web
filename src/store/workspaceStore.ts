@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useNetworkStore } from './networkStore'
 import { isValidIpv4 } from '@/simulator/protocols/ip'
+import { PACKET_PROTOCOLS } from '@/types/network'
 import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceType, PacketPdu } from '@/types/network'
 
 type Snapshot = { devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[] }
@@ -48,6 +49,8 @@ interface WorkspaceStore {
   fileName: string
   showGrid: boolean
   showPduList: boolean
+  pduView: 'pdus' | 'events'
+  hiddenEventProtocols: string[]
   pduSource: string | null
   pduDestination: string | null
   pdus: UserPdu[]
@@ -56,6 +59,11 @@ interface WorkspaceStore {
   addScenario: () => void
   deleteScenario: () => void
   firePdu: (sourceId: string, destinationId: string, targetIp?: string, options?: { protocol?: 'ICMP' | 'UDP'; port?: number; data?: string }) => void
+  setPduView: (view: WorkspaceStore['pduView']) => void
+  setEventProtocolVisible: (protocol: string, visible: boolean) => void
+  showAllEventFilters: () => void
+  showNoneEventFilters: () => void
+  toggleEventFilters: () => void
   setView: (view: WorkspaceStore['view']) => void
   setTool: (tool: WorkspaceTool) => void
   command: (kind: CanvasAction) => void
@@ -86,7 +94,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   view: 'logical', tool: 'select', inspectedDeviceId:null, hoveredConnection: null,
   setHoveredConnection: (info) => set({ hoveredConnection: info }),
   placement: null, canvasAction: null, past: [], future: [], clipboard: null, dialog: null,
-  status: '', fileName: '', showGrid: false, showPduList: true, pduSource: null, pduDestination: null,
+  status: '', fileName: '', showGrid: false, showPduList: true, pduView: 'pdus', hiddenEventProtocols: [], pduSource: null, pduDestination: null,
   pdus: [], scenario: 0, scenarios: [0],pduError:null,
   selectPduSource:(deviceId)=>{
     const device=useNetworkStore.getState().devices.find(d=>d.id===deviceId)
@@ -181,6 +189,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setDialog: (dialog) => set({ dialog,...(dialog===null?{pendingDeletion:null,noteDraft:null,pduError:null}:{}) }), setStatus: (status) => set({ status }),
   toggleGrid: () => set({ showGrid: !get().showGrid }),
   togglePduList: () => set({ showPduList: !get().showPduList }),
+  setPduView: (view) => set({ pduView: view }),
+  setEventProtocolVisible: (protocol, visible) => set(state => ({
+    hiddenEventProtocols: visible ? state.hiddenEventProtocols.filter(item => item !== protocol) : [...state.hiddenEventProtocols, protocol],
+  })),
+  showAllEventFilters: () => set({ hiddenEventProtocols: [] }),
+  showNoneEventFilters: () => set({ hiddenEventProtocols: [...PACKET_PROTOCOLS] }),
+  toggleEventFilters: () => set(state => ({ hiddenEventProtocols: state.hiddenEventProtocols.length === 0 ? [...PACKET_PROTOCOLS] : [] })),
   checkpoint: () => set({ past: [...get().past.slice(-49), snapshot()], future: [] }),
   copyDevice: () => {
     const net=useNetworkStore.getState(); const device=net.devices.find(d=>d.id===net.selectedDeviceId)
@@ -230,7 +245,11 @@ useNetworkStore.subscribe((state, previous) => {
       changed=true
       return {...pdu,status:'Failed',reason:'Cancelled because the topology was replaced or reset.'}
     }
-    if(result.status==='pending')return pdu
+    if(result.status==='pending'){
+      if(pdu.status==='In Progress')return pdu
+      changed=true
+      return {...pdu,status:'In Progress',reason:undefined}
+    }
     const status = result.status === 'successful' ? 'Successful' : 'Failed'
     if (pdu.status === status) return pdu
     changed = true
@@ -244,15 +263,22 @@ useNetworkStore.subscribe((state, previous) => {
   const results = new Map(state.udpTransactions.map(result => [result.requestId, result]))
   let changed = false
   const pdus = useWorkspaceStore.getState().pdus.map(pdu => {
-    if (pdu.protocol !== 'UDP' || pdu.status !== 'In Progress' || !pdu.udpRequestId) return pdu
+    if (pdu.protocol !== 'UDP' || !pdu.udpRequestId) return pdu
     const result = results.get(pdu.udpRequestId)
     if (!result) {
+      if (pdu.status !== 'In Progress') return pdu
       changed = true
       return { ...pdu, status: 'Failed', reason: 'Cancelled because the topology was replaced or reset.' }
     }
-    if (result.status === 'pending') return pdu
+    if (result.status === 'pending') {
+      if (pdu.status === 'In Progress') return pdu
+      changed = true
+      return { ...pdu, status: 'In Progress', reason: undefined }
+    }
+    const status = result.status === 'successful' ? 'Successful' : 'Failed'
+    if (pdu.status === status) return pdu
     changed = true
-    return { ...pdu, status: result.status === 'successful' ? 'Successful' : 'Failed', reason: result.reason }
+    return { ...pdu, status, reason: result.reason }
   })
   if (changed) useWorkspaceStore.setState({ pdus })
 })

@@ -19,6 +19,7 @@ import {
   TcpReassemblyBuffer,
   TcpOutstandingSegment,
   IotThingState,
+  SimulationEvent,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
 import {getHardwareProfile,getModulePortIds,modulePorts,canCableConnect} from '@/simulator/physicalHardware'
@@ -104,6 +105,8 @@ interface NetworkStore {
   simulationPlaying: boolean
   simulationTick: number
   simulationWarning: string | null
+  simulationEvents: SimulationEvent[]
+  simulationHistory: SimulationSnapshot[]
   activeModal: ActiveModalState | null
   deviceWindows: DeviceWindow[]
   updateDeviceWindow: (deviceId: string, updates: Partial<Omit<DeviceWindow,'deviceId'>>) => void
@@ -166,10 +169,40 @@ interface NetworkStore {
   setSimulationPlaying: (playing: boolean) => void
   tickSimulation: () => void
   stepSimulation: () => void
+  stepSimulationBack: () => void
   clearSimulation: () => void
 
   loadLab: (devices: NetworkDevice[], links: NetworkLink[], annotations?: NetworkAnnotation[]) => void
   resetTopology: () => void
+}
+
+export type SimulationSnapshot = Pick<NetworkStore, 'devices' | 'links' | 'inFlightPackets' | 'pingResults' | 'httpTransactions' | 'emailTransactions' | 'dnsTransactions' | 'udpTransactions' | 'dhcpTransactions' | 'tcpReceiveBuffers' | 'tcpOutstandingSegments' | 'simulationTick' | 'simulationWarning' | 'simulationEvents'>
+
+const SIMULATION_EVENT_LIMIT = 300
+
+export function simulationHistoryLimitFor(deviceCount: number) {
+  return deviceCount > 150 ? 8 : deviceCount > 60 ? 20 : 50
+}
+
+let internalSimulationSet = false
+
+function captureSimulationSnapshot(state: NetworkStore): SimulationSnapshot {
+  return structuredClone({
+    devices: state.devices,
+    links: state.links,
+    inFlightPackets: state.inFlightPackets,
+    pingResults: state.pingResults,
+    httpTransactions: state.httpTransactions,
+    emailTransactions: state.emailTransactions,
+    dnsTransactions: state.dnsTransactions,
+    udpTransactions: state.udpTransactions,
+    dhcpTransactions: state.dhcpTransactions,
+    tcpReceiveBuffers: state.tcpReceiveBuffers,
+    tcpOutstandingSegments: state.tcpOutstandingSegments,
+    simulationTick: state.simulationTick,
+    simulationWarning: state.simulationWarning,
+    simulationEvents: state.simulationEvents,
+  })
 }
 
 const initialLab = getCcnaEnterpriseLab()
@@ -469,6 +502,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   simulationPlaying: true,
   simulationTick: 0,
   simulationWarning: null,
+  simulationEvents: [],
+  simulationHistory: [],
   activeModal: null,
   deviceWindows: [],
   activeTab: 'cli',
@@ -1322,6 +1357,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     set((state) => ({
       simulationMode: state.simulationMode === 'realtime' ? 'simulation' : 'realtime',
       simulationPlaying: state.simulationMode === 'realtime' ? false : true,
+      simulationHistory: [],
+      simulationEvents: [],
     }))
   },
 
@@ -1333,21 +1370,26 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
-      if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})
+      if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning){internalSimulationSet=true;set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})}
       return
     }
 
     const nextSimulationTick=simulationTick+1
-    const result = stepSimulationTick(devices, links, inFlightPackets, tcpReceiveBuffers, tcpOutstandingSegments,nextSimulationTick)
+    const result = stepSimulationTick(devices, links, inFlightPackets, tcpReceiveBuffers, tcpOutstandingSegments, nextSimulationTick, simulationMode === 'simulation')
     const retainedHttpRequests = new Set(result.tcpOutstandingSegments.map(segment => segment.requestId))
     const httpTransactions = failDrainedTransactions(mergeHttpTransactions(get().httpTransactions, result.applicationResults), inFlightPackets, result.newInFlightPackets, 'HTTP', 'No HTTP response arrived before this request left the simulated network.', retainedHttpRequests)
     const emailTransactions = failDrainedTransactions(mergeEmailTransactions(get().emailTransactions, result.emailResults), inFlightPackets, result.newInFlightPackets, 'EMAIL', 'No SMTP or POP3 response arrived before this request left the simulated network.', retainedHttpRequests)
     const dhcpTransactions = failDrainedDhcpTransactions(mergeDhcpTransactions(get().dhcpTransactions, result.dhcpResults), inFlightPackets, result.newInFlightPackets, result.updatedDevices, links)
     const dhcpFailure = dhcpTransactions.find(transaction => transaction.status === 'failed' && get().dhcpTransactions.some(previous => previous.requestId === transaction.requestId && previous.status === 'pending'))
     const dhcpTimers=advanceDhcpLeaseTimers(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults),links,result.newInFlightPackets,dhcpTransactions)
+    const simulationHistory = simulationMode === 'simulation' ? [...get().simulationHistory, captureSimulationSnapshot(get())].slice(-simulationHistoryLimitFor(devices.length)) : get().simulationHistory
+    const simulationEvents = simulationMode === 'simulation' ? [...get().simulationEvents, ...result.newEvents].slice(-SIMULATION_EVENT_LIMIT) : get().simulationEvents
+    internalSimulationSet = true
     set({
       devices: dhcpTimers.devices,
       simulationTick:nextSimulationTick,
+      simulationHistory,
+      simulationEvents,
       inFlightPackets: dhcpTimers.packets,
       pingResults: completePingResults(get().pingResults, inFlightPackets, result),
       httpTransactions,
@@ -1362,24 +1404,29 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   },
 
   stepSimulation: () => {
-    const { devices, links, inFlightPackets, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
+    const { devices, links, inFlightPackets, simulationMode, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
-      if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})
+      if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning){internalSimulationSet=true;set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})}
       return
     }
     const nextSimulationTick=simulationTick+1
-    const result = stepSimulationTick(devices, links, inFlightPackets, tcpReceiveBuffers, tcpOutstandingSegments,nextSimulationTick)
+    const result = stepSimulationTick(devices, links, inFlightPackets, tcpReceiveBuffers, tcpOutstandingSegments, nextSimulationTick, simulationMode === 'simulation')
     const retainedHttpRequests = new Set(result.tcpOutstandingSegments.map(segment => segment.requestId))
     const httpTransactions = failDrainedTransactions(mergeHttpTransactions(get().httpTransactions, result.applicationResults), inFlightPackets, result.newInFlightPackets, 'HTTP', 'No HTTP response arrived before this request left the simulated network.', retainedHttpRequests)
     const emailTransactions = failDrainedTransactions(mergeEmailTransactions(get().emailTransactions, result.emailResults), inFlightPackets, result.newInFlightPackets, 'EMAIL', 'No SMTP or POP3 response arrived before this request left the simulated network.', retainedHttpRequests)
     const dhcpTransactions = failDrainedDhcpTransactions(mergeDhcpTransactions(get().dhcpTransactions, result.dhcpResults), inFlightPackets, result.newInFlightPackets, result.updatedDevices, links)
     const dhcpFailure = dhcpTransactions.find(transaction => transaction.status === 'failed' && get().dhcpTransactions.some(previous => previous.requestId === transaction.requestId && previous.status === 'pending'))
     const dhcpTimers=advanceDhcpLeaseTimers(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults),links,result.newInFlightPackets,dhcpTransactions)
+    const simulationHistory = simulationMode === 'simulation' ? [...get().simulationHistory, captureSimulationSnapshot(get())].slice(-simulationHistoryLimitFor(devices.length)) : get().simulationHistory
+    const simulationEvents = simulationMode === 'simulation' ? [...get().simulationEvents, ...result.newEvents].slice(-SIMULATION_EVENT_LIMIT) : get().simulationEvents
+    internalSimulationSet = true
     set({
       devices: dhcpTimers.devices,
       simulationTick:nextSimulationTick,
+      simulationHistory,
+      simulationEvents,
       inFlightPackets: dhcpTimers.packets,
       pingResults: completePingResults(get().pingResults, inFlightPackets, result),
       httpTransactions,
@@ -1391,6 +1438,15 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       dhcpTransactions:dhcpTimers.transactions,
       simulationWarning: dhcpFailure?.reason ?? dhcpTimers.warning ?? (result.queueLimitReached ? 'Packet limit reached. Excess traffic was dropped to keep the simulation responsive.' : get().simulationWarning),
     })
+  },
+
+  stepSimulationBack: () => {
+    const state = get()
+    if (state.simulationMode !== 'simulation' || state.simulationHistory.length === 0) return
+    const snapshot = state.simulationHistory[state.simulationHistory.length - 1]
+    const simulationHistory = state.simulationHistory.slice(0, -1)
+    internalSimulationSet = true
+    set({ ...snapshot, simulationHistory, simulationPlaying: false })
   },
 
   clearSimulation: () => set(state => ({
@@ -1410,6 +1466,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       })
       : state.devices,
     inFlightPackets: [], tcpReceiveBuffers: [], tcpOutstandingSegments: [], simulationWarning: null, connectingSource: null,
+    simulationHistory: [], simulationEvents: [],
     pingResults: cancelPendingPings(state.pingResults),
     httpTransactions: state.httpTransactions.map(transaction => transaction.status === 'pending' ? { ...transaction, status: 'failed', reason: 'Cancelled when the simulation was cleared.' } : transaction),
     emailTransactions: state.emailTransactions.map(transaction => transaction.status === 'pending' ? { ...transaction, status: 'failed', reason: 'Cancelled when the simulation was cleared.' } : transaction),
@@ -1694,3 +1751,12 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 if (typeof window !== 'undefined') {
   (window as unknown as { __wireforgeNetworkStore: typeof useNetworkStore }).__wireforgeNetworkStore = useNetworkStore
 }
+
+// Back stepping only rewinds the uninterrupted run of simulation steps. Any topology, device, or
+// traffic edit restarts that run, so the journal is dropped instead of restoring stale state.
+useNetworkStore.subscribe((state, previous) => {
+  if (internalSimulationSet) { internalSimulationSet = false; return }
+  if (state.devices === previous.devices && state.links === previous.links && state.inFlightPackets === previous.inFlightPackets && state.pingResults === previous.pingResults) return
+  if (state.simulationHistory.length === 0 && state.simulationEvents.length === 0) return
+  useNetworkStore.setState({ simulationHistory: [], simulationEvents: [] })
+})
