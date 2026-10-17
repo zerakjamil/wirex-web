@@ -120,6 +120,26 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
         if (entry.wepKey !== undefined) string(entry.wepKey)
       }
     }
+    if (config.iotKind !== undefined) oneOf(config.iotKind, ['lamp', 'fan', 'door', 'window', 'blinds', 'sprinkler', 'siren', 'thermostat', 'smoke-detector', 'water-detector', 'light-sensor', 'push-button'])
+    if (config.iotState !== undefined) {
+      const state = object(config.iotState)
+      for (const field of ['power', 'open', 'smoke']) if (state[field] !== undefined && typeof state[field] !== 'boolean') throw new Error('Invalid IoT state flag.')
+      for (const field of ['level', 'temperature', 'pressedAtTick']) if (state[field] !== undefined && !Number.isFinite(Number(state[field]))) throw new Error('Invalid IoT state value.')
+    }
+    if (config.iotServerAddress !== undefined) string(config.iotServerAddress)
+    if (config.iotServiceEnabled !== undefined && typeof config.iotServiceEnabled !== 'boolean') throw new Error('Invalid IoT service flag.')
+    if (config.iotCredentials !== undefined) {
+      const credentials = object(config.iotCredentials)
+      string(credentials.username); string(credentials.password)
+    }
+    if (device.iotRuntime !== undefined) {
+      const runtime = object(device.iotRuntime)
+      oneOf(runtime.state, ['searching', 'registered'])
+    }
+    if (device.iotServerRuntime !== undefined) {
+      const runtime = object(device.iotServerRuntime)
+      if (runtime.clients !== undefined) array(runtime.clients, 512)
+    }
     if (device.apRuntime !== undefined) {
       const runtime = object(device.apRuntime)
       oneOf(runtime.mode, ['autonomous', 'lightweight'])

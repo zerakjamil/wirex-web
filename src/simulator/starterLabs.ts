@@ -1189,3 +1189,109 @@ export function getPtAnywhereLab(): {
   return { devices, links, annotations }
 }
 
+
+export function getIotLab(): {
+  devices: NetworkDevice[]
+  links: NetworkLink[]
+  annotations: NetworkAnnotation[]
+} {
+  const devices: NetworkDevice[] = []
+  const links: NetworkLink[] = []
+  const annotations: NetworkAnnotation[] = []
+
+  const wire = (a: NetworkDevice, aPortIndex: number, b: NetworkDevice, bPortIndex: number, id: string) => {
+    const aPort = a.ports[aPortIndex]
+    const bPort = b.ports[bPortIndex]
+    if (!aPort || !bPort) return
+    aPort.status = 'up'
+    aPort.adminStatus = 'up'
+    bPort.status = 'up'
+    bPort.adminStatus = 'up'
+    const link: NetworkLink = {
+      id,
+      type: 'straight',
+      fromDeviceId: a.id,
+      fromPortId: aPort.id,
+      toDeviceId: b.id,
+      toPortId: bPort.id,
+      status: 'up',
+    }
+    aPort.connectedLinkId = link.id
+    aPort.connectedDeviceId = b.id
+    aPort.connectedPortId = bPort.id
+    bPort.connectedLinkId = link.id
+    bPort.connectedDeviceId = a.id
+    bPort.connectedPortId = aPort.id
+    links.push(link)
+  }
+
+  // 1. Home gateway router with a DHCP pool for the smart home subnet
+  const router = createDevice('router', 420, 70, '2911')
+  router.name = 'R1'
+  router.config.hostname = 'R1'
+  router.ports[0].ipAddress = '192.168.10.1'
+  router.ports[0].subnetMask = '255.255.255.0'
+  router.config.dhcpPool = {
+    network: '192.168.10.0',
+    subnetMask: '255.255.255.0',
+    startIp: '192.168.10.100',
+    endIp: '192.168.10.150',
+    gateway: '192.168.10.1',
+    dns: '192.168.10.10',
+  }
+  devices.push(router)
+
+  // 2. Access switch for the smart home segment
+  const sw = createDevice('switch', 420, 230, '2960-24TT')
+  sw.name = 'SW1'
+  sw.config.hostname = 'SW1'
+  sw.ports.forEach((port) => { port.portfast = true })
+  devices.push(sw)
+
+  // 3. IoT registration server
+  const server = createDevice('server', 90, 430, 'Server-PT')
+  server.name = 'IoTServer'
+  server.config.hostname = 'IoTServer'
+  server.ports[0].ipAddress = '192.168.10.10'
+  server.ports[0].subnetMask = '255.255.255.0'
+  server.config.defaultGateway = '192.168.10.1'
+  server.config.iotServiceEnabled = true
+  server.config.iotCredentials = { username: 'admin', password: 'admin' }
+  devices.push(server)
+
+  // 4. Six smart things with static addresses so discovery works from the first tick
+  const things: Array<{ model: string; ip: string }> = [
+    { model: 'Lamp-PT', ip: '192.168.10.21' },
+    { model: 'Fan-PT', ip: '192.168.10.22' },
+    { model: 'Door-PT', ip: '192.168.10.23' },
+    { model: 'Thermostat-PT', ip: '192.168.10.24' },
+    { model: 'Smoke-Detector-PT', ip: '192.168.10.25' },
+    { model: 'Siren-PT', ip: '192.168.10.26' },
+  ]
+  things.forEach((entry, index) => {
+    const thing = createDevice('iot', 200 + index * 95, 430, entry.model)
+    thing.ports[0].ipAddress = entry.ip
+    thing.ports[0].subnetMask = '255.255.255.0'
+    thing.config.defaultGateway = '192.168.10.1'
+    devices.push(thing)
+    wire(thing, 0, sw, index + 1, `link-iot${index + 1}-sw`)
+  })
+
+  wire(router, 0, sw, 0, 'link-r1-sw')
+  wire(server, 0, sw, 7, 'link-iotserver-sw')
+
+  annotations.push({
+    id: 'ann-iot-guide',
+    type: 'note',
+    x: 30,
+    y: 10,
+    width: 570,
+    height: 160,
+    title: 'Smart Home with an IoT Registration Server',
+    text: '1. Six smart things and IoTServer share one subnet behind R1. Each thing broadcasts an IoT discovery request, and IoTServer answers because its IoT registration service is enabled.\n2. Double-click IoTServer -> Services: the IoT Registration Service lists every device that registered, with its address, online state and last report time.\n3. Use the buttons on each registered device in that list to control it remotely (turn a lamp on, open the door, set the blinds level, press the button). The command travels as a UDP unicast datagram and the thing acknowledges it.\n4. Double-click a smart thing -> IoT tab to change its local state (for example simulate smoke on the detector) and watch the periodic state report carry it to the server.\n5. Discovery repeats every few seconds, so a device that boots later still finds the server. Open Event List (Alt+E) to follow the IoT discovery, registration, report and control messages.\n6. R1 also runs a DHCP pool: use Obtain DHCP Address in a thing IoT tab to lease an address from 192.168.10.100 - 192.168.10.150.',
+    color: '#ecfdf5',
+    borderColor: '#10b981',
+  })
+
+  return { devices, links, annotations }
+}

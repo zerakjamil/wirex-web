@@ -18,6 +18,7 @@ import {
   DhcpTransactionResult,
   TcpReassemblyBuffer,
   TcpOutstandingSegment,
+  IotThingState,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
 import {getHardwareProfile,getModulePortIds,modulePorts,canCableConnect} from '@/simulator/physicalHardware'
@@ -35,12 +36,14 @@ import {
   createDhcpRenewalPackets,
   createRouterSolicitationPackets,
   createDhcpv6SolicitPackets,
+  createIotControlPackets,
   MAX_IN_FLIGHT_PACKETS,
 } from '@/simulator/engine'
 import type { SnmpOperation } from '@/simulator/snmp'
 import { parseIosCommand } from '@/simulator/ios/ciscoParser'
 import { executeWlcCommand } from '@/simulator/ios/wlcCli'
 import { hasCapwapActivity } from '@/simulator/capwap'
+import { hasIotActivity, iotServerRuntimeOf, isIotServer, applyIotLocalState } from '@/simulator/iot'
 import { getCcnaEnterpriseLab } from '@/simulator/starterLabs'
 import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
@@ -107,7 +110,7 @@ interface NetworkStore {
   closeDeviceWindow: (deviceId: string) => void
   minimizeDeviceWindow: (deviceId: string) => void
   focusDeviceWindow: (deviceId: string) => void
-  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'imported' | 'gui' | 'webadmin' | 'asdm'
+  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'imported' | 'gui' | 'webadmin' | 'asdm' | 'iot'
   connectingSource: { deviceId: string; portId?: string } | null
 
   // Actions
@@ -155,6 +158,8 @@ interface NetworkStore {
   requestSnmpQuery: (sourceDeviceId: string, targetIp: string, operation: SnmpOperation, oid: string, community: string) => string | null
   requestTftpRead: (sourceDeviceId: string, targetIp: string, fileName: string) => string | null
   requestDhcp: (deviceId:string)=>string
+  sendIotControl: (serverDeviceId: string, clientDeviceId: string, patch: IotThingState) => string | null
+  setIotState: (deviceId: string, patch: IotThingState) => void
   setIpv6HostMode: (deviceId: string, portId: string, mode: 'static' | 'auto' | 'dhcpv6') => void
 
   toggleSimulationMode: () => void
@@ -1251,6 +1256,38 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     }
   },
 
+  sendIotControl: (serverDeviceId, clientDeviceId, patch) => {
+    const { devices, links, inFlightPackets } = get()
+    const server = devices.find(device => device.id === serverDeviceId)
+    const client = devices.find(device => device.id === clientDeviceId)
+    if (!server || !client) return 'The IoT server or client device was not found.'
+    if (!isIotServer(server)) return `${server.name} does not provide an IoT registration service.`
+    if (!iotServerRuntimeOf(server).clients.some(entry => entry.deviceId === clientDeviceId)) {
+      return `${client.name} is not registered to ${server.name} yet.`
+    }
+    const commandId = crypto.randomUUID()
+    const packets = createIotControlPackets(server, devices, links, commandId, clientDeviceId, patch)
+    if (!packets.length) {
+      const reason = 'Cannot send the IoT command. Check the client address, route, gateway and link status.'
+      set({ simulationWarning: reason })
+      return reason
+    }
+    if (inFlightPackets.length + packets.length > MAX_IN_FLIGHT_PACKETS) {
+      const reason = 'Packet queue is full. Pause or reset the simulation before sending more traffic.'
+      set({ simulationWarning: reason })
+      return reason
+    }
+    set(state => ({ inFlightPackets: [...state.inFlightPackets, ...packets], simulationWarning: null }))
+    return null
+  },
+
+  setIotState: (deviceId, patch) => {
+    const device = get().devices.find(item => item.id === deviceId)
+    if (!device || device.type !== 'iot') return
+    const edited = applyIotLocalState(device, patch)
+    get().updateDeviceConfig(deviceId, { iotState: edited.config.iotState })
+  },
+
   sendPing: (sourceDeviceId, targetIp) => {
     const { devices, links } = get()
     const source = devices.find((d) => d.id === sourceDeviceId)
@@ -1293,7 +1330,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   tickSimulation: () => {
     const { devices, links, inFlightPackets, simulationMode, simulationPlaying, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     if (simulationMode === 'simulation' && !simulationPlaying) return
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})
@@ -1326,7 +1363,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   stepSimulation: () => {
     const { devices, links, inFlightPackets, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})

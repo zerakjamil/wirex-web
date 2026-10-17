@@ -21,6 +21,7 @@ import {useI18n} from '@/i18n/useI18n'
 import {PhysicalDeviceView} from './PhysicalDeviceView'
 import { EmailServiceSettings } from './EmailServiceSettings'
 import { EmailClientApp } from './EmailClientApp'
+import { IotTab, IotServiceSection } from './IotTabs'
 
 export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: () => void }) {
   const {t}=useI18n()
@@ -29,6 +30,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
     const state=useNetworkStore.getState()
     const initial=state.devices.find(candidate=>candidate.id===deviceId)
     if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
+    if(initial?.type==='iot'&&(state.activeTab==='cli'||state.activeTab==='config'||state.activeTab==='desktop'))return 'iot'
     return state.activeTab==='gui'?'cli':state.activeTab
   })
   const device = devices.find((d) => d.id === deviceId)
@@ -107,6 +109,21 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
               }`}
             >
               {t('Services')}
+            </button>
+          )}
+
+          {/* IoT Tab (smart devices) */}
+          {device.type === 'iot' && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('iot')}
+              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
+                activeTab === 'iot'
+                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
+                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
+              }`}
+            >
+              {t('IoT')}
             </button>
           )}
 
@@ -195,6 +212,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           {activeTab === 'config' && (device.type === 'wlc' ? <WlcConfigTab deviceId={device.id} /> : <ConfigTab deviceId={device.id} />)}
           {activeTab === 'webadmin' && device.type === 'wlc' && <WlcWebTab deviceId={device.id} />}
           {activeTab === 'services' && <ServicesTab deviceId={device.id} />}
+          {activeTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
           {activeTab === 'desktop' && <DesktopTab deviceId={device.id} />}
           {activeTab === 'physical' && <PhysicalTab deviceId={device.id} />}
           {activeTab === 'asdm' && <AsdmTab deviceId={device.id} />}
@@ -1146,6 +1164,7 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
               </div>
             </section>
             <EmailServiceSettings device={device} />
+            <IotServiceSection device={device} />
     </>
     </div>
   )

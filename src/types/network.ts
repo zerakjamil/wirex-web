@@ -11,6 +11,7 @@ export type DeviceType =
   | 'smartphone'
   | 'wireless'
   | 'wlc'
+  | 'iot'
   | 'security'
   | 'hub'
   | 'cloud'
@@ -261,6 +262,11 @@ export interface DeviceConfig {
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]
+  iotKind?: IotThingKind
+  iotState?: IotThingState
+  iotServerAddress?: string
+  iotServiceEnabled?: boolean
+  iotCredentials?: { username: string; password: string }
   ripNetworks?: string[]
   ripVersion?: 1 | 2
   ripAutoSummary?: boolean
@@ -426,6 +432,55 @@ export interface WlcRuntime {
   seq: number
 }
 
+export type IotThingKind =
+  | 'lamp'
+  | 'fan'
+  | 'door'
+  | 'window'
+  | 'blinds'
+  | 'sprinkler'
+  | 'siren'
+  | 'thermostat'
+  | 'smoke-detector'
+  | 'water-detector'
+  | 'light-sensor'
+  | 'push-button'
+
+export interface IotThingState {
+  power?: boolean
+  open?: boolean
+  level?: number
+  temperature?: number
+  smoke?: boolean
+  pressedAtTick?: number
+}
+
+export interface IotRuntime {
+  state: 'searching' | 'registered'
+  serverId?: string
+  serverName?: string
+  serverAddress?: string
+  lastDiscoveryTick?: number
+  lastReportTick?: number
+  lastControlTick?: number
+  stateVersion?: number
+  reportsSent?: number
+  controlsApplied?: number
+}
+
+export interface IotServerClient {
+  deviceId: string
+  address: string
+  kind: IotThingKind
+  registeredAtTick: number
+  lastSeenTick: number
+}
+
+export interface IotServerRuntime {
+  clients: IotServerClient[]
+  lastControlTick?: number
+}
+
 export interface NetworkDevice {
   stpRuntime?: StpRuntime
   ospf?: OspfRuntime
@@ -434,6 +489,8 @@ export interface NetworkDevice {
   eigrp?: EigrpRuntime
   apRuntime?: ApRuntime
   wlcRuntime?: WlcRuntime
+  iotRuntime?: IotRuntime
+  iotServerRuntime?: IotServerRuntime
   asaNatTranslations?: AsaNatTranslation[]
   ospfSequence?: number
   ipv6OspfSequence?: number
@@ -714,6 +771,12 @@ export interface PacketPdu {
     greTunnelInterface?: string
     capwap?: CapwapMessage
     capwapInnerPacket?: PacketPdu
+    iotMessageType?: 'discovery' | 'discovery-reply' | 'register' | 'report' | 'control' | 'control-ack'
+    iotClientDeviceId?: string
+    iotServerDeviceId?: string
+    iotCommandId?: string
+    iotStateSummary?: string
+    iotControlPatch?: IotThingState
     greKeepaliveType?: 'request' | 'reply'
     greKeepaliveTunnel?: string
     greKeepaliveSequence?: number
@@ -768,7 +831,7 @@ export interface PacketPdu {
     udpRequestId?: string
     udpSourceDeviceId?: string
     udpData?: string
-    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp'
+    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot'
     udpSourcePort?: number
     udpDestinationPort?: number
     tftpMessageType?: 'rrq' | 'data' | 'ack'
@@ -880,7 +943,7 @@ export interface UdpTransactionResult {
   sourceDeviceId: string
   targetIp: string
   port: number
-  service?: 'echo' | 'ntp' | 'tftp' | 'snmp'
+  service?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot'
   status: 'successful' | 'failed'
   response?: string
   fileName?: string

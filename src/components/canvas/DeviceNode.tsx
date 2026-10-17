@@ -245,6 +245,7 @@ export function DeviceNode({ data, selected }: NodeProps<DeviceNodeType>) {
           model={device.model}
           size={56}
           isPowerOn={device.power !== false}
+          iotState={device.config.iotState}
         />
       </div>
 

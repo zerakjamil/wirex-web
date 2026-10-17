@@ -1,4 +1,4 @@
-import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry } from '@/types/network'
+import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry, IotThingState } from '@/types/network'
 import { isInSameSubnet, ipToNumber, isValidIpv4 } from './protocols/ip'
 import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAddress, ipv6SolicitedNodeMulticastMac, isValidIpv6, parseIpv6, formatIpv6, ipv6PrefixMask, ipv6AddressFromPrefixAndInterfaceId, ipv6InterfaceIdFromMac, isIpv6LinkLocal, isIpv6Multicast } from './protocols/ipv6'
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates } from './spanningTree'
@@ -13,6 +13,7 @@ import type { RipOutbound } from './rip'
 import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './eigrp'
 import type { EigrpOutbound } from './eigrp'
 import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
+import { applyIotControl, iotKindOf, iotServerRuntimeOf, iotStateOf, iotStateSummary, isIotServer, isIotThing, markIotRegistered, prepareIotTick, recordIotClient, touchIotClient, IOT_BROADCAST_ADDRESS, IOT_CLIENT_PORT, IOT_SERVER_PORT, type IotIntent } from './iot'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES, TFTP_BLOCK_SIZE, tftpBlockCount, tftpBlockDataHex } from './tftp'
 import { isValidSnmpCommunity, isValidSnmpOid, resolveSnmpSystemObject, type SnmpOperation } from './snmp'
 import { activeHsrpGroup, hsrpVirtualMac, prepareHsrpTick } from './hsrp'
@@ -612,6 +613,26 @@ export function createUdpEchoPackets(source: NetworkDevice, devices: NetworkDevi
   return ipFrames(source, route, pdu, devices, links, 0)
 }
 
+export function createIotControlPackets(server: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], commandId: string, clientDeviceId: string, patch: IotThingState): InFlightPacket[] {
+  if (!commandId || server.power === false) return []
+  const client = devices.find(device => device.id === clientDeviceId)
+  if (!client || !isIotThing(client)) return []
+  const registered = iotServerRuntimeOf(server).clients.find(entry => entry.deviceId === clientDeviceId)
+  const targetIp = registered?.address ?? client.ports.find(port => port.ipAddress)?.ipAddress
+  if (!targetIp || !isValidIpv4(targetIp)) return []
+  const route = outgoingRoute(server, targetIp)
+  if (!route || !isUp(server, route.port) || !route.port.ipAddress) return []
+  const kind = iotKindOf(client)
+  const summary = iotStateSummary(kind, { ...iotStateOf(client), ...patch })
+  const pdu: PacketPdu = {
+    id: packetId('iot-control'), protocol: 'UDP', summary: `IoT command ${commandId.slice(0, 8)} from ${server.name} to ${client.name}`,
+    sourceMac: route.port.macAddress, destMac: '00:00:00:00:00:00', etherType: '0x0800', sourceIp: route.port.ipAddress, destIp: targetIp, ttl: 64,
+    payload: { udpMessageType: 'request', udpService: 'iot', udpSourcePort: IOT_SERVER_PORT, udpDestinationPort: IOT_CLIENT_PORT, iotMessageType: 'control', iotClientDeviceId: client.id, iotServerDeviceId: server.id, iotCommandId: commandId, iotControlPatch: patch, iotStateSummary: summary },
+    explanation: { layer1: `Outbound interface: ${route.port.name}.`, layer2: `Ethernet II: ${route.port.macAddress} to the next hop.`, layer3: `IPv4: ${route.port.ipAddress} to ${targetIp}, TTL 64.`, layer4AndAbove: `UDP: server port ${IOT_SERVER_PORT} to client port ${IOT_CLIENT_PORT}. IoT control command (${summary}).`, deviceDecision: `${server.name} sends a remote IoT command to ${client.name} through the routing table.` },
+  }
+  return ipFrames(server, route, pdu, devices, links, 0)
+}
+
 export function createNtpQueryPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], requestId: string, targetIp: string): InFlightPacket[] {
   if (!requestId || !isValidIpv4(targetIp)) return []
   const route = outgoingRoute(source, targetIp)
@@ -671,7 +692,7 @@ export function createTftpReadPackets(source: NetworkDevice, devices: NetworkDev
   return ipFrames(source, route, pdu, devices, links, 0)
 }
 
-function dhcpBroadcastFrames(device: NetworkDevice, logicalPort: NetworkPort, pdu: PacketPdu, devices: NetworkDevice[], links: NetworkLink[]): InFlightPacket[] {
+export function dhcpBroadcastFrames(device: NetworkDevice, logicalPort: NetworkPort, pdu: PacketPdu, devices: NetworkDevice[], links: NetworkLink[]): InFlightPacket[] {
   const physicalPort = logicalPort.parentPortId
     ? device.ports.find(port => port.id === logicalPort.parentPortId)
     : logicalPort
@@ -839,7 +860,8 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
   const ripControl = prepareRipTick(ospfv3Control.devices)
   const eigrpControl = prepareEigrpTick(ripControl.devices)
   const capwapControl = prepareCapwapTick(eigrpControl.devices, links, simulationTick)
-  const control = { devices: capwapControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
+  const iotControl = prepareIotTick(capwapControl.devices, links, simulationTick)
+  const control = { devices: iotControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
   const stpControl=prepareStpTick(control.devices,links,simulationTick)
   let updatedDevices = ageLearnedMacTables(advanceStpPortStates(stpControl.devices,links,simulationTick),simulationTick)
   const byId = new Map(updatedDevices.map(d => [d.id, d]))
@@ -1063,6 +1085,20 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     }
   }
   for (const intent of capwapControl.outbound) sendCapwap(intent)
+  const sendIot = (intent: IotIntent) => {
+    const device = byId.get(intent.deviceId)
+    if (!device) return
+    const port = device.ports.find(candidate => candidate.id === intent.portId)
+    if (!port || !isUp(device, port)) return
+    if (intent.broadcast) {
+      dhcpBroadcastFrames(device, port, intent.pdu, updatedDevices, links).forEach(enqueue)
+      return
+    }
+    const route = outgoingRoute(device, intent.targetIp)
+    if (!route || !route.port.ipAddress) return
+    ipFrames(device, route, { ...intent.pdu, sourceMac: route.port.macAddress, sourceIp: route.port.ipAddress }, updatedDevices, links, 0).forEach(enqueue)
+  }
+  iotControl.outbound.forEach(sendIot)
   const learnArp = (device: NetworkDevice, port: NetworkPort, ip: string, mac: string) => {
     const existing = device.arpTable.find(a => a.ipAddress === ip && a.interfaceName === port.name)
     if (existing?.macAddress === mac) return
@@ -1770,6 +1806,92 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       if (received.reason) { drop(packet, received.reason); continue }
       received.outbound.forEach(sendControl)
       packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} processed ${pdu.protocol} ${pdu.payload.ospf?.type ?? pdu.payload.rip?.command ?? pdu.payload.eigrp?.type}.` })
+      continue
+    }
+    if (pdu.protocol === 'UDP' && pdu.payload.udpService === 'iot' && pdu.payload.iotMessageType) {
+      const iotMessageType = pdu.payload.iotMessageType
+      const iotClientDeviceId = pdu.payload.iotClientDeviceId
+      const iotServerDeviceId = pdu.payload.iotServerDeviceId
+      const iotClientDevice = iotClientDeviceId ? byId.get(iotClientDeviceId) : undefined
+      const iotLocalIp = localIp ?? (receivingPort.ipAddress ? receivingPort : undefined) ?? receiver.ports.find(port => isUp(receiver, port) && port.ipAddress && port.connectedLinkId)
+      if (!iotLocalIp?.ipAddress) continue
+      const iotLocalAddress = iotLocalIp.ipAddress
+      const editIotReceiver = (editor: (device: NetworkDevice) => NetworkDevice) => {
+        const edited = editor(byId.get(receiver.id)!)
+        updatedDevices[deviceIndices.get(receiver.id)!] = edited
+        byId.set(receiver.id, edited)
+        mutable.add(receiver.id)
+      }
+      if (iotMessageType === 'discovery') {
+        if (!isIotServer(receiver) || (pdu.destIp !== IOT_BROADCAST_ADDRESS && pdu.destIp !== iotLocalAddress)) continue
+        const reply: PacketPdu = {
+          ...pdu, id: packetId('iot-discovery-reply'), summary: `IoT discovery reply from ${receiver.name}`,
+          sourceMac: iotLocalIp.macAddress, destMac: pdu.sourceMac, sourceIp: iotLocalAddress, destIp: pdu.sourceIp, ttl: 64, pendingPacket: undefined,
+          payload: { udpMessageType: 'response', udpService: 'iot', udpSourcePort: IOT_SERVER_PORT, udpDestinationPort: pdu.payload.udpSourcePort ?? IOT_CLIENT_PORT, iotMessageType: 'discovery-reply', iotClientDeviceId, iotServerDeviceId: receiver.id, iotStateSummary: pdu.payload.iotStateSummary },
+          explanation: { ...pdu.explanation, layer1: `Outbound interface: ${iotLocalIp.name}.`, layer2: `Ethernet II: ${iotLocalIp.macAddress} to ${pdu.sourceMac}.`, layer3: `IPv4: ${iotLocalAddress} to ${pdu.sourceIp}, TTL 64.`, layer4AndAbove: `UDP: server registration port ${IOT_SERVER_PORT} to client port ${pdu.payload.udpSourcePort ?? IOT_CLIENT_PORT}. IoT discovery reply.`, deviceDecision: `${receiver.name} answered the IoT discovery broadcast from ${iotClientDevice?.name ?? 'a device'}.` },
+        }
+        if (!sendIp(byId.get(receiver.id)!, reply, 0, packet)) continue
+        packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} answered the IoT discovery broadcast from ${iotClientDevice?.name ?? 'a device'}.` })
+        continue
+      }
+      if (iotMessageType === 'discovery-reply') {
+        if (!isIotThing(receiver) || receiver.id !== iotClientDeviceId || pdu.destIp !== iotLocalAddress) continue
+        const server = iotServerDeviceId ? byId.get(iotServerDeviceId) : undefined
+        editIotReceiver(current => markIotRegistered(current, { serverId: iotServerDeviceId, serverName: server?.name, serverAddress: pdu.sourceIp }, simulationTick))
+        const kind = iotKindOf(receiver)
+        const summary = iotStateSummary(kind, iotStateOf(receiver))
+        const register: PacketPdu = {
+          ...pdu, id: packetId('iot-register'), summary: `IoT registration from ${receiver.name}`,
+          sourceMac: iotLocalIp.macAddress, destMac: pdu.sourceMac, sourceIp: iotLocalAddress, destIp: pdu.sourceIp, ttl: 64, pendingPacket: undefined,
+          payload: { udpMessageType: 'request', udpService: 'iot', udpSourcePort: IOT_CLIENT_PORT, udpDestinationPort: IOT_SERVER_PORT, iotMessageType: 'register', iotClientDeviceId: receiver.id, iotServerDeviceId, iotStateSummary: summary },
+          explanation: { ...pdu.explanation, layer1: `Outbound interface: ${iotLocalIp.name}.`, layer2: `Ethernet II: ${iotLocalIp.macAddress} to ${pdu.sourceMac}.`, layer3: `IPv4: ${iotLocalAddress} to ${pdu.sourceIp}, TTL 64.`, layer4AndAbove: `UDP: client port ${IOT_CLIENT_PORT} to server registration port ${IOT_SERVER_PORT}. Registration request.`, deviceDecision: `${receiver.name} learned IoT server ${server?.name ?? pdu.sourceIp} and registers with its current state (${summary}).` },
+        }
+        if (!sendIp(byId.get(receiver.id)!, register, 0, packet)) continue
+        packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} learned IoT server ${server?.name ?? pdu.sourceIp} and started registration.` })
+        continue
+      }
+      if (iotMessageType === 'register' || iotMessageType === 'report') {
+        if (!isIotServer(receiver) || iotServerDeviceId !== receiver.id || pdu.destIp !== iotLocalAddress) continue
+        if (!iotClientDevice || !isIotThing(iotClientDevice)) {
+          drop(packet, `IoT ${iotMessageType} from ${pdu.sourceIp} references an unknown client device.`)
+          continue
+        }
+        const kind = iotKindOf(iotClientDevice)
+        editIotReceiver(current => recordIotClient(current, { deviceId: iotClientDevice.id, address: pdu.sourceIp, kind }, simulationTick))
+        const summary = pdu.payload.iotStateSummary ?? iotStateSummary(kind, iotStateOf(iotClientDevice))
+        packetDeliveries.push({
+          packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id,
+          reason: iotMessageType === 'register'
+            ? `${receiver.name} registered ${iotClientDevice.name} as an IoT device with address ${pdu.sourceIp}.`
+            : `${receiver.name} recorded an IoT state report from ${iotClientDevice.name} (${summary}).`,
+        })
+        continue
+      }
+      if (iotMessageType === 'control') {
+        if (!isIotThing(receiver) || receiver.id !== iotClientDeviceId || pdu.destIp !== iotLocalAddress) continue
+        if (receiver.iotRuntime?.serverId && iotServerDeviceId && receiver.iotRuntime.serverId !== iotServerDeviceId) {
+          drop(packet, `${receiver.name} is registered to ${byId.get(receiver.iotRuntime.serverId)?.name ?? 'another IoT server'} and rejected the command.`)
+          continue
+        }
+        editIotReceiver(current => applyIotControl(current, pdu.payload.iotControlPatch ?? {}, simulationTick))
+        const edited = byId.get(receiver.id)!
+        const summary = iotStateSummary(iotKindOf(edited), iotStateOf(edited))
+        const acknowledgement: PacketPdu = {
+          ...pdu, id: packetId('iot-control-ack'), summary: `IoT command acknowledgement from ${receiver.name}`,
+          sourceMac: iotLocalIp.macAddress, destMac: pdu.sourceMac, sourceIp: iotLocalAddress, destIp: pdu.sourceIp, ttl: 64, pendingPacket: undefined,
+          payload: { udpMessageType: 'response', udpService: 'iot', udpSourcePort: IOT_CLIENT_PORT, udpDestinationPort: IOT_SERVER_PORT, iotMessageType: 'control-ack', iotClientDeviceId: receiver.id, iotServerDeviceId, iotCommandId: pdu.payload.iotCommandId, iotStateSummary: summary },
+          explanation: { ...pdu.explanation, layer1: `Outbound interface: ${iotLocalIp.name}.`, layer2: `Ethernet II: ${iotLocalIp.macAddress} to ${pdu.sourceMac}.`, layer3: `IPv4: ${iotLocalAddress} to ${pdu.sourceIp}, TTL 64.`, layer4AndAbove: `UDP: client port ${IOT_CLIENT_PORT} to server registration port ${IOT_SERVER_PORT}. Command acknowledgement.`, deviceDecision: `${receiver.name} applied the remote IoT command and now reports ${summary}.` },
+        }
+        if (!sendIp(byId.get(receiver.id)!, acknowledgement, 0, packet)) continue
+        packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} applied the remote IoT command from ${byId.get(iotServerDeviceId ?? '')?.name ?? 'its server'} (${summary}).` })
+        continue
+      }
+      if (iotMessageType === 'control-ack') {
+        if (!isIotServer(receiver) || iotServerDeviceId !== receiver.id || pdu.destIp !== iotLocalAddress) continue
+        if (iotClientDeviceId) editIotReceiver(current => touchIotClient(current, iotClientDeviceId, simulationTick))
+        packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} received an IoT command acknowledgement from ${iotClientDevice?.name ?? 'a client'} (${pdu.payload.iotStateSummary ?? 'state updated'}).` })
+        continue
+      }
       continue
     }
     if (pdu.protocol === 'DHCP') {

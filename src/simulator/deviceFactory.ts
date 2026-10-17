@@ -1,5 +1,6 @@
 import { NetworkDevice, DeviceType, NetworkPort } from '@/types/network'
 import { generateMacAddress } from './protocols/ip'
+import { defaultIotState, iotThingSpec } from './iot'
 
 const deviceCounters: Record<DeviceType, number> = {
   router: 0,
@@ -14,6 +15,7 @@ const deviceCounters: Record<DeviceType, number> = {
   smartphone: 0,
   wireless: 0,
   wlc: 0,
+  iot: 0,
   security: 0,
   hub: 0,
   cloud: 0,
@@ -27,6 +29,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   let name = ''
   let model = customModel || ''
   let ports: NetworkPort[] = []
+  let iotKind: NetworkDevice['config']['iotKind']
 
   switch (type) {
     case 'router': {
@@ -171,6 +174,18 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       break
     }
 
+    case 'iot': {
+      const spec = iotThingSpec(customModel || '')
+      model = spec.model
+      iotKind = spec.kind
+      name = `${spec.label.replace(/\s+/g, '')}${index}`
+      ports = [
+        createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+        createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
+      ]
+      break
+    }
+
     case 'security': {
       model = customModel || 'ASA 5505'
       name = `ASA${index}`
@@ -305,6 +320,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     switch: [],
     wireless: [],
     wlc: [],
+    iot: [],
     smartphone: [],
     tablet: [],
     server: ['PT-HOST-NM-1CGE'],
@@ -341,6 +357,14 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' ? { apMode: 'lightweight' as const } : {}),
+      ...(type === 'iot' && iotKind
+        ? {
+            iotKind,
+            iotState: defaultIotState(iotKind),
+            iotServerAddress: 'auto',
+            dhcpEnabled: true,
+          }
+        : {}),
       ...(type === 'security'
         ? {
             asaInspection: { icmp: true, http: true, tcp: true, dns: true, udp: true, tftp: true },

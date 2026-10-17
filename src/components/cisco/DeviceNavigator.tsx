@@ -16,7 +16,7 @@ export function DeviceNavigator() {
     <div className="pt-device-list">{devices.filter(device=>`${device.name} ${device.model}`.toLowerCase().includes(query.toLowerCase())).map(device=>{
       const frame=windows.find(window=>window.deviceId===device.id)
       return <button key={device.id} className={frame?'is-open':''} onClick={()=>useNetworkStore.getState().setActiveModal({type:'device',deviceId:device.id})}>
-        <Cisco3DIcon type={device.type} model={device.model} size={28}/><span dir="ltr"><strong>{device.name}</strong><small>{device.model}</small></span><small>{t(frame?.minimized?'Min':frame?'Open':'')}</small>
+        <Cisco3DIcon type={device.type} model={device.model} size={28} iotState={device.config.iotState}/><span dir="ltr"><strong>{device.name}</strong><small>{device.model}</small></span><small>{t(frame?.minimized?'Min':frame?'Open':'')}</small>
       </button>
     })}</div>
     <p>{t('Drag a window by its title. Resize from its lower-right corner.')}</p>

@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { DeviceType } from '@/types/network'
+import { DeviceType, IotThingState } from '@/types/network'
+import { iotThingSpec } from '@/simulator/iot'
 
 interface Cisco3DIconProps {
   type: DeviceType
@@ -9,6 +10,7 @@ interface Cisco3DIconProps {
   size?: number
   className?: string
   isPowerOn?: boolean
+  iotState?: IotThingState
 }
 
 export function Cisco3DIcon({
@@ -17,6 +19,7 @@ export function Cisco3DIcon({
   size = 56,
   className = '',
   isPowerOn = true,
+  iotState,
 }: Cisco3DIconProps) {
   const powerFilter = isPowerOn ? '' : 'grayscale opacity-50'
 
@@ -41,6 +44,7 @@ export function Cisco3DIcon({
       {type === 'tv' && <Tv3DIcon size={size} />}
       {type === 'modem' && <Modem3DIcon size={size} />}
       {type === 'wlc' && <Wlc3DIcon />}
+      {type === 'iot' && <Iot3DIcon model={model} iotState={iotState} />}
     </div>
   )
 }
@@ -852,6 +856,176 @@ function Modem3DIcon({ size }: { size: number }) {
       {[24, 34, 44, 54].map((x) => (
         <circle key={x} cx={x} cy={45} r="2" fill="#22c55e" />
       ))}
+    </svg>
+  )
+}
+
+/**
+ * 17. 3D IoT Smart Thing
+ * One compact smart-home appliance per model. The silhouette follows the
+ * configured kind and the accent glow reflects the live simulated state.
+ */
+function Iot3DIcon({ model, iotState }: { model?: string; iotState?: IotThingState }) {
+  const kind = iotThingSpec(model ?? '').kind
+  const state = iotState ?? {}
+  const powered = state.power === true
+  const open = state.open === true
+  const level = Math.max(0, Math.min(100, state.level ?? 0))
+  const temperature = state.temperature ?? 22
+  const smoke = state.smoke === true
+  const recentlyPressed = state.pressedAtTick !== undefined
+  const plate = '#94a3b8'
+  const plateDark = '#475569'
+  const outline = '#0f172a'
+  return (
+    <svg viewBox="0 0 100 85" className="w-full h-full drop-shadow-md overflow-visible">
+      <ellipse cx="50" cy="77" rx="30" ry="6" fill="rgba(15,23,42,0.32)" />
+      {kind === 'lamp' && (
+        <g>
+          <rect x="46" y="50" width="8" height="22" rx="2" fill={plateDark} />
+          <rect x="34" y="70" width="32" height="7" rx="3.5" fill="#334155" />
+          {powered && <circle cx="50" cy="52" r="18" fill="rgba(253,224,71,0.30)" />}
+          <polygon points="32,16 68,16 60,50 40,50" fill={powered ? '#fde68a' : '#cbd5e1'} stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="52" r="6.5" fill={powered ? '#facc15' : '#e2e8f0'} stroke={outline} strokeWidth="1.2" />
+          <rect x="44" y="24" width="12" height="3" rx="1.5" fill={powered ? '#f59e0b' : '#94a3b8'} />
+        </g>
+      )}
+      {kind === 'fan' && (
+        <g>
+          <ellipse cx="50" cy="72" rx="14" ry="5" fill="#334155" />
+          <rect x="47" y="46" width="6" height="24" rx="2" fill={plateDark} />
+          <circle cx="50" cy="34" r="24" fill="#e2e8f0" stroke={outline} strokeWidth="1.5" />
+          <g transform={powered ? 'rotate(18 50 34)' : undefined}>
+            {[0, 120, 240].map((angle) => (
+              <path key={angle} d="M50 34 L50 12 A11 11 0 0 1 60 26 Z" transform={`rotate(${angle} 50 34)`} fill={powered ? '#7dd3fc' : '#94a3b8'} stroke={outline} strokeWidth="0.8" />
+            ))}
+          </g>
+          <circle cx="50" cy="34" r="5" fill={plateDark} stroke={outline} strokeWidth="1" />
+          {powered && <circle cx="50" cy="34" r="27" fill="none" stroke="rgba(125,211,252,0.5)" strokeWidth="2" strokeDasharray="5 6" />}
+        </g>
+      )}
+      {kind === 'siren' && (
+        <g>
+          <rect x="28" y="58" width="44" height="14" rx="4" fill={plateDark} stroke={outline} strokeWidth="1.2" />
+          <path d="M32 58 A18 20 0 0 1 68 58 Z" fill={powered ? '#ef4444' : '#cbd5e1'} stroke={outline} strokeWidth="1.5" />
+          <rect x="36" y="52" width="28" height="6" rx="3" fill={powered ? '#b91c1c' : plate} />
+          {powered && (
+            <g stroke="#f87171" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M22 30 L14 22" /><path d="M50 24 L50 12" /><path d="M78 30 L86 22" />
+            </g>
+          )}
+          <circle cx="50" cy="66" r="2.4" fill={powered ? '#fde047' : '#64748b'} />
+        </g>
+      )}
+      {kind === 'sprinkler' && (
+        <g>
+          <rect x="30" y="62" width="40" height="11" rx="3" fill={plateDark} stroke={outline} strokeWidth="1.2" />
+          <rect x="46" y="44" width="8" height="20" rx="2" fill="#334155" />
+          <rect x="38" y="37" width="24" height="9" rx="4" fill={plate} stroke={outline} strokeWidth="1.2" />
+          {powered && (
+            <g stroke="#38bdf8" strokeWidth="2.4" fill="none" strokeLinecap="round">
+              <path d="M40 34 Q30 24 26 14" /><path d="M50 32 Q50 20 50 10" /><path d="M60 34 Q70 24 74 14" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'door' && (
+        <g>
+          <rect x="28" y="12" width="44" height="60" rx="2" fill="#1e293b" stroke={outline} strokeWidth="1.5" />
+          {open ? (
+            <g>
+              <polygon points="30,13 56,22 56,62 30,72" fill="#a16207" stroke={outline} strokeWidth="1.2" />
+              <circle cx="51" cy="43" r="2" fill="#fde047" />
+              <rect x="58" y="16" width="12" height="52" fill="#0f172a" opacity="0.55" />
+            </g>
+          ) : (
+            <g>
+              <rect x="32" y="16" width="36" height="52" rx="2" fill="#b45309" stroke={outline} strokeWidth="1.2" />
+              <rect x="37" y="22" width="26" height="18" rx="2" fill="#92400e" />
+              <circle cx="62" cy="44" r="2.2" fill="#fde047" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'window' && (
+        <g>
+          <rect x="22" y="16" width="56" height="52" rx="2" fill={open ? '#0f172a' : '#7dd3fc'} stroke={outline} strokeWidth="1.5" />
+          {open ? (
+            <g>
+              <polygon points="24,18 44,26 44,60 24,66" fill="#bae6fd" stroke={outline} strokeWidth="1" />
+              <polygon points="76,18 56,26 56,60 76,66" fill="#bae6fd" stroke={outline} strokeWidth="1" />
+              <polygon points="44,26 56,26 56,60 44,60" fill="#0f172a" opacity="0.5" />
+            </g>
+          ) : (
+            <g stroke={outline} strokeWidth="1.2">
+              <line x1="50" y1="16" x2="50" y2="68" /><line x1="22" y1="42" x2="78" y2="42" />
+            </g>
+          )}
+          <rect x="20" y="68" width="60" height="5" rx="2" fill={plate} stroke={outline} strokeWidth="1" />
+        </g>
+      )}
+      {kind === 'blinds' && (
+        <g>
+          <rect x="22" y="16" width="56" height="52" rx="2" fill="#7dd3fc" opacity="0.75" stroke={outline} strokeWidth="1.5" />
+          <rect x="18" y="12" width="64" height="6" rx="3" fill={plateDark} stroke={outline} strokeWidth="1" />
+          {Array.from({ length: 7 }, (_, index) => {
+            const coverage = (1 - level / 100) * 46
+            const slat = (coverage / 7) * (index + 1)
+            return slat > 0 ? <rect key={index} x="24" y={18 + slat} width="52" height="3.4" rx="1.7" fill="#f8fafc" stroke="#94a3b8" strokeWidth="0.6" /> : null
+          })}
+          <circle cx="64" cy="64" r="2" fill={plateDark} />
+        </g>
+      )}
+      {kind === 'thermostat' && (
+        <g>
+          <circle cx="50" cy="42" r="30" fill="#f8fafc" stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="42" r="25" fill="none" stroke={plate} strokeWidth="3" strokeDasharray="6 4" />
+          <circle cx="50" cy="42" r="20" fill="#0f172a" />
+          <text x="50" y="48" textAnchor="middle" fontSize="16" fontWeight="700" fill="#38bdf8">{temperature.toFixed(1)}°</text>
+          <circle cx="50" cy="70" r="3" fill={powered ? '#22c55e' : plateDark} />
+        </g>
+      )}
+      {kind === 'smoke-detector' && (
+        <g>
+          <rect x="24" y="18" width="52" height="16" rx="8" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          {[32, 40, 48, 56, 64].map((x) => <line key={x} x1={x} y1="24" x2={x} y2="30" stroke={plate} strokeWidth="2" strokeLinecap="round" />)}
+          <circle cx="50" cy="27" r="3.4" fill={smoke ? '#ef4444' : '#22c55e'} stroke={outline} strokeWidth="0.8" />
+          {smoke && (
+            <g fill="rgba(148,163,184,0.75)">
+              <circle cx="38" cy="48" r="6" /><circle cx="50" cy="42" r="7.5" /><circle cx="62" cy="48" r="6" /><circle cx="50" cy="56" r="5" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'water-detector' && (
+        <g>
+          <rect x="20" y="26" width="44" height="34" rx="6" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          <path d="M30 52 Q30 40 42 32 Q54 40 54 52 A12 12 0 0 1 30 52 Z" fill="#38bdf8" stroke={outline} strokeWidth="1" />
+          <rect x="68" y="26" width="12" height="34" rx="3" fill="#e2e8f0" stroke={outline} strokeWidth="1" />
+          <rect x="70" y={54 - (30 * level) / 100} width="8" height={(30 * level) / 100} rx="2" fill="#0ea5e9" />
+        </g>
+      )}
+      {kind === 'light-sensor' && (
+        <g>
+          <circle cx="40" cy="40" r="22" fill="#f8fafc" stroke={outline} strokeWidth="1.5" />
+          <circle cx="40" cy="40" r="9" fill="#facc15" stroke="#eab308" strokeWidth="1" />
+          {Array.from({ length: 8 }, (_, index) => {
+            const angle = (index * Math.PI) / 4
+            return <line key={index} x1={40 + Math.cos(angle) * 13} y1={40 + Math.sin(angle) * 13} x2={40 + Math.cos(angle) * 18} y2={40 + Math.sin(angle) * 18} stroke="#f59e0b" strokeWidth="2.4" strokeLinecap="round" />
+          })}
+          <rect x="66" y="24" width="12" height="36" rx="3" fill="#e2e8f0" stroke={outline} strokeWidth="1" />
+          <rect x="68" y={56 - (32 * level) / 100} width="8" height={(32 * level) / 100} rx="2" fill="#fbbf24" />
+        </g>
+      )}
+      {kind === 'push-button' && (
+        <g>
+          <rect x="28" y="14" width="44" height="58" rx="6" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          {recentlyPressed && <circle cx="50" cy="40" r="22" fill="rgba(251,191,36,0.35)" />}
+          <circle cx="50" cy="40" r={recentlyPressed ? 15 : 16.5} fill={recentlyPressed ? '#f59e0b' : plate} stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="40" r="7" fill={recentlyPressed ? '#fde68a' : '#e2e8f0'} stroke={outline} strokeWidth="1" />
+          <circle cx="50" cy="64" r="2.2" fill="#22c55e" />
+        </g>
+      )}
     </svg>
   )
 }

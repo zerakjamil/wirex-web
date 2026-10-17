@@ -9,7 +9,7 @@ import type {DeviceType} from '@/types/network'
 import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
 
-const labels: Record<Category,string>={routers:'Routers',switches:'Switches',hubs:'Hubs',wireless:'Wireless Devices',security:'Security',wan:'WAN Emulation',end:'End Devices',connections:'Connections',components:'Components',custom:'Custom Made Devices',multiuser:'Multiuser Connection'}
+const labels: Record<Category,string>={routers:'Routers',switches:'Switches',hubs:'Hubs',wireless:'Wireless Devices',security:'Security',wan:'WAN Emulation',end:'End Devices',iot:'IoT Devices',connections:'Connections',components:'Components',custom:'Custom Made Devices',multiuser:'Multiuser Connection'}
 const cables=[{tool:'cable-auto',label:'Automatically Choose Connection Type',color:'#df931a'}, {tool:'cable-console',label:'Console',color:'#57c9e5'}, {tool:'cable-straight',label:'Copper Straight-Through',color:'#222'}, {tool:'cable-crossover',label:'Copper Cross-Over',color:'#222'}, {tool:'cable-fiber',label:'Fiber',color:'#eb8c22'}, {tool:'cable-phone',label:'Phone',color:'#738aa7'}, {tool:'cable-coaxial',label:'Coaxial',color:'#186ab5'}, {tool:'cable-serial-dce',label:'Serial DCE',color:'#c33434'}, {tool:'cable-serial',label:'Serial DTE',color:'#c33434'}, {tool:'cable-octal',label:'Octal',color:'#5d7c4e'}, {tool:'cable-usb',label:'USB',color:'#396792'}] as const
 export function CiscoBottomBar() {
   const {t}=useI18n()
@@ -56,7 +56,7 @@ export function CiscoBottomBar() {
         <button className="pt-category-button" aria-label={t('Network Devices')} title={t('Network Devices')} aria-pressed={!['end','connections','components','custom','multiuser'].includes(category)} onClick={()=>choose('routers')}><CiscoIcon name="network" size={27}/></button>
         {categoryButton('end','end')}{categoryButton('components','components')}{categoryButton('connections','connections')}{categoryButton('custom','folder')}{categoryButton('multiuser','multiuser')}
       </div><div className="pt-category-divider"/><div className="pt-category-row">
-        {categoryButton('routers','router',true)}{categoryButton('switches','switch',true)}{categoryButton('hubs','hub',true)}{categoryButton('wireless','wireless',true)}{categoryButton('security','security',true)}{categoryButton('wan','cloud',true)}
+        {categoryButton('routers','router',true)}{categoryButton('switches','switch',true)}{categoryButton('hubs','hub',true)}{categoryButton('wireless','wireless',true)}{categoryButton('security','security',true)}{categoryButton('wan','cloud',true)}{categoryButton('iot','iot',true)}
       </div><div className="pt-device-description">{t(labels[category])}</div></div>
       <div className="pt-model-box"><div className="pt-model-shelf">
         {catalog[category]?.flatMap(group=>group.models.map(model=>{

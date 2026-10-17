@@ -4,7 +4,7 @@ import React, { useRef, useEffect } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { NetworkDevice, NetworkLink } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
-import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab, getWlcLab } from '@/simulator/starterLabs'
+import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab, getWlcLab, getIotLab } from '@/simulator/starterLabs'
 import { useI18n } from '@/i18n/useI18n'
 import { getOspfPracticeLab } from '@/simulator/ospfLab'
 import { getRipPracticeLab } from '@/simulator/ripLab'
@@ -50,6 +50,12 @@ export function SampleLabsModal() {
 
   const handleLoadWlcLab = () => {
     const { devices, links, annotations } = getWlcLab()
+    loadLab(devices, links, annotations)
+    setActiveModal(null)
+  }
+
+  const handleLoadIotLab = () => {
+    const { devices, links, annotations } = getIotLab()
     loadLab(devices, links, annotations)
     setActiveModal(null)
   }
@@ -383,6 +389,21 @@ export function SampleLabsModal() {
           <button
             type="button"
             onClick={handleLoadWlcLab}
+            style={{ fontWeight: 'bold' }}
+          >
+            {t('Load Lab')}
+          </button>
+        </li>
+
+        <li>
+          <h3>{t('Smart Home with IoT Server')}</h3>
+          <p>
+            {t('Six smart devices register with the IoT server through a switch, report their state, and accept remote commands from the Services tab.')}
+          </p>
+          <small dir="ltr">{t('IoT Devices')}</small>
+          <button
+            type="button"
+            onClick={handleLoadIotLab}
             style={{ fontWeight: 'bold' }}
           >
             {t('Load Lab')}
