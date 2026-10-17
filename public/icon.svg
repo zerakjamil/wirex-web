@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#4338ca" flood-opacity="0.4" />
+    </filter>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <!-- Border subtle highlight -->
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="#312e81" stroke-width="3" />
+  
+  <!-- Stylized Geometric wireX "W" Network Mesh -->
+  <g filter="url(#shadow)" transform="translate(48, 56) scale(0.8125)">
+    <!-- Interconnected Bus Traces -->
+    <path d="M 80 140 L 176 340 L 256 180 L 336 340 L 432 140" fill="none" stroke="url(#glow)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 176 340 L 336 340" fill="none" stroke="#6366f1" stroke-width="18" stroke-linecap="round" stroke-dasharray="8 14" opacity="0.8" />
+    <path d="M 80 140 L 256 180 L 432 140" fill="none" stroke="#38bdf8" stroke-width="12" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Network Topology Nodes -->
+    <!-- Node 1: Left Router -->
+    <circle cx="80" cy="140" r="32" fill="#1e1b4b" stroke="#38bdf8" stroke-width="10" />
+    <circle cx="80" cy="140" r="14" fill="#38bdf8" />
+
+    <!-- Node 2: Left Switch -->
+    <circle cx="176" cy="340" r="34" fill="#1e1b4b" stroke="#6366f1" stroke-width="10" />
+    <circle cx="176" cy="340" r="16" fill="#818cf8" />
+
+    <!-- Node 3: Core Convergence Node (Diamond) -->
+    <polygon points="256,140 296,180 256,220 216,180" fill="#047857" stroke="#10b981" stroke-width="8" />
+    <circle cx="256" cy="180" r="12" fill="#34d399" />
+
+    <!-- Node 4: Right Switch -->
+    <circle cx="336" cy="340" r="34" fill="#1e1b4b" stroke="#6366f1" stroke-width="10" />
+    <circle cx="336" cy="340" r="16" fill="#818cf8" />
+
+    <!-- Node 5: Right Server / Cloud -->
+    <circle cx="432" cy="140" r="32" fill="#1e1b4b" stroke="#38bdf8" stroke-width="10" />
+    <circle cx="432" cy="140" r="14" fill="#38bdf8" />
+  </g>
+  
+  <!-- Subtle Status LED Beacon -->
+  <circle cx="420" cy="92" r="10" fill="#10b981" />
+  <circle cx="420" cy="92" r="18" fill="#10b981" opacity="0.3" />
+</svg>

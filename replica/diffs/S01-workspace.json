@@ -1,0 +1,33 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 1024,
+    "height": 823
+  },
+  "clone": {
+    "width": 1024,
+    "height": 640
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 300
+  },
+  "height_delta_pct": -22.3,
+  "score": 23.9,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 1024,
+      "h": 682,
+      "cells": 75,
+      "where": "middle centre"
+    }
+  ],
+  "files": {
+    "original": "replica/screens/S01-workspace.png",
+    "clone": "replica/clone-screens/S01-workspace.png"
+  },
+  "diff_image": "replica/diffs/S01-workspace.png"
+}

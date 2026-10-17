@@ -1,0 +1,56 @@
+.phone-workspace {flex:1;min-height:0;overflow:auto;background:#f4f4f2;padding:12px;font-family:Arial,sans-serif;color:#24292b}
+.phone-stage {position:relative;width:100%;max-width:640px;aspect-ratio:640/405;margin:0 auto}
+.phone-hardware {position:absolute;left:0;top:0;width:640px;height:405px;transform-origin:top left;isolation:isolate}
+.phone-shell {position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.phone-hardware button {cursor:pointer;font-family:Arial,sans-serif}
+.phone-hardware button:disabled {cursor:default;opacity:.5}
+.phone-hardware button:focus-visible {outline:2px solid #0093bf;outline-offset:2px}
+.phone-handset {position:absolute;left:19px;top:28px;width:90px;height:345px;background:#343b3f;border:3px solid #262d30;border-radius:28px;box-shadow:inset 7px 0 8px #4c555a;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px;transition:transform .15s}
+.phone-handset span:first-child,.phone-handset span:last-child {width:64px;height:66px;background:#2b3236;border-radius:20px;box-shadow:inset 1px 2px 4px #161b1e}
+.phone-handset span:nth-child(2) {width:50px;flex:1;background:#333a3e;border-radius:30px}
+.phone-handset-lifted {transform:translate(-8px,-8px) rotate(-7deg);box-shadow:6px 10px 8px #0003}
+.phone-lcd {position:absolute;left:291px;top:76px;width:216px;height:152px;background:#a3b19d;border:1px solid #535e50;color:#182219;font:10px Arial,sans-serif;overflow:auto}
+.phone-lcd-off {background:#727b6e}
+.phone-lcd-bar {background:#3f493c;color:#edf2e8;display:flex;justify-content:space-between;font-size:10px;padding:2px}
+.phone-number {padding:8px 5px;font-size:16px;min-height:40px}
+.phone-status {padding:5px;position:absolute;bottom:8px;font-size:10px}
+.phone-lcd-info {padding:5px;font-size:10px;line-height:17px;overflow-wrap:anywhere}
+.phone-lcd-info button {display:block;width:100%;text-align:left;color:inherit;background:none;border:0;font-size:10px;line-height:17px;text-decoration:underline}
+.phone-dial-input {position:absolute;left:292px;top:126px;width:211px;height:23px;background:#a3b19d;border:0;font:13px Arial;color:#182219;padding:2px 4px}
+.phone-dial-input:disabled {display:none}
+.phone-softkeys {position:absolute;left:287px;top:237px;width:223px;display:flex;justify-content:space-around}
+.phone-softkeys button {font-size:9px;border:1px solid #1d2529;border-radius:6px;background:#394348;color:#fff;min-width:42px;height:20px}
+.phone-keypad {position:absolute;left:284px;top:277px;display:grid;grid-template-columns:repeat(3,25px);gap:4px 9px}
+.phone-keypad button {border:2px solid #20282c;background:#657074;color:#fff;border-radius:50%;width:25px;height:25px;box-shadow:inset 1px 2px 2px #a8aeb0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.phone-keypad b {font-size:12px;font-weight:normal;line-height:12px}
+.phone-keypad small {font-size:5px;line-height:7px}
+.phone-navigation {position:absolute;left:395px;top:277px;border:3px solid #748991;border-radius:13px;overflow:hidden;display:flex;flex-direction:column}
+.phone-navigation button {background:#344e5a;color:#fff;border:0;width:24px;height:26px;font-size:12px}
+.phone-featurekeys {position:absolute;left:441px;top:285px;width:119px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.phone-featurekeys button {border:1px solid #22292c;border-radius:12px;font-size:7px;color:#fff;background:#3b4448;padding:5px 1px;box-shadow:inset 0 1px 2px #798184}
+.phone-volume {position:absolute;left:453px;top:335px;text-align:center;color:white;font-size:6px}
+.phone-volume div {display:flex;justify-content:center}
+.phone-volume button {width:36px;height:13px;background:#505c62;color:white;border:1px solid #232b30;font-size:12px;line-height:10px}
+.phone-audiokeys {position:absolute;left:442px;top:361px;display:flex;gap:14px}
+.phone-audiokeys button {border:0;background:none;color:#eee;font-size:6px;width:30px}
+.phone-audiokeys span {display:block;border:1px solid #242d32;background:#6c797e;border-radius:50%;font-size:15px;margin:3px auto 0;width:18px;height:18px;line-height:18px;color:#bbc1c3}
+.phone-audiokeys .on {color:#80e965;background:#354e39}
+.phone-linekeys {position:absolute;left:538px;top:93px;display:flex;flex-direction:column;gap:11px}
+.phone-linekeys button {width:14px;height:14px;background:transparent;border:0;border-radius:50%}
+.phone-melody {position:absolute;left:582px;top:39px;display:flex;flex-direction:column;gap:2px}
+.phone-melody button {font-size:8px;padding:1px 5px;border:0;background:#e6e462;color:#000}
+.phone-melody button:first-child {background:#f44132}.phone-melody button:nth-child(2) {background:#ffb93d}
+.phone-call-strip {display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px;font-size:12px;border-top:1px solid #c4c8c6;margin-top:12px}
+.phone-call-strip button {background:#e2e4e3;border:1px solid #929a98;padding:5px 10px;font:12px Arial;cursor:pointer}
+.phone-help {font-size:12px;text-align:center;padding:6px;color:#52605a}
+.phone-ring-lamp {animation:phone-ring-flash .6s steps(1) infinite;filter:drop-shadow(0 0 4px #ff3a3a)}
+@keyframes phone-ring-flash {0%,50% {fill:#ff3434;filter:drop-shadow(0 0 5px #ff3434)} 51%,100% {fill:#552020;filter:none}}
+.phone-window-layer {position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;pointer-events:none;overflow:auto}
+.phone-device-window {border:2px solid #57899b;background:#f1f1ef;width:670px;min-width:300px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);display:flex;flex-direction:column;box-shadow:0 6px 20px #0004;flex:0 1 670px;overflow:hidden;pointer-events:auto}
+.phone-window-title {display:flex;justify-content:space-between;align-items:center;background:#5b9fb3;color:#fff;padding:5px 8px;font:12px Arial}
+.phone-window-title button {background:#c84949;border:1px solid #963737;color:#fff;width:24px;height:22px;cursor:pointer}
+.phone-window-tabs {display:flex;gap:2px;background:#ddd;padding:4px 4px 0;border-bottom:1px solid #aaa}
+.phone-window-tabs button {background:#e9e9e9;border:1px solid #999;padding:4px 12px;font:12px Arial;cursor:pointer}
+.phone-window-tabs button[aria-selected=true] {background:white;border-bottom-color:white}
+.phone-window-body {overflow:auto;min-height:0;display:flex;flex-direction:column;min-width:0}
+@media(max-width:680px) {.phone-window-layer {flex-direction:column;justify-content:flex-start;align-items:center}.phone-device-window {width:100%;flex:0 0 auto;max-height:none;min-width:0}.phone-workspace {padding:8px}.phone-call-strip {gap:8px;font-size:11px}}

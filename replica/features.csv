@@ -1,0 +1,93 @@
+feature,area,priority,original,clone,notes
+Logical Canvas with Pan and Zoom,Workspace Canvas,must,yes,yes,Pan via left drag and smooth zoom with fit-to-screen
+Multi-Device Selection and Group Movement,Workspace Canvas,must,yes,yes,Shift-drag and marquee area selection with undo checkpoint
+Cisco Packet Tracer Toolbar and Secondary Palette,Workspace Canvas,must,yes,yes,Top menu and right vertical palette matching CPT layout
+Canvas Sticky Notes and Colored Zone Boxes,Workspace Canvas,must,yes,yes,Place Note and Draw Rectangle tools for network annotations
+Categorized Device Bottom Shelf Dock,Workspace Canvas,must,yes,yes,Routers Switches Hubs Wireless Security WAN End Devices
+Cabling Tool with Auto and Manual Types,Workspace Canvas,must,yes,yes,Straight Crossover Fiber Serial Console Coaxial Phone Wireless
+Per-Port Link Status LEDs,Workspace Canvas,must,yes,yes,Green forwarding triangles and orange STP blocking circles
+Physical Rack and Wiring Closet View,Workspace Canvas,could,yes,no,19-inch equipment rack and multi-room wiring closet view
+Cluster Sub-level Grouping,Workspace Canvas,could,yes,no,Hierarchical nested sub-networks inside logical canvas
+Dark Mode Theme Toggle,Workspace Canvas,should,no,yes,Scoped dark mode toggle preserving authentic device LEDs
+Multi-Language RTL Localization,Workspace Canvas,should,no,yes,English Arabic and Central Kurdish Sorani with RTL layout
+3D Isometric Cisco Hardware Vector Engine,Device Library,must,yes,yes,15 authentic 3D device types matching CPT and PTAnywhere
+Cisco Router Models (2911 1941 1841),Device Library,must,yes,yes,Pre-configured modular Cisco ISR routers
+Cisco Catalyst Switch Models (2960 3560),Device Library,must,yes,yes,Catalyst Layer 2 and Layer 3 switches with Gigabit uplinks
+End Devices (PC Laptop Server Printer),Device Library,must,yes,yes,Full suite of end stations with configurable NICs
+Wireless Devices (Access Point and Smartphone),Device Library,must,yes,yes,802.11 AP and tilted smartphone with radio wave arcs
+WAN Emulation (Cloud-PT and Modems),Device Library,must,yes,yes,Multi-interface Internet cloud and serial endpoints
+VoIP IP Phone Hardware,Device Library,must,yes,yes,Cisco 7960 style IP Phone with LCD and RJ-45 LAN/PC ports
+ASA Security Appliance (ASA 5505 / 5506-X),Device Library,should,yes,yes,3D model default inside and outside interfaces ASA CLI and ASDM GUI
+Wireless LAN Controller (WLC 3504 / Meraki),Device Library,could,yes,no,Enterprise WLC with web admin dashboard
+IoT Smart Devices and Sensors,Device Library,could,yes,no,Smart home sensors actuators and MCU boards
+Interactive Zoomable Device Physical Chassis,Physical Chassis,must,yes,yes,Front rear and side chassis views with cooling vents and RJ-45
+Power Rocker Switch with LED Interlock,Physical Chassis,must,yes,yes,Toggleable power switch with glowing LED and safety interlock
+Modular Expansion Bays and Hot-Plugging,Physical Chassis,must,yes,yes,Card slot insertion and removal blocked when power is ON
+Linksys WPC300N Wireless-N Card,Physical Chassis,must,yes,yes,Horizontal antenna swivel hinge and ACT LED matching CPT Image 2
+WIC-2T and WIC-1T Serial WAN Modules,Physical Chassis,must,yes,yes,Dual serial smart serial connectors for routers
+GLC SFP Optical Transceiver Modules,Physical Chassis,should,yes,yes,SFP fiber Gigabit modules for Catalyst switches
+Custom Device Icons in Physical and Logical View,Physical Chassis,could,yes,yes,Buttons to customize physical and logical node icons
+Independent Movable Floating Windows,Device Window,must,yes,yes,Movable resizable and minimizable Windows XP / Cisco windows
+Multi-Device Side-by-Side Viewing,Device Window,must,yes,yes,Open multiple router CLIs and PC desktops simultaneously
+Device Navigator Quick Switcher,Device Window,should,no,yes,Dockable navigator to jump between opened device windows
+IP Configuration Desktop App,Desktop Apps,must,yes,yes,Static and DHCP IPv4 addressing subnet gateway and DNS
+Command Prompt Desktop App,Desktop Apps,must,yes,yes,Ping ipconfig arp tracert commands with authentic text output
+PC Wireless Linksys GUI Desktop App,Desktop Apps,must,yes,yes,Link information site survey and wireless profile settings
+Terminal Console Desktop App,Desktop Apps,must,yes,yes,Serial 9600-8-N-1 console connection to Cisco devices
+Web Browser Desktop App,Desktop Apps,must,yes,yes,HTTP client rendering HTML pages from Server-PT
+Cisco IP Communicator / Phone GUI,Desktop Apps,should,yes,yes,Interactive dial pad LCD screen dialing ringing and call audio
+Email Client Desktop App (SMTP/POP3),Desktop Apps,must,yes,yes,Esmtp AUTH PLAIN submission and POP3 retrieval/deletion per command turn over simulated TCP 25 and 110
+SNMP Manager Desktop App (GET/GETNEXT),Desktop Apps,should,yes,yes,SNMPv2c read-only GET and GETNEXT over UDP/161 for four system scalars with Agent config in Server-PT
+Traffic Generator Desktop App,Desktop Apps,could,yes,no,Configurable UDP/TCP test packet injector
+Cisco IOS Multi-Mode CLI Hierarchy,Cisco IOS CLI,must,yes,yes,User Privileged Global Config Interface Subif Line Router
+IOS Contextual Help and Tab Completion,Cisco IOS CLI,must,yes,yes,Question mark help tab auto-completion and standard shortcuts
+IOS Command Abbreviations,Cisco IOS CLI,must,yes,yes,Accepts sh ip int br conf t no shut int fa0/1 sw mo acc
+IOS Command History Navigation,Cisco IOS CLI,must,yes,yes,Up and Down arrow history recall and circular buffer
+Mobile Touch Macro Toolbar,Cisco IOS CLI,should,no,yes,Touch friendly shortcut buttons for common CLI commands
+IOS Show Running-Config Generation,Cisco IOS CLI,must,yes,yes,Dynamic running-config reconstructed from live device state
+IOS Copy Running-Config Startup-Config,Cisco IOS CLI,should,yes,yes,NVRAM saving and persistent startup configuration
+Ethernet MAC Learning and Aging,Layer 2 Protocols,must,yes,yes,Dynamic MAC table population from incoming frame source MAC
+802.1Q VLAN Trunking and Access Ports,Layer 2 Protocols,must,yes,yes,Switchport mode access/trunk encapsulation dot1q and allow-lists
+Native VLAN and Voice Aux VLAN,Layer 2 Protocols,must,yes,yes,Configurable native VLAN and CDP voice VLAN tagging
+Switch Virtual Interface (SVI),Layer 2 Protocols,must,yes,yes,Interface Vlan management IP bound to active VLAN state
+Spanning Tree Root Bridge Calculation,STP Protocols,must,yes,yes,Priority and MAC comparison selecting root and designated ports
+STP Alternate Blocking Port State,STP Protocols,must,yes,yes,Blocked redundant ports rendered with orange circular LEDs
+Dynamic STP BPDU Timers and Transitions,STP Protocols,should,yes,yes,Listening to learning to forwarding timer transitions with animated amber to green LEDs
+Rapid PVST+ (802.1w) and Multiple Spanning Tree,STP Protocols,could,yes,no,PVST+ rapid convergence and MST instances
+EtherChannel Link Aggregation (LACP / PAgP / Manual),EtherChannel,must,yes,yes,Bundled crossover links Po1 to Po6 with oval ring graphic
+IPv4 Addressing and Subnet Calculations,Layer 3 Routing,must,yes,yes,Full classless VLSM subnet masking and CIDR checks
+Connected and Static IPv4 Routes,Layer 3 Routing,must,yes,yes,Directly connected interfaces and ip route next-hop entries
+Default Gateway Forwarding,Layer 3 Routing,must,yes,yes,Forwarding packets outside local subnet to gateway
+OSPF Area 0 Single-Area Routing,Layer 3 Routing,must,yes,yes,Router ospf network statements and route table insertion
+Dynamic OSPF Neighbor Adjacency and DR/BDR,Layer 3 Routing,should,yes,yes,OSPF Hello state tracking with show ip ospf neighbor command
+EIGRP Routing Protocol (DUAL FSM),Layer 3 Routing,could,yes,no,Cisco proprietary DUAL finite state machine and metrics
+BGP Border Gateway Protocol,Layer 3 Routing,could,yes,no,Autonomous system path vector eBGP peering
+IPv6 Addressing and Routing (OSPFv3 / SLAAC),Layer 3 Routing,could,yes,no,Dual-stack IPv6 routing and auto-configuration; slices 1-5 landed 2026-10-17 (address layer, engine ICMPv6/NDP, CLI/Config UI with show commands and ping, SLAAC + DHCPv6 client/server with Desktop mode selector, OSPFv3 with prefix LSAs and O-route installation; see docs/IPV6_IMPLEMENTATION.md)
+DHCP Server Pools and Exclusions,Network Services,must,yes,yes,Ip dhcp pool network default-router dns-server and excluded-address
+DHCP Option 150 for Cisco IP Telephony,Network Services,should,yes,yes,Option 150 TFTP server IP allocation for VoIP phones
+DHCP Dynamic Client Lease Allocation,Network Services,must,yes,yes,Automated lease assignment to end stations and phones
+DHCP Relay Agent (ip helper-address),Network Services,should,yes,yes,Full ip helper-address relay forwarding from client interfaces to central DHCP servers
+DNS Server (A Records and Resolution),Network Services,must,yes,yes,Domain name mapping and PC browser name resolution
+HTTP Server on Server-PT,Network Services,must,yes,yes,Configurable web server hosting HTML pages
+Cisco Unified CME Telephony-Service,VoIP Telephony,should,yes,yes,Telephony-service max-ephones max-dn ip source-address
+Ephone and Ephone-dn Directory Numbers,VoIP Telephony,should,yes,yes,Ephone MAC binding line buttons and extension assignment
+Interactive Phone Calling Ringing and Hold,VoIP Telephony,should,yes,yes,Live dialing between IP phones with ringing and hold
+NAT Overload (Port Address Translation - PAT),Security and WAN,must,yes,yes,Inside/outside translation allowing private subnets to reach Internet
+Standard and Extended IPv4 Access Control Lists,Security and WAN,must,yes,yes,Standard (1-99) and extended (100-199) ACLs with ip access-group packet filtering
+Switch Port Security (Max MAC and Violations),Security and WAN,must,yes,yes,Sticky MAC max addresses protect/restrict/shutdown modes
+GRE Tunnel Interfaces (tunnel source/dest),Security and WAN,must,yes,yes,Point-to-point IP GRE tunnels across WAN core
+Realtime Simulation Mode,Simulation Engine,must,yes,yes,Continuous packet processing without artificial pauses
+Event-Driven Simulation Mode with Step Forward,Simulation Engine,must,yes,yes,Play pause step forward and reset simulation controls
+Visual PDU Mail Envelope Links,Simulation Engine,must,yes,yes,Animated yellow Packet Tracer mail envelopes with protocol tags
+7-Layer OSI PDU Details Inspection,Simulation Engine,must,yes,yes,Layer by layer incoming and outgoing frame decision breakdown
+Simulation Event List Buffer,Simulation Engine,must,yes,yes,Event list recording in-flight and delivered frames
+Official .PKT Binary Decryption and Import,File IO Interop,must,yes,yes,Twofish cipher decoding of encrypted Packet Tracer files
+Packet Tracer XML Project Import and Export,File IO Interop,must,yes,yes,Standard XML network description and configuration import
+Browser LocalStorage Persistence,File IO Interop,must,yes,yes,Auto-save and recovery across reloads and tab closures
+Pre-built CCNA Enterprise and PTAnywhere Labs,File IO Interop,must,yes,yes,Instant loading of complex multi-tier topologies
+Interactive Campus Training Center,Training Engine,should,no,yes,Six structured lessons with guided recall and practice modes
+Real-State Assessment Grader,Training Engine,should,no,yes,Evaluates live network state and CLI commands instead of static regex
+Network Connection Diagnostics Engine,Training Engine,should,no,yes,Detailed device interface expected vs actual checks and CLI fix scripts
+Server Services Tab (DNS/TFTP/SNMP/Mail Service Enablement),Network Services,must,yes,yes,Packet Tracer-style Services tab on server windows; service settings split from Config exactly where PT students look for them
+Simulation Event List Toggle,Simulation Engine,should,yes,yes,Event List button in the simulation bar toggles the user-created packet window (mirrors the PT Alt+I affordance)
+Packet Tracer Keyboard Shortcuts,Workspace Canvas,could,yes,yes,"Alt+S power cycle, Alt+D fast forward, Alt+P/C/I simulation play, capture and event list; shortcut hints in tooltips"

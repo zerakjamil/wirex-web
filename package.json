@@ -1,26 +1,74 @@
 {
-  "name": "cisco-packet-tracer-web",
+  "name": "wirex-web",
   "version": "0.1.0",
-  "private": true,
+  "description": "wireX network simulation and classroom practice workspace",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "next build && node scripts/generateOfflineManifest.mjs",
+    "start": "node .next/standalone/server.js",
+    "lint": "eslint",
+    "test": "tsx --test src/simulator/*.test.ts src/store/*.test.ts src/i18n/*.test.ts",
+    "check": "npm test && npm run lint && npm run build && npm audit --omit=dev",
+    "test:e2e": "playwright test",
+    "electron:prep": "npm run build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "electron:dev": "electron .",
+    "electron:pack": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
+    "electron:dist": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder"
+  },
+  "build": {
+    "appId": "com.wireforge.simulator",
+    "productName": "wireX Network Simulator",
+    "asar": false,
+    "directories": {
+      "output": "dist-electron"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        "dir"
+      ],
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "files": [
+      "electron/**/*",
+      ".next/standalone/**/*",
+      "package.json"
+    ]
   },
   "dependencies": {
-    "next": "16.3.6",
+    "@xyflow/react": "^12.12.0",
+    "fast-xml-parser": "^5.11.2",
+    "next": "16.3.8",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "twofish": "^1.0.1",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

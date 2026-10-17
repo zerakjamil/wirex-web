@@ -1,69 +1,90 @@
-import Image from "next/image";
+'use client'
+
+import React, { useEffect } from 'react'
+import { CiscoTitleBar } from '@/components/cisco/CiscoTitleBar'
+import { CiscoMenuBar } from '@/components/cisco/CiscoMenuBar'
+import { CiscoMainToolbar } from '@/components/cisco/CiscoMainToolbar'
+import { CiscoRightPalette } from '@/components/cisco/CiscoRightPalette'
+import { WorkspaceDialog } from '@/components/cisco/WorkspaceDialog'
+import dynamic from 'next/dynamic'
+import { CiscoWorkspaceHeader } from '@/components/cisco/CiscoWorkspaceHeader'
+const TopologyCanvas = dynamic(
+  () => import('@/components/canvas/TopologyCanvas').then((mod) => mod.TopologyCanvas),
+  { ssr: false }
+)
+import { CiscoBottomBar } from '@/components/cisco/CiscoBottomBar'
+import { DeviceWindows } from '@/components/modals/DeviceWindows'
+import { DeviceNavigator } from '@/components/cisco/DeviceNavigator'
+import { PortSelectModal } from '@/components/modals/PortSelectModal'
+import { PduDetailsModal } from '@/components/modals/PduDetailsModal'
+import { SampleLabsModal } from '@/components/modals/SampleLabsModal'
+import { NetworkDoctorModal } from '@/components/modals/NetworkDoctorModal'
+import { ShareLabModal } from '@/components/modals/ShareLabModal'
+import { ExamRevisionModal } from '@/components/modals/ExamRevisionModal'
+import { DesktopInstallModal } from '@/components/modals/DesktopInstallModal'
+import { useNetworkStore } from '@/store/networkStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { initializeWorkspacePersistence, useWorkspacePersistence } from '@/store/workspacePersistence'
+import {TrainingCatalog,TrainingPanel,TrainingDock,ConnectionDiagnostics} from '@/components/cisco/CampusTraining'
+import {useTrainingStore} from '@/store/trainingStore'
+import {initializeLocale,useI18n} from '@/i18n/useI18n'
+import {initializeTheme} from '@/store/themeStore'
+import { isLoopbackAutomationHost } from '@/store/testHost'
 
 export default function Home() {
+  const activeModal = useNetworkStore(state => state.activeModal)
+  const ready=useWorkspacePersistence(state=>state.ready)
+  const training=useTrainingStore(s=>s.active),{t}=useI18n()
+  const [diagnostics,setDiagnostics]=React.useState(false)
+  const [trainingView,setTrainingView]=React.useState<'lesson'|'network'|'cli'>('network')
+  const wsDialog = useWorkspaceStore(state => state.dialog)
+  const setWsDialog = useWorkspaceStore(state => state.setDialog)
+  // Reapply the saved language when Fast Refresh replaces the locale store.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>initializeLocale(),[initializeLocale])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>initializeTheme(),[initializeTheme])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>initializeWorkspacePersistence(),[initializeWorkspacePersistence])
+  useEffect(() => {
+    if (!isLoopbackAutomationHost(window.location.hostname)) return
+    const automationWindow = window as Window & { __NET_STORE__?: typeof useNetworkStore }
+    automationWindow.__NET_STORE__ = useNetworkStore
+    return () => {
+      delete automationWindow.__NET_STORE__
+    }
+  }, [])
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <main className="pt-app">
+      <CiscoTitleBar onDiagnose={training?undefined:()=>setDiagnostics(!diagnostics)} />
+
+      <CiscoMenuBar />
+
+      <CiscoMainToolbar />
+      <CiscoRightPalette />
+
+      <CiscoWorkspaceHeader />
+
+      {training&&<nav className="pt-training-mobile-tabs" aria-label={t('Training')}>{(['lesson','network','cli'] as const).map(view=><button key={view} aria-pressed={trainingView===view} onClick={()=>setTrainingView(view)}>{t(view==='lesson'?'Lesson':view==='network'?'Network':'CLI')}</button>)}</nav>}
+      <div className="pt-canvas-area" data-training-view={training?trainingView:undefined}>
+        {training?<TrainingPanel/>:<DeviceNavigator />}
+        <div className="pt-topology-container"><TopologyCanvas /></div>
+        {training?<TrainingDock/>:diagnostics&&<aside className="pt-network-doctor"><ConnectionDiagnostics onClose={()=>setDiagnostics(false)}/></aside>}
+      </div>
+
+      <CiscoBottomBar />
+      <WorkspaceDialog />
+      <TrainingCatalog/>
+
+      <DeviceWindows />
+      {activeModal?.type === 'port-select' && <PortSelectModal />}
+      {activeModal?.type === 'pdu' && <PduDetailsModal />}
+      {activeModal?.type === 'labs' && <SampleLabsModal />}
+      <NetworkDoctorModal />
+      <ShareLabModal />
+      <ExamRevisionModal isOpen={wsDialog === 'revision'} onClose={() => setWsDialog(null)} />
+      <DesktopInstallModal isOpen={wsDialog === 'install'} onClose={() => setWsDialog(null)} />
+    </main>
+  )
 }

@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# electron & local data
+/dist-electron/
+/.wireforge/
+/data/
+/public/offline-assets.json
+
+# test results & screenshots
+/test-results/
+*.png
+*.jpg
+*.jpeg
+*.webp
+!public/*.png
+!public/*.jpg
+!public/*.jpeg
+!public/*.svg

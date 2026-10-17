@@ -1,0 +1,18 @@
+{
+  "name": "WireForge",
+  "avoid": [
+    "Cisco Packet Tracer",
+    "Packet Tracer",
+    "NetAcad"
+  ],
+  "domains": [
+    "cisco.com",
+    "netacad.com"
+  ],
+  "colors": [
+    "#00bceb",
+    "#049fd9",
+    "#005073",
+    "#002c3d"
+  ]
+}

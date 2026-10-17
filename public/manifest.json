@@ -1,0 +1,35 @@
+{
+  "name": "wireX - Interactive Network Topology Lab",
+  "short_name": "wireX",
+  "description": "Browser network practice with supported IOS commands, schematic hardware, and ARP/ICMP packet inspection.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4338ca",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Starter Labs",
+      "short_name": "Labs",
+      "description": "Open pre-configured CCNA practice labs",
+      "url": "/?modal=labs",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "New Topology",
+      "short_name": "New",
+      "description": "Start a clean network canvas",
+      "url": "/?action=new",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["education", "developer", "utilities"]
+}
