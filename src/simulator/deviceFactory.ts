@@ -13,6 +13,7 @@ const deviceCounters: Record<DeviceType, number> = {
   tablet: 0,
   smartphone: 0,
   wireless: 0,
+  wlc: 0,
   security: 0,
   hub: 0,
   cloud: 0,
@@ -151,12 +152,22 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('Wireless-N', 'Wlan0', 'wireless', 'up'),
         ]
       } else {
-        // Access Point
+        // Access Point (autonomous) and Lightweight Access Point
         ports = [
           createPort('Port 0', 'Port0', 'fastethernet', 'up'),
           createPort('Port 1', 'Port1', 'wireless', 'up'),
         ]
       }
+      break
+    }
+
+    case 'wlc': {
+      model = customModel || 'WLC-PT'
+      name = `WLC${index}`
+      ports = [
+        createPort('GigabitEthernet0/0', 'Gi0/0', 'gigabitethernet', 'up'),
+        createPort('GigabitEthernet0/1', 'Gi0/1', 'gigabitethernet', 'up'),
+      ]
       break
     }
 
@@ -293,6 +304,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     router: !['819IOX','819HGW','829','1240'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
     switch: [],
     wireless: [],
+    wlc: [],
     smartphone: [],
     tablet: [],
     server: ['PT-HOST-NM-1CGE'],
@@ -328,6 +340,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       vlans: type === 'security'
         ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
+      ...(model === 'LAP-PT' ? { apMode: 'lightweight' as const } : {}),
       ...(type === 'security'
         ? {
             asaInspection: { icmp: true, http: true, tcp: true, dns: true, udp: true, tftp: true },

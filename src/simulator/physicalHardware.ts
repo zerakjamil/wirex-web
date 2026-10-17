@@ -2,7 +2,7 @@ import type {DeviceType,NetworkDevice,NetworkPort,CableType} from '@/types/netwo
 import {MODULE_CATALOG,createPort} from './deviceFactory'
 
 export type HardwareShape='rack'|'tower'|'laptop'|'printer'|'phone'|'display'|'tablet'|'handheld'|'access-point'|'hub'|'cloud'|'modem'
-const shapes:Record<DeviceType,HardwareShape>={router:'rack',switch:'rack',security:'rack',pc:'tower',server:'tower',laptop:'laptop',printer:'printer',phone:'phone',tv:'display',tablet:'tablet',smartphone:'handheld',wireless:'access-point',hub:'hub',cloud:'cloud',modem:'modem'}
+const shapes:Record<DeviceType,HardwareShape>={router:'rack',switch:'rack',wlc:'rack',security:'rack',pc:'tower',server:'tower',laptop:'laptop',printer:'printer',phone:'phone',tv:'display',tablet:'tablet',smartphone:'handheld',wireless:'access-point',hub:'hub',cloud:'cloud',modem:'modem'}
 
 export function getHardwareProfile(device:NetworkDevice){
   const compact=['819IOX','819HGW','829','1240'].includes(device.model)

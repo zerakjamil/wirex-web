@@ -4,7 +4,7 @@ import React, { useRef, useEffect } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { NetworkDevice, NetworkLink } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
-import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab } from '@/simulator/starterLabs'
+import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab, getWlcLab } from '@/simulator/starterLabs'
 import { useI18n } from '@/i18n/useI18n'
 import { getOspfPracticeLab } from '@/simulator/ospfLab'
 import { getRipPracticeLab } from '@/simulator/ripLab'
@@ -44,6 +44,12 @@ export function SampleLabsModal() {
 
   const handleLoadWirelessLab = () => {
     const { devices, links, annotations } = getWirelessLab()
+    loadLab(devices, links, annotations)
+    setActiveModal(null)
+  }
+
+  const handleLoadWlcLab = () => {
+    const { devices, links, annotations } = getWlcLab()
     loadLab(devices, links, annotations)
     setActiveModal(null)
   }
@@ -362,6 +368,21 @@ export function SampleLabsModal() {
           <button
             type="button"
             onClick={handleLoadWirelessLab}
+            style={{ fontWeight: 'bold' }}
+          >
+            {t('Load Lab')}
+          </button>
+        </li>
+
+        <li>
+          <h3>{t('Wireless LAN Controller & Lightweight Access Points')}</h3>
+          <p>
+            {t('Two lightweight access points join WLC1 over the wired LAN, receive both WLANs through CAPWAP configuration updates, and carry client traffic that is centrally switched by the controller.')}
+          </p>
+          <small dir="ltr">{t('Wireless LAN Controller')}</small>
+          <button
+            type="button"
+            onClick={handleLoadWlcLab}
             style={{ fontWeight: 'bold' }}
           >
             {t('Load Lab')}

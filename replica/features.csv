@@ -18,7 +18,7 @@ Wireless Devices (Access Point and Smartphone),Device Library,must,yes,yes,802.1
 WAN Emulation (Cloud-PT and Modems),Device Library,must,yes,yes,Multi-interface Internet cloud and serial endpoints
 VoIP IP Phone Hardware,Device Library,must,yes,yes,Cisco 7960 style IP Phone with LCD and RJ-45 LAN/PC ports
 ASA Security Appliance (ASA 5505 / 5506-X),Device Library,should,yes,yes,3D model default inside and outside interfaces ASA CLI and ASDM GUI
-Wireless LAN Controller (WLC 3504 / Meraki),Device Library,could,yes,no,Enterprise WLC with web admin dashboard
+Wireless LAN Controller (WLC 3504 / Meraki),Device Library,could,yes,no,"Enterprise WLC with web admin dashboard. Landed as a reduced model 2026-10-17: WLC-PT + LAP-PT lightweight APs, layer-2 CAPWAP (discovery/join/config-update/echo/AP timeout, self-healing), central switching with per-client tunnels, AireOS-lite console, Config + GUI (admin/admin) tabs, starter lab, 8 unit tests + 2 browser specs (docs/WLC_IMPLEMENTATION.md). Clone stays no: no IP/UDP CAPWAP or AP DHCP/option-43, untagged tunneling only, configuration-only security, read-only AP groups, no RADIUS/mobility/HA, no measured acceptance against real controller output"
 IoT Smart Devices and Sensors,Device Library,could,yes,no,Smart home sensors actuators and MCU boards
 Interactive Zoomable Device Physical Chassis,Physical Chassis,must,yes,yes,Front rear and side chassis views with cooling vents and RJ-45
 Power Rocker Switch with LED Interlock,Physical Chassis,must,yes,yes,Toggleable power switch with glowing LED and safety interlock

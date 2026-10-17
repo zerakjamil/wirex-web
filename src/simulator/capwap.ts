@@ -37,6 +37,11 @@ export const apWiredPort = (device: NetworkDevice) => device.ports.find(port => 
 export const apWirelessPort = (device: NetworkDevice) => device.ports.find(port => port.type === 'wireless')
 export const wlcManagementPort = (device: NetworkDevice) => device.ports.find(port => port.type === 'gigabitethernet') ?? device.ports.find(port => port.type === 'fastethernet') ?? device.ports[0]
 
+/** True while the topology contains a controller or a lightweight AP, so the realtime loop keeps driving CAPWAP timers even with no packets in flight. */
+export function hasCapwapActivity(devices: NetworkDevice[]) {
+  return devices.some(device => device.type === 'wlc' || isLightweightAp(device))
+}
+
 export function wlcWlans(device: NetworkDevice): WlanProfile[] {
   return (device.config.wlans ?? [])
     .filter(wlan => Number.isInteger(wlan.id) && wlan.id >= CAPWAP_WLAN_ID_MIN && wlan.id <= CAPWAP_MAX_WLANS)

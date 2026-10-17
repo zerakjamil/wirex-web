@@ -13,6 +13,8 @@ import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
 import { usePingFeedback } from './usePingFeedback'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
+import { WlcConfigTab, WlcWebTab } from './WlcTabs'
+import { apAdvertisedWlans, apRuntimeOf, isLightweightAp } from '@/simulator/capwap'
 import { getTerminalSuggestions } from './terminalSuggestions'
 import {useWorkspaceStore} from '@/store/workspaceStore'
 import {useI18n} from '@/i18n/useI18n'
@@ -23,7 +25,12 @@ import { EmailClientApp } from './EmailClientApp'
 export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: () => void }) {
   const {t}=useI18n()
   const devices = useNetworkStore(state=>state.devices)
-  const [activeTab,setActiveTab] = useState<ReturnType<typeof useNetworkStore.getState>['activeTab']>(()=>useNetworkStore.getState().activeTab==='gui'?'cli':useNetworkStore.getState().activeTab)
+  const [activeTab,setActiveTab] = useState<ReturnType<typeof useNetworkStore.getState>['activeTab']>(()=>{
+    const state=useNetworkStore.getState()
+    const initial=state.devices.find(candidate=>candidate.id===deviceId)
+    if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
+    return state.activeTab==='gui'?'cli':state.activeTab
+  })
   const device = devices.find((d) => d.id === deviceId)
   if (!device) return null
   if (device.type === 'phone') return <PhoneDeviceWindow deviceId={device.id} />
@@ -146,6 +153,21 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
             </button>
           )}
 
+          {/* WLC Web GUI Tab */}
+          {device.type === 'wlc' && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('webadmin')}
+              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
+                activeTab === 'webadmin'
+                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
+                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
+              }`}
+            >
+              {t('GUI')}
+            </button>
+          )}
+
           {/* Programming Tab */}
           <button
             type="button"
@@ -170,7 +192,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
         {/* Tab Content Body with Spacious Padding */}
         <div className="flex-1 overflow-hidden p-3 sm:p-4 bg-[#eff2f7] flex flex-col">
           {(activeTab === 'cli' || activeTab === 'gui') && <CliTab deviceId={device.id} onSelectTab={setActiveTab} />}
-          {activeTab === 'config' && <ConfigTab deviceId={device.id} />}
+          {activeTab === 'config' && (device.type === 'wlc' ? <WlcConfigTab deviceId={device.id} /> : <ConfigTab deviceId={device.id} />)}
+          {activeTab === 'webadmin' && device.type === 'wlc' && <WlcWebTab deviceId={device.id} />}
           {activeTab === 'services' && <ServicesTab deviceId={device.id} />}
           {activeTab === 'desktop' && <DesktopTab deviceId={device.id} />}
           {activeTab === 'physical' && <PhysicalTab deviceId={device.id} />}
@@ -1712,12 +1735,20 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                     {availableAps.map((ap) => {
                       const isThisConnected = connectedAp?.id === ap.id
                       const apWlan = ap.ports.find((p) => p.type === 'wireless')
+                      const surveyed = apAdvertisedWlans(ap)
+                      const lapPending = isLightweightAp(ap) && apRuntimeOf(ap).state !== 'run'
+                      const securityText = surveyed.length === 0 || surveyed[0].security === 'none' ? 'None' : surveyed[0].security === 'wep' ? 'WEP' : 'WPA2'
                       return (
                         <tr key={ap.id} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="p-2 font-bold text-slate-800">{ap.name}</td>
-                          <td className="p-2 text-emerald-600 font-semibold">95% (Strong)</td>
+                          <td className="p-2 font-bold text-slate-800">
+                            {surveyed.length > 0 ? surveyed.map((wlan) => wlan.ssid).join(', ') : ap.name}
+                            {lapPending && (
+                              <span className="block text-[11px] font-normal text-amber-600">{t('Lightweight AP — waiting for its controller to join')}</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-emerald-600 font-semibold">{surveyed.length > 0 ? '95% (Strong)' : '—'}</td>
                           <td className="p-2">6</td>
-                          <td className="p-2 text-slate-600">None</td>
+                          <td className="p-2 text-slate-600">{securityText}</td>
                           <td className="p-2 text-right">
                             {isThisConnected ? (
                               <button
@@ -1730,12 +1761,13 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                             ) : (
                               <button
                                 type="button"
+                                disabled={lapPending}
                                 onClick={() => {
                                   if (apWlan) {
                                     connectPorts(device.id, wirelessPort.id, ap.id, apWlan.id, 'wireless')
                                   }
                                 }}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px] cursor-pointer"
+                                className={`px-2.5 py-1 text-white font-bold rounded text-[11px] ${lapPending ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'}`}
                               >
                                 Connect
                               </button>

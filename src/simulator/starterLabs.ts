@@ -873,6 +873,142 @@ export function getWirelessLab(): {
   return { devices, links, annotations }
 }
 
+export function getWlcLab(): {
+  devices: NetworkDevice[]
+  links: NetworkLink[]
+  annotations: NetworkAnnotation[]
+} {
+  const devices: NetworkDevice[] = []
+  const links: NetworkLink[] = []
+  const annotations: NetworkAnnotation[] = []
+
+  const wire = (a: NetworkDevice, aPortIndex: number, b: NetworkDevice, bPortIndex: number, id: string) => {
+    const aPort = a.ports[aPortIndex]
+    const bPort = b.ports[bPortIndex]
+    if (!aPort || !bPort) return
+    aPort.status = 'up'
+    aPort.adminStatus = 'up'
+    bPort.status = 'up'
+    bPort.adminStatus = 'up'
+    const link: NetworkLink = {
+      id,
+      type: 'straight',
+      fromDeviceId: a.id,
+      fromPortId: aPort.id,
+      toDeviceId: b.id,
+      toPortId: bPort.id,
+      status: 'up',
+    }
+    aPort.connectedLinkId = link.id
+    aPort.connectedDeviceId = b.id
+    aPort.connectedPortId = bPort.id
+    bPort.connectedLinkId = link.id
+    bPort.connectedDeviceId = a.id
+    bPort.connectedPortId = aPort.id
+    links.push(link)
+  }
+
+  const associate = (ap: NetworkDevice, client: NetworkDevice, id: string) => {
+    const apPort = ap.ports.find((p) => p.type === 'wireless')
+    const clientPort = client.ports.find((p) => p.type === 'wireless')
+    if (!apPort || !clientPort) return
+    apPort.status = 'up'
+    clientPort.status = 'up'
+    const link: NetworkLink = {
+      id,
+      type: 'wireless',
+      fromDeviceId: ap.id,
+      fromPortId: apPort.id,
+      toDeviceId: client.id,
+      toPortId: clientPort.id,
+      status: 'up',
+    }
+    apPort.connectedLinkId = link.id
+    apPort.connectedDeviceId = client.id
+    apPort.connectedPortId = clientPort.id
+    clientPort.connectedLinkId = link.id
+    clientPort.connectedDeviceId = ap.id
+    clientPort.connectedPortId = apPort.id
+    links.push(link)
+  }
+
+  // 1. Wireless LAN Controller (management address on the first gigabit port)
+  const wlc = createDevice('wlc', 420, 80, 'WLC-PT')
+  wlc.name = 'WLC1'
+  wlc.config.hostname = 'WLC1'
+  wlc.ports[0].ipAddress = '192.168.1.254'
+  wlc.ports[0].subnetMask = '255.255.255.0'
+  wlc.config.wlans = [
+    { id: 1, name: 'CORP', ssid: 'CORP-NET', enabled: true, vlan: 0, security: 'wpa2-psk', passphrase: 'wireforge1' },
+    { id: 2, name: 'GUEST', ssid: 'GUEST-WIFI', enabled: true, vlan: 0, security: 'none' },
+  ]
+  devices.push(wlc)
+
+  // 2. Access layer switch (PortFast on every edge port so CAPWAP can start immediately)
+  const sw = createDevice('switch', 420, 240, '2960-24TT')
+  sw.name = 'SW1'
+  sw.config.hostname = 'SW1'
+  sw.ports.forEach((port) => { port.portfast = true })
+  devices.push(sw)
+
+  // 3. Two lightweight access points
+  const lap1 = createDevice('wireless', 150, 200, 'LAP-PT')
+  lap1.name = 'LAP1'
+  const lap2 = createDevice('wireless', 690, 200, 'LAP-PT')
+  lap2.name = 'LAP2'
+  devices.push(lap1, lap2)
+
+  // 4. Wireless clients (one per access point)
+  const phone1 = createDevice('smartphone', 110, 420, 'Smartphone-PT')
+  phone1.name = 'Smartphone1'
+  phone1.ports[0].ipAddress = '192.168.1.101'
+  phone1.ports[0].subnetMask = '255.255.255.0'
+  phone1.config.defaultGateway = '192.168.1.1'
+  devices.push(phone1)
+
+  const phone2 = createDevice('smartphone', 730, 420, 'Smartphone-PT')
+  phone2.name = 'Smartphone2'
+  phone2.ports[0].ipAddress = '192.168.1.102'
+  phone2.ports[0].subnetMask = '255.255.255.0'
+  phone2.config.defaultGateway = '192.168.1.1'
+  devices.push(phone2)
+
+  // 5. Wired ping target
+  const pc = createDevice('pc', 420, 420, 'PC-PT')
+  pc.name = 'PC1'
+  pc.ports[0].ipAddress = '192.168.1.10'
+  pc.ports[0].subnetMask = '255.255.255.0'
+  pc.ports[0].status = 'up'
+  pc.ports[0].adminStatus = 'up'
+  devices.push(pc)
+
+  // Wired links
+  wire(wlc, 0, sw, 0, 'link-wlc-sw')
+  wire(lap1, 0, sw, 1, 'link-lap1-sw')
+  wire(lap2, 0, sw, 2, 'link-lap2-sw')
+  wire(pc, 0, sw, 3, 'link-pc-sw')
+
+  // Wireless associations
+  associate(lap1, phone1, 'wlink-lap1-phone1')
+  associate(lap2, phone2, 'wlink-lap2-phone2')
+
+  // Lab instructions note
+  annotations.push({
+    id: 'ann-wlc-guide',
+    type: 'note',
+    x: 30,
+    y: 10,
+    width: 560,
+    height: 150,
+    title: 'Wireless LAN Controller & Lightweight Access Points',
+    text: '1. LAP1 and LAP2 ship with no configuration of their own: they discover WLC1 over the wired LAN and join it (CAPWAP discovery -> join -> run).\n2. Double-click WLC1 -> GUI, sign in with admin / admin, and open Monitor to see both access points and both WLANs.\n3. WLC1 -> Config: edit the CORP WLAN (for example rename the SSID) and watch the change reach both access points through a CAPWAP configuration update.\n4. Open Event List (Alt+E) to follow the CAPWAP discovery, join and configuration messages.\n5. Ping from Smartphone1 to PC1 (192.168.1.10) and to Smartphone2 (192.168.1.102): wireless frames are encapsulated to WLC1 and centrally switched.\n6. WLC1 -> CLI: try "show wlan summary", "show ap summary", "show client summary" and "config wlan disable 2".',
+    color: '#eff6ff',
+    borderColor: '#3b82f6',
+  })
+
+  return { devices, links, annotations }
+}
+
 export function getPtAnywhereLab(): {
   devices: NetworkDevice[]
   links: NetworkLink[]

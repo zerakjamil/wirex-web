@@ -113,6 +113,7 @@ export function normalizeInterfaceName(
 
 export function getPrompt(device: NetworkDevice): string {
   const host = device.config.hostname || device.name
+  if (device.type === 'wlc') return `${host}>`
   switch (device.currentCliMode) {
     case 'user':
       return `${host}>`

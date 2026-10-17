@@ -33,7 +33,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
   uniqueIds(devices)
   for (const device of devices) {
     string(device.name); string(device.model); finite(device.x); finite(device.y)
-    oneOf(device.type, ['router', 'switch', 'pc', 'laptop', 'server', 'printer', 'phone', 'tv', 'tablet', 'smartphone', 'wireless', 'security', 'hub', 'cloud', 'modem'])
+    oneOf(device.type, ['router', 'switch', 'pc', 'laptop', 'server', 'printer', 'phone', 'tv', 'tablet', 'smartphone', 'wireless', 'wlc', 'security', 'hub', 'cloud', 'modem'])
     const config = object(device.config); string(config.hostname)
     textFields(config, [], ['defaultGateway', 'dnsServer', 'banner', 'htmlContent', 'secretPassword', 'snmpSystemContact', 'snmpSystemLocation'])
     textFields(config, [], ['ospfRouterId'])
@@ -108,6 +108,31 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     }
     for (const field of ['ripAutoSummary', 'ripPassiveDefault']) if (config[field] !== undefined && typeof config[field] !== 'boolean') throw new Error('Invalid RIP setting.')
     if (config.ripVersion !== undefined) oneOf(config.ripVersion, ['1', '2'])
+    if (config.apMode !== undefined) oneOf(config.apMode, ['autonomous', 'lightweight'])
+    if (config.wlans !== undefined) {
+      for (const entry of array(config.wlans, 16).map(object)) {
+        if (!Number.isInteger(entry.id) || Number(entry.id) < 1 || Number(entry.id) > 16) throw new Error('Invalid wireless LAN identifier.')
+        string(entry.name); string(entry.ssid)
+        if (entry.enabled !== undefined && typeof entry.enabled !== 'boolean') throw new Error('Invalid wireless LAN state.')
+        if (entry.vlan !== undefined && (!Number.isInteger(entry.vlan) || Number(entry.vlan) < 0 || Number(entry.vlan) > 4094)) throw new Error('Invalid wireless LAN VLAN.')
+        oneOf(entry.security, ['none', 'wep', 'wpa2-psk'])
+        if (entry.passphrase !== undefined) string(entry.passphrase)
+        if (entry.wepKey !== undefined) string(entry.wepKey)
+      }
+    }
+    if (device.apRuntime !== undefined) {
+      const runtime = object(device.apRuntime)
+      oneOf(runtime.mode, ['autonomous', 'lightweight'])
+      oneOf(runtime.state, ['idle', 'discovery', 'join', 'run'])
+    }
+    if (device.wlcRuntime !== undefined) {
+      const runtime = object(device.wlcRuntime)
+      if (runtime.aps !== undefined) array(runtime.aps, 256)
+      if (runtime.clientTunnels !== undefined) array(runtime.clientTunnels, 4096)
+      if (runtime.pendingConfig !== undefined) array(runtime.pendingConfig, 256)
+      if (runtime.configSeq !== undefined && (!Number.isSafeInteger(runtime.configSeq) || Number(runtime.configSeq) < 0)) throw new Error('Invalid CAPWAP configuration sequence.')
+      if (runtime.seq !== undefined && (!Number.isSafeInteger(runtime.seq) || Number(runtime.seq) < 0)) throw new Error('Invalid CAPWAP sequence.')
+    }
     if (config.ospfProcessId !== undefined && (!Number.isInteger(config.ospfProcessId) || Number(config.ospfProcessId) < 1 || Number(config.ospfProcessId) > 65535)) throw new Error('Invalid OSPF process ID.')
     if (device.ospfSequence !== undefined && (!Number.isSafeInteger(device.ospfSequence) || Number(device.ospfSequence) < 0)) throw new Error('Invalid OSPF sequence.')
     const ports = array(device.ports, 512).map(object); uniqueIds(ports)

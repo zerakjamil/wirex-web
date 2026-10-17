@@ -40,6 +40,7 @@ export function Cisco3DIcon({
       {type === 'phone' && <Phone3DIcon size={size} />}
       {type === 'tv' && <Tv3DIcon size={size} />}
       {type === 'modem' && <Modem3DIcon size={size} />}
+      {type === 'wlc' && <Wlc3DIcon />}
     </div>
   )
 }
@@ -796,6 +797,40 @@ function Tv3DIcon({ size }: { size: number }) {
       <rect x="10" y="14" width="80" height="42" rx="3" fill="#0f172a" stroke="#334155" strokeWidth="2" />
       <rect x="14" y="18" width="72" height="34" rx="1.5" fill="#0284c7" />
       <path d="M 16 20 L 40 20 L 22 50 L 16 50 Z" fill="#ffffff" opacity="0.25" />
+    </svg>
+  )
+}
+
+/**
+ * 16. 3D Wireless LAN Controller
+ * Rack-mount appliance with front-panel status LEDs and diversity antennas.
+ */
+function Wlc3DIcon() {
+  return (
+    <svg viewBox="0 0 100 85" className="w-full h-full drop-shadow-md overflow-visible">
+      <defs>
+        <linearGradient id="wlc-front" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#64748b" />
+          <stop offset="100%" stopColor="#334155" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="76" rx="40" ry="7" fill="rgba(15,23,42,0.35)" />
+      {/* Diversity antennas */}
+      <line x1="30" y1="30" x2="24" y2="9" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="24" cy="9" r="2.4" fill="#0ea5e9" />
+      <line x1="70" y1="30" x2="76" y2="9" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="76" cy="9" r="2.4" fill="#0ea5e9" />
+      {/* Chassis */}
+      <polygon points="14,30 74,30 74,72 14,72" fill="url(#wlc-front)" stroke="#0f172a" strokeWidth="1.5" />
+      <polygon points="74,30 88,20 88,62 74,72" fill="#0f172a" />
+      <polygon points="14,30 28,20 88,20 74,30" fill="#94a3b8" stroke="#cbd5e1" strokeWidth="0.8" />
+      {/* Front-panel slots */}
+      {[38, 50, 62].map((y) => (
+        <g key={y}>
+          <rect x="20" y={y} width="48" height="7" rx="1" fill="#1e293b" stroke="#475569" strokeWidth="0.6" />
+          <circle cx="24" cy={y + 3.5} r="1.3" fill={y === 38 ? '#22c55e' : y === 50 ? '#38bdf8' : '#f59e0b'} />
+        </g>
+      ))}
     </svg>
   )
 }

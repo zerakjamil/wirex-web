@@ -1,4 +1,4 @@
-import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment } from '@/types/network'
+import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry } from '@/types/network'
 import { isInSameSubnet, ipToNumber, isValidIpv4 } from './protocols/ip'
 import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAddress, ipv6SolicitedNodeMulticastMac, isValidIpv6, parseIpv6, formatIpv6, ipv6PrefixMask, ipv6AddressFromPrefixAndInterfaceId, ipv6InterfaceIdFromMac, isIpv6LinkLocal, isIpv6Multicast } from './protocols/ipv6'
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates } from './spanningTree'
@@ -12,7 +12,7 @@ import { prepareRipTick, receiveRipPacket, hasRip, ripEnabled } from './rip'
 import type { RipOutbound } from './rip'
 import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './eigrp'
 import type { EigrpOutbound } from './eigrp'
-import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, wlcManagementPort, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
+import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES, TFTP_BLOCK_SIZE, tftpBlockCount, tftpBlockDataHex } from './tftp'
 import { isValidSnmpCommunity, isValidSnmpOid, resolveSnmpSystemObject, type SnmpOperation } from './snmp'
 import { activeHsrpGroup, hsrpVirtualMac, prepareHsrpTick } from './hsrp'
@@ -1455,6 +1455,67 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     return sendIp(byId.get(device.id)!, target, 0, incoming)
   }
 
+  const learnWirelessClient = (ap: NetworkDevice, macAddress: string, link: NetworkLink) => {
+    const wirelessPort = apWirelessPort(ap)
+    if (!wirelessPort) return
+    const edited = editDevice(ap.id)
+    edited.macTable = [...edited.macTable.filter(entry => entry.macAddress.toLowerCase() !== macAddress.toLowerCase()).slice(-1023), { macAddress, portId: wirelessPort.shortName, linkId: link.id, vlan: 1, age: 0, lastSeenTick: simulationTick }]
+  }
+  const deliverInnerToWireless = (ap: NetworkDevice, inner: PacketPdu, tunnelHops: number) => {
+    const wirelessPort = apWirelessPort(ap)
+    if (!wirelessPort) return
+    const clientLink = clientLinkFor(updatedDevices, links, ap, inner.sourceMac)
+    const edited = editDevice(ap.id)
+    edited.macTable = [...edited.macTable.filter(entry => entry.macAddress.toLowerCase() !== inner.sourceMac.toLowerCase()).slice(-1023), { macAddress: inner.sourceMac, portId: wirelessPort.shortName, linkId: clientLink?.id, vlan: 1, age: 0, lastSeenTick: simulationTick }]
+    const lower = inner.destMac.toLowerCase()
+    const group = lower === BROADCAST || lower.startsWith('01:') || lower.startsWith('33:33')
+    const known = group ? undefined : edited.macTable.find(entry => entry.macAddress.toLowerCase() === lower)
+    for (const outLink of linksByPort.get(`${ap.id}|${wirelessPort.id}`) ?? []) {
+      if (!liveLinks.has(outLink.id)) continue
+      if (!group && known?.linkId && outLink.id !== known.linkId) continue
+      enqueue(onWire(ap, wirelessPort, outLink, inner, tunnelHops))
+    }
+  }
+  const tunnelInnerToAp = (wlc: NetworkDevice, entry: WlcApEntry, inner: PacketPdu, tunnelHops: number, apName: string): boolean => {
+    const port = wlc.ports.find(candidate => candidate.id === entry.portId)
+    const outLink = linksById.get(entry.linkId)
+    if (!port || !outLink || !liveLinks.has(outLink.id) || !isUp(wlc, port)) return false
+    enqueue(onWire(wlc, port, outLink, capwapDataPdu(wlc, port, entry.apMac, inner, apName, entry.apId, apName, wlc.id), tunnelHops))
+    return true
+  }
+  const wlcForwardInner = (wlc: NetworkDevice, inner: PacketPdu, apId: string, tunnelHops: number): number => {
+    const edited = editDevice(wlc.id)
+    const runtime = edited.wlcRuntime ?? wlcRuntimeOf(wlc)
+    const tunnels = [...runtime.clientTunnels.filter(tunnel => tunnel.macAddress.toLowerCase() !== inner.sourceMac.toLowerCase()), { macAddress: inner.sourceMac, apId }]
+    const aps = runtime.aps.map(entry => entry.apId === apId ? { ...entry, lastSeenTick: simulationTick } : entry)
+    edited.wlcRuntime = { ...runtime, clientTunnels: tunnels, aps }
+    const lower = inner.destMac.toLowerCase()
+    const group = lower === BROADCAST || lower.startsWith('01:') || lower.startsWith('33:33')
+    const nameOf = (entryId: string) => byId.get(entryId)?.name ?? entryId
+    const tunnelTarget = group ? undefined : tunnels.find(tunnel => tunnel.macAddress.toLowerCase() === lower)
+    if (tunnelTarget) {
+      const entry = aps.find(candidate => candidate.apId === tunnelTarget.apId)
+      if (entry && tunnelInnerToAp(wlc, entry, inner, tunnelHops, nameOf(entry.apId))) return 1
+    }
+    if (!group && !tunnelTarget) {
+      const wiredTarget = edited.macTable.find(entry => entry.macAddress.toLowerCase() === lower)
+      const port = wiredTarget && wlc.ports.find(candidate => candidate.id === wiredTarget.portId || candidate.shortName === wiredTarget.portId || candidate.name === wiredTarget.portId)
+      const outLink = wiredTarget?.linkId ? linksById.get(wiredTarget.linkId) : undefined
+      if (port && outLink && liveLinks.has(outLink.id) && isUp(wlc, port)) { enqueue(onWire(wlc, port, outLink, inner, tunnelHops)); return 0 }
+    }
+    // Flood toward the wired LAN and the remaining wireless tunnels.
+    for (const port of wlc.ports) {
+      if (!isUp(wlc, port)) continue
+      for (const outLink of linksByPort.get(`${wlc.id}|${port.id}`) ?? []) {
+        if (!liveLinks.has(outLink.id)) continue
+        enqueue(onWire(wlc, port, outLink, inner, tunnelHops))
+      }
+    }
+    let forwarded = 0
+    for (const entry of aps) if (tunnelInnerToAp(wlc, entry, inner, tunnelHops, nameOf(entry.apId))) forwarded += 1
+    return forwarded
+  }
+
   for (const packet of inFlightPackets.slice(0, packetQueueLimit)) {
     trackTcpTransmission(packet.pdu)
     if (packet.pdu.pendingPacket) trackTcpTransmission(packet.pdu.pendingPacket)
@@ -1500,6 +1561,75 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     if ((packet.pdu.protocol === 'ICMPv6' || packet.pdu.protocol === 'DHCPv6') && !isBridge(receiver)) { handleIpv6Frame(receiver, packet, link, receivingPort, vlan); continue }
     let pdu = packet.pdu
     const hops = (packet.hops ?? 0) + 1
+    if (packet.pdu.protocol === 'CAPWAP' && (isWlcDevice(receiver) || isLightweightAp(receiver))) {
+      const received = receiveCapwapPacket(byId.get(receiver.id)!, receivingPort, link.id, packet.pdu, simulationTick)
+      updatedDevices[deviceIndices.get(receiver.id)!] = received.device
+      byId.set(receiver.id, received.device); mutable.add(receiver.id)
+      if (received.reason) { drop(packet, received.reason); continue }
+      for (const intent of received.outbound) sendCapwap(intent)
+      if (received.inner) {
+        if (isWlcDevice(receiver)) {
+          const forwardedTunnels = wlcForwardInner(byId.get(receiver.id)!, received.inner, received.innerApId ?? '', hops)
+          if (forwardedTunnels > 0) packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} forwarded the frame into ${forwardedTunnels} CAPWAP tunnel${forwardedTunnels === 1 ? '' : 's'}.` })
+        } else {
+          deliverInnerToWireless(byId.get(receiver.id)!, received.inner, hops)
+        }
+      }
+      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: received.note ?? `${receiver.name} processed a CAPWAP frame.` })
+      continue
+    }
+    if (isLightweightAp(receiver) && receivingPort.type === 'wireless') {
+      const runtime = apRuntimeOf(byId.get(receiver.id)!)
+      const wired = apWiredPort(receiver)
+      learnWirelessClient(receiver, packet.pdu.sourceMac, link)
+      if (runtime.state !== 'run' || !runtime.wlcMac || !wired || !isUp(receiver, wired)) {
+        drop(packet, `${receiver.name} is a lightweight access point without an operational CAPWAP Run state; the frame is not forwarded.`)
+        continue
+      }
+      const controller = runtime.selectedWlcId ? byId.get(runtime.selectedWlcId) : undefined
+      const outer = capwapDataPdu(receiver, wired, runtime.wlcMac, packet.pdu, controller?.name ?? 'the wireless LAN controller', receiver.id, receiver.name, runtime.selectedWlcId)
+      let tunnelled = false
+      for (const outLink of linksByPort.get(`${receiver.id}|${wired.id}`) ?? []) {
+        if (!liveLinks.has(outLink.id)) continue
+        enqueue(onWire(receiver, wired, outLink, outer, hops)); tunnelled = true
+      }
+      if (!tunnelled) { drop(packet, `${receiver.name} has no operational CAPWAP path to its controller.`); continue }
+      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} encapsulated the ${packet.pdu.protocol} frame for central switching by ${controller?.name ?? 'its controller'}.` })
+      continue
+    }
+    if (isLightweightAp(receiver)) {
+      drop(packet, `${receiver.name} is a lightweight access point and does not forward wired frames locally.`)
+      continue
+    }
+    if (isWlcDevice(receiver)) {
+      const lowerDest = packet.pdu.destMac.toLowerCase()
+      const addressedToController = receiver.ports.some(port => port.macAddress.toLowerCase() === lowerDest)
+      const arpForController = packet.pdu.protocol === 'ARP' && packet.pdu.payload.arpType === 'request' && receiver.ports.some(port => port.ipAddress && port.ipAddress === packet.pdu.payload.targetIp)
+      if (!addressedToController && !arpForController) {
+        const group = lowerDest === BROADCAST || lowerDest.startsWith('01:') || lowerDest.startsWith('33:33')
+        const runtime = wlcRuntimeOf(receiver)
+        const edited = editDevice(receiver.id)
+        if (!group) {
+          edited.macTable = [...edited.macTable.filter(entry => entry.macAddress.toLowerCase() !== packet.pdu.sourceMac.toLowerCase()).slice(-1023), { macAddress: packet.pdu.sourceMac, portId: receivingPort.shortName, linkId: link.id, vlan, age: 0, lastSeenTick: simulationTick }]
+        }
+        const tunnelHit = group ? undefined : runtime.clientTunnels.find(tunnel => tunnel.macAddress.toLowerCase() === lowerDest)
+        const tunnelTargets = group ? runtime.aps.map(entry => entry.apId) : tunnelHit ? [tunnelHit.apId] : []
+        let forwarded = 0
+        for (const apId of tunnelTargets) {
+          const entry = (edited.wlcRuntime ?? runtime).aps.find(candidate => candidate.apId === apId)
+          if (!entry) continue
+          const apName = byId.get(entry.apId)?.name ?? entry.apId
+          if (tunnelInnerToAp(receiver, entry, packet.pdu, hops, apName)) forwarded += 1
+        }
+        if (forwarded) {
+          packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} forwarded the frame into ${forwarded} CAPWAP tunnel${forwarded === 1 ? '' : 's'}.` })
+          continue
+        }
+        drop(packet, group ? `${receiver.name} has no registered access points to forward the broadcast to.` : `${receiver.name} is a wireless LAN controller and does not forward wired frames between its own ports.`)
+        continue
+      }
+      // ARP requests for the management address and frames addressed to the controller fall through to the normal host handling below.
+    }
     const subinterfaces = receiver.ports.filter(p => p.parentPortId === receivingPort.id)
     const subinterface = subinterfaces.find(p => isUp(receiver,p) && (packet.vlanId === undefined ? p.dot1qNative : p.dot1qVlan === packet.vlanId))
     if (receiver.type === 'router' && (packet.vlanId !== undefined || subinterfaces.length > 0 && !receivingPort.ipAddress) && !subinterface) { drop(packet, `No operational 802.1Q subinterface on ${receivingPort.name} for ${packet.vlanId === undefined ? 'untagged traffic' : `VLAN ${packet.vlanId}`}.`); continue }

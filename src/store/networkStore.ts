@@ -39,6 +39,8 @@ import {
 } from '@/simulator/engine'
 import type { SnmpOperation } from '@/simulator/snmp'
 import { parseIosCommand } from '@/simulator/ios/ciscoParser'
+import { executeWlcCommand } from '@/simulator/ios/wlcCli'
+import { hasCapwapActivity } from '@/simulator/capwap'
 import { getCcnaEnterpriseLab } from '@/simulator/starterLabs'
 import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
@@ -105,7 +107,7 @@ interface NetworkStore {
   closeDeviceWindow: (deviceId: string) => void
   minimizeDeviceWindow: (deviceId: string) => void
   focusDeviceWindow: (deviceId: string) => void
-  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'imported' | 'gui' | 'asdm'
+  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'imported' | 'gui' | 'webadmin' | 'asdm'
   connectingSource: { deviceId: string; portId?: string } | null
 
   // Actions
@@ -963,6 +965,12 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       return finish('% Device is powered off. Turn power on in Physical tab to access CLI.')
     }
 
+    if (dev.type === 'wlc') {
+      const result = executeWlcCommand(dev, rawCmd, devices, get().links)
+      if (result.config) get().updateDeviceConfig(deviceId, result.config)
+      return finish(result.output)
+    }
+
     if (/^(?:do )?show ephone(?: registered)?$/i.test(rawCmd.trim()) && dev.currentCliMode !== 'user') {
       const regs=getPhoneRegistrations(devices,get().links).filter(reg=>reg.routerId===deviceId)
       return finish(`CME registered ephones: ${regs.filter(reg=>reg.registered).length}\n${regs.map(reg=>`${reg.extension.padEnd(8)} ${reg.macAddress} ${reg.ipAddress || '-'} ${reg.reason}`).join('\n')}`)
@@ -1285,7 +1293,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   tickSimulation: () => {
     const { devices, links, inFlightPackets, simulationMode, simulationPlaying, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     if (simulationMode === 'simulation' && !simulationPlaying) return
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})
@@ -1318,7 +1326,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   stepSimulation: () => {
     const { devices, links, inFlightPackets, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning)set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})
