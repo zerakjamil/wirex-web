@@ -184,7 +184,7 @@ export function getForwardingLinks(devices: NetworkDevice[], links: NetworkLink[
   return getStpTopology(devices,links,vlan).forwardingLinks
 }
 
-function outgoingRoute(device: NetworkDevice, targetIp: string, excludeGreTunnels = false): { port: NetworkPort; nextHop: string } | undefined {
+export function outgoingRoute(device: NetworkDevice, targetIp: string, excludeGreTunnels = false): { port: NetworkPort; nextHop: string } | undefined {
   const routes = device.routingTable.filter(r => isInSameSubnet(targetIp, r.network, r.netmask))
     .map(r => ({
       port: device.ports.find(p => p.name === r.interfaceName || p.shortName === r.interfaceName || p.id === r.interfaceName)

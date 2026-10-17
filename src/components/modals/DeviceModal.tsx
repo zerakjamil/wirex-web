@@ -21,6 +21,7 @@ import {useI18n} from '@/i18n/useI18n'
 import {PhysicalDeviceView} from './PhysicalDeviceView'
 import { EmailServiceSettings } from './EmailServiceSettings'
 import { EmailClientApp } from './EmailClientApp'
+import { TrafficGeneratorApp } from './TrafficGeneratorApp'
 import { IotTab, IotServiceSection } from './IotTabs'
 
 export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: () => void }) {
@@ -1202,7 +1203,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
     requestTftpRead: state.requestTftpRead, requestSnmpQuery: state.requestSnmpQuery, udpTransactions: state.udpTransactions,
     dnsTransactions: state.dnsTransactions, dhcpTransactions: state.dhcpTransactions, simulationWarning: state.simulationWarning,
   })))
-  const [activeApp, setActiveApp] = useState<'launcher' | 'ip' | 'wireless' | 'cmd' | 'terminal' | 'browser' | 'tftp' | 'snmp' | 'email'>('launcher')
+  const [activeApp, setActiveApp] = useState<'launcher' | 'ip' | 'wireless' | 'cmd' | 'terminal' | 'browser' | 'tftp' | 'snmp' | 'email' | 'traffic'>('launcher')
   const [ipv6HostDraft, setIpv6HostDraft] = useState<{ portId: string; text: string } | null>(null)
   const [leaseClockNow,setLeaseClockNow]=useState(0)
   const [urlInput, setUrlInput] = useState('http://192.168.100.10')
@@ -1558,6 +1559,8 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
   }
 
   if (activeApp === 'email') return <EmailClientApp deviceId={device.id} onBack={() => setActiveApp('launcher')} />
+
+  if (activeApp === 'traffic') return <TrafficGeneratorApp deviceId={device.id} onBack={() => setActiveApp('launcher')} />
 
   // 2. PC Wireless App
   if (activeApp === 'wireless') {
@@ -2314,6 +2317,18 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
         >
           <div aria-hidden="true" className="w-12 h-12 rounded-xl bg-violet-100 border border-violet-300 text-violet-800 flex items-center justify-center shadow-xs font-bold text-xs">SNMP</div>
           <span className="text-xs font-bold text-slate-800">{t('SNMP Manager')}</span>
+        </button>}
+
+        {(device.type === 'pc' || device.type === 'laptop') && <button
+          type="button"
+          onClick={() => setActiveApp('traffic')}
+          aria-label={t('Traffic Generator')}
+          className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
+        >
+          <div aria-hidden="true" className="w-12 h-12 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center shadow-xs">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 17l4-8 4 5 3-6 3 4 4-7" /><path d="M3 20h18" /></svg>
+          </div>
+          <span className="text-xs font-bold text-slate-800">{t('Traffic Generator')}</span>
         </button>}
       </div>
     </div>

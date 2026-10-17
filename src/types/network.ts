@@ -772,6 +772,7 @@ export interface PacketPdu {
   sourceIp: string
   destIp: string
   ttl: number
+  generatorColor?: string
   pendingPacket?: PacketPdu
   payload: {
     ospf?: OspfPacket
@@ -800,6 +801,7 @@ export interface PacketPdu {
     greKeepaliveType?: 'request' | 'reply'
     greKeepaliveTunnel?: string
     greKeepaliveSequence?: number
+    dscp?: number
     type?: string
     icmpType?: 'echo-request' | 'echo-reply'
     icmpSeq?: number

@@ -63,6 +63,7 @@ import { parseIosCommand } from '@/simulator/ios/ciscoParser'
 import { executeWlcCommand } from '@/simulator/ios/wlcCli'
 import { hasCapwapActivity } from '@/simulator/capwap'
 import { hasIotActivity, iotServerRuntimeOf, isIotServer, applyIotLocalState } from '@/simulator/iot'
+import { stampTrafficGeneratorPackets, trafficGeneratorIntervalTicks, validateTrafficGeneratorSettings, TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, type TrafficGeneratorError, type TrafficGeneratorRun, type TrafficGeneratorSettings } from '@/simulator/trafficGenerator'
 import { getCcnaEnterpriseLab } from '@/simulator/starterLabs'
 import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
@@ -194,6 +195,12 @@ interface NetworkStore {
   setIotState: (deviceId: string, patch: IotThingState) => void
   setIpv6HostMode: (deviceId: string, portId: string, mode: 'static' | 'auto' | 'dhcpv6') => void
 
+  trafficGenerators: TrafficGeneratorRun[]
+  startTrafficGenerator: (deviceId: string, settings: TrafficGeneratorSettings, intervalSeconds: number) => { ok: true; runId: string } | { ok: false; error: TrafficGeneratorError }
+  stopTrafficGenerator: (runId: string) => void
+  sendTrafficGeneratorOnce: (deviceId: string, settings: TrafficGeneratorSettings) => { ok: true; requestId: string | null } | { ok: false; error: TrafficGeneratorError }
+  advanceTrafficGenerators: () => void
+
   toggleSimulationMode: () => void
   setSimulationPlaying: (playing: boolean) => void
   tickSimulation: () => void
@@ -211,6 +218,18 @@ const SIMULATION_EVENT_LIMIT = 300
 
 export function simulationHistoryLimitFor(deviceCount: number) {
   return deviceCount > 150 ? 8 : deviceCount > 60 ? 20 : 50
+}
+
+function dispatchTrafficGenerator(state: NetworkStore, deviceId: string, settings: TrafficGeneratorSettings): string | null {
+  const target = settings.target.trim()
+  switch (settings.application) {
+    case 'icmp': return state.sendPing(deviceId, target)
+    case 'http': return state.requestHttp(deviceId, target, settings.path.trim() || '/')
+    case 'tftp': return state.requestTftpRead(deviceId, target, settings.fileName.trim())
+    case 'udp': return state.requestUdpEcho(deviceId, target, settings.port, settings.data)
+    case 'dns': return state.requestDns(deviceId, target)
+    case 'ntp': return state.requestNtp(deviceId, target)
+  }
 }
 
 let internalSimulationSet = false
@@ -522,6 +541,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   activeTool: 'select',
   connectingSource: null,
   inFlightPackets: [],
+  trafficGenerators: [],
   pingResults: [],
   httpTransactions: [],
   emailTransactions: [],
@@ -810,6 +830,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId,
         physicalAssignment: id in state.physicalAssignment ? Object.fromEntries(Object.entries(state.physicalAssignment).filter(([deviceId]) => deviceId !== id)) : state.physicalAssignment,
         clusters: purgeDeviceFromClusters(state.clusters, id),
+        trafficGenerators: state.trafficGenerators.filter(run => run.deviceId !== id),
       }
     })
   },
@@ -1436,6 +1457,68 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     return id
   },
 
+  startTrafficGenerator: (deviceId, settings, intervalSeconds) => {
+    const error = validateTrafficGeneratorSettings(settings)
+    if (error) return { ok: false as const, error }
+    if (!get().devices.some(device => device.id === deviceId)) return { ok: false as const, error: 'device-missing' as const }
+    const tick = get().simulationTick
+    const run: TrafficGeneratorRun = {
+      id: crypto.randomUUID(),
+      deviceId,
+      settings: { ...settings },
+      intervalSeconds: Math.min(Math.max(intervalSeconds, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS), TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS),
+      sentCount: 0,
+      startedTick: tick,
+      nextDueTick: tick + trafficGeneratorIntervalTicks(intervalSeconds),
+      lastRequestId: null,
+    }
+    const dispatched = get().sendTrafficGeneratorOnce(deviceId, settings)
+    if (dispatched.ok && dispatched.requestId) {
+      run.sentCount = 1
+      run.lastRequestId = dispatched.requestId
+    }
+    set(state => ({ trafficGenerators: [...state.trafficGenerators.filter(candidate => candidate.deviceId !== deviceId), run] }))
+    return { ok: true as const, runId: run.id }
+  },
+
+  stopTrafficGenerator: (runId) => set(state => ({ trafficGenerators: state.trafficGenerators.filter(run => run.id !== runId) })),
+
+  sendTrafficGeneratorOnce: (deviceId, settings) => {
+    const error = validateTrafficGeneratorSettings(settings)
+    if (error) return { ok: false as const, error }
+    if (!get().devices.some(device => device.id === deviceId)) return { ok: false as const, error: 'device-missing' as const }
+    const requestId = dispatchTrafficGenerator(get(), deviceId, settings)
+    if (requestId) {
+      const packets = get().inFlightPackets
+      const stamped = stampTrafficGeneratorPackets(packets, settings.application, requestId, settings.packetColor, settings.dscp)
+      if (stamped !== packets) set({ inFlightPackets: stamped })
+    }
+    return { ok: true as const, requestId }
+  },
+
+  advanceTrafficGenerators: () => {
+    const tick = get().simulationTick
+    for (const run of get().trafficGenerators) {
+      if (run.nextDueTick > tick) continue
+      if (!get().devices.some(device => device.id === run.deviceId)) {
+        set(state => ({ trafficGenerators: state.trafficGenerators.filter(candidate => candidate.id !== run.id) }))
+        continue
+      }
+      const dispatched = get().sendTrafficGeneratorOnce(run.deviceId, run.settings)
+      const requestId = dispatched.ok ? dispatched.requestId : null
+      set(state => ({
+        trafficGenerators: state.trafficGenerators.map(candidate => candidate.id === run.id
+          ? {
+              ...candidate,
+              sentCount: candidate.sentCount + (requestId ? 1 : 0),
+              lastRequestId: requestId ?? candidate.lastRequestId,
+              nextDueTick: tick + trafficGeneratorIntervalTicks(candidate.intervalSeconds),
+            }
+          : candidate),
+      }))
+    }
+  },
+
   toggleSimulationMode: () => {
     set((state) => ({
       simulationMode: state.simulationMode === 'realtime' ? 'simulation' : 'realtime',
@@ -1451,7 +1534,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const { devices, links, inFlightPackets, simulationMode, simulationPlaying, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     if (simulationMode === 'simulation' && !simulationPlaying) return
     const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
-    if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
+    const hasGeneratorActivity=get().trafficGenerators.length>0
+    if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity&&!hasGeneratorActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning){internalSimulationSet=true;set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})}
       return
@@ -1484,12 +1568,14 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       dhcpTransactions:dhcpTimers.transactions,
       simulationWarning: dhcpFailure?.reason ?? dhcpTimers.warning ?? (result.queueLimitReached ? 'Packet limit reached. Excess traffic was dropped to keep the simulation responsive.' : get().simulationWarning),
     })
+    get().advanceTrafficGenerators()
   },
 
   stepSimulation: () => {
     const { devices, links, inFlightPackets, simulationMode, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
-    if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity){
+    const hasGeneratorActivity=get().trafficGenerators.length>0
+    if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity&&!hasGeneratorActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
       if(timers.devices!==devices||timers.packets!==inFlightPackets||timers.transactions!==get().dhcpTransactions||timers.warning){internalSimulationSet=true;set({devices:timers.devices,inFlightPackets:timers.packets,dhcpTransactions:timers.transactions,simulationWarning:timers.warning??get().simulationWarning})}
       return
@@ -1521,6 +1607,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       dhcpTransactions:dhcpTimers.transactions,
       simulationWarning: dhcpFailure?.reason ?? dhcpTimers.warning ?? (result.queueLimitReached ? 'Packet limit reached. Excess traffic was dropped to keep the simulation responsive.' : get().simulationWarning),
     })
+    get().advanceTrafficGenerators()
   },
 
   stepSimulationBack: () => {
@@ -1549,7 +1636,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       })
       : state.devices,
     inFlightPackets: [], tcpReceiveBuffers: [], tcpOutstandingSegments: [], simulationWarning: null, connectingSource: null,
-    simulationHistory: [], simulationEvents: [],
+    simulationHistory: [], simulationEvents: [], trafficGenerators: [],
     pingResults: cancelPendingPings(state.pingResults),
     httpTransactions: state.httpTransactions.map(transaction => transaction.status === 'pending' ? { ...transaction, status: 'failed', reason: 'Cancelled when the simulation was cleared.' } : transaction),
     emailTransactions: state.emailTransactions.map(transaction => transaction.status === 'pending' ? { ...transaction, status: 'failed', reason: 'Cancelled when the simulation was cleared.' } : transaction),
@@ -1794,6 +1881,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       physicalContainers: sanitizedPhysical.containers,
       physicalAssignment: sanitizedPhysical.assignment,
       clusters: sanitizedPhysical.clusters,
+      trafficGenerators: [],
       selectedDeviceId: null,
       selectedLinkId: null,
       inFlightPackets: [],
@@ -1820,6 +1908,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       physicalContainers: defaultPhysicalContainers(),
       physicalAssignment: {},
       clusters: [],
+      trafficGenerators: [],
       selectedDeviceId: null,
       selectedLinkId: null,
       inFlightPackets: [],

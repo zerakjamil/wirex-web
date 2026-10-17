@@ -484,6 +484,15 @@ function PacketEnvelopes({ linkId, sourceX, sourceY, targetX, targetY }: {linkId
           badgeText = '#9a3412'
         }
 
+        const generatorColor = packet.pdu.generatorColor
+        if (generatorColor) {
+          bodyFill = generatorColor
+          flapFill = generatorColor
+          strokeColor = '#1e293b'
+          badgeBg = generatorColor
+          badgeText = '#ffffff'
+        }
+
         if (denseTraffic) {
           const inspectLabel = `${t('Click to inspect PDU layers')}: ${protocol} (${packet.pdu.sourceIp} -> ${packet.pdu.destIp})`
           return (

@@ -136,6 +136,9 @@ function PduDetailsDialog({ pdu }: { pdu: PacketPdu }) {
                 <div>Source IP: {pdu.sourceIp}</div>
                 <div>Destination IP: {pdu.destIp}</div>
                 <div>TTL: {pdu.ttl}</div>
+                {pdu.payload.dscp !== undefined && (
+                  <div>{t('TOS / DSCP')}: 0x{pdu.payload.dscp.toString(16).toUpperCase().padStart(2, '0')} ({pdu.payload.dscp})</div>
+                )}
               </div>
               <div className="border-t border-slate-900 pt-2">
                 <span className="text-slate-500 block">Payload Details:</span>
