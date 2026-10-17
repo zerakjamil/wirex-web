@@ -44,7 +44,7 @@ import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
 import { getPhoneRegistrations } from '@/simulator/voice'
 import { observeCommand,type CommandEvent } from '@/simulator/commandObservation'
-import { getStpTopology,getOperationalChannels,hasStpActivity } from '@/simulator/spanningTree'
+import { formatMstConfiguration,formatStpInstanceView,formatStpSummary,formatStpVlanView,getOperationalChannels,hasStpActivity } from '@/simulator/spanningTree'
 import { hasHsrpActivity } from '@/simulator/hsrp'
 import { allocateDhcpLease } from '@/simulator/dhcp'
 import { hasOspf } from '@/simulator/ospf'
@@ -988,11 +988,13 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         })
       return finish(`IP address        Client-ID                Lease remaining Type\n${rows.join('\n')||'No active DHCP bindings.'}`)
     }
-    if(dev.currentCliMode!=='user'&&/^(show|sh) (spanning-tree|span)(?: vlan \d+)?$/.test(show)){
-      const vlan=Number(show.match(/vlan (\d+)/)?.[1]||1),tree=getStpTopology(devices,get().links,vlan),root=devices.find(d=>d.id===tree.roots.get(deviceId))
-      if(!root)return finish('% Spanning tree is available on bridge devices only.')
-      const rows=dev.ports.flatMap(p=>{const s=tree.ports.get(`${dev.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${p.stpCost??(p.type==='gigabitethernet'?4:19)}`]:[]})
-      return finish(`VLAN${String(vlan).padStart(4,'0')}\n  Root ID Priority ${(root.config.stpPriorities?.[String(vlan)]??32768)+vlan}\n          Address ${root.macAddress||root.ports[0]?.macAddress}\n  ${root.id===deviceId?'This bridge is the root':`Root path cost ${tree.costs.get(deviceId)}`}\n  Bridge ID Priority ${(dev.config.stpPriorities?.[String(vlan)]??32768)+vlan}\n\nInterface        Role Sts Cost\n${rows.join('\n')}`)
+    if(dev.currentCliMode!=='user'&&/^(show|sh) (spanning-tree|span)(?: vlan \d+| summary| mst(?: configuration)?(?: \d+)?)?$/.test(show)){
+      if(/ summary$/.test(show))return finish(formatStpSummary(dev))
+      if(/ mst configuration$/.test(show))return finish(formatMstConfiguration(dev))
+      const mst=show.match(/ mst(?: (\d+))?$/)
+      if(mst)return finish(formatStpInstanceView(devices,get().links,deviceId,mst[1]?Number(mst[1]):0))
+      const vlan=Number(show.match(/vlan (\d+)/)?.[1]||1)
+      return finish(formatStpVlanView(devices,get().links,deviceId,vlan))
     }
     if(dev.currentCliMode!=='user'&&/^(show|sh) etherchannel(?: summary)?$/.test(show)){
       const channels=getOperationalChannels(devices,get().links).filter(c=>c.links.some(l=>l.fromDeviceId===deviceId||l.toDeviceId===deviceId))

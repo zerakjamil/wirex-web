@@ -12,6 +12,7 @@ import { prepareRipTick, receiveRipPacket, hasRip, ripEnabled } from './rip'
 import type { RipOutbound } from './rip'
 import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './eigrp'
 import type { EigrpOutbound } from './eigrp'
+import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, wlcManagementPort, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES, TFTP_BLOCK_SIZE, tftpBlockCount, tftpBlockDataHex } from './tftp'
 import { isValidSnmpCommunity, isValidSnmpOid, resolveSnmpSystemObject, type SnmpOperation } from './snmp'
 import { activeHsrpGroup, hsrpVirtualMac, prepareHsrpTick } from './hsrp'
@@ -837,7 +838,8 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
   const ospfv3Control = prepareIpv6OspfTick(ospfControl.devices)
   const ripControl = prepareRipTick(ospfv3Control.devices)
   const eigrpControl = prepareEigrpTick(ripControl.devices)
-  const control = { devices: eigrpControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
+  const capwapControl = prepareCapwapTick(eigrpControl.devices, links, simulationTick)
+  const control = { devices: capwapControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
   const stpControl=prepareStpTick(control.devices,links,simulationTick)
   let updatedDevices = ageLearnedMacTables(advanceStpPortStates(stpControl.devices,links,simulationTick),simulationTick)
   const byId = new Map(updatedDevices.map(d => [d.id, d]))
@@ -1051,6 +1053,16 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     const device=byId.get(intent.deviceId),port=device?.ports.find(candidate=>candidate.id===intent.portId),link=linksById.get(intent.linkId)
     if(device&&port&&link&&liveLinks.has(link.id))enqueue(onWire(device,port,link,intent.pdu,0,intent.vlan))
   }
+  const sendCapwap = (intent: CapwapIntent) => {
+    const device = byId.get(intent.deviceId), port = device?.ports.find(candidate => candidate.id === intent.portId)
+    if (!device || !port || !isUp(device, port)) return
+    const vlan = port.vlan ?? 1
+    for (const link of linksByPort.get(`${device.id}|${port.id}`) ?? []) {
+      if (!liveLinks.has(link.id) || !forwardingLinks(vlan).has(link.id)) continue
+      enqueue(onWire(device, port, link, intent.pdu, 0))
+    }
+  }
+  for (const intent of capwapControl.outbound) sendCapwap(intent)
   const learnArp = (device: NetworkDevice, port: NetworkPort, ip: string, mac: string) => {
     const existing = device.arpTable.find(a => a.ipAddress === ip && a.interfaceName === port.name)
     if (existing?.macAddress === mac) return

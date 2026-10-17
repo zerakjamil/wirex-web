@@ -10,6 +10,7 @@ export type DeviceType =
   | 'tablet'
   | 'smartphone'
   | 'wireless'
+  | 'wlc'
   | 'security'
   | 'hub'
   | 'cloud'
@@ -88,6 +89,7 @@ export interface NetworkPort {
   channelMode?: 'active' | 'passive' | 'desirable' | 'auto' | 'on'
   portfast?: boolean
   stpCost?: number
+  stpLinkType?: 'point-to-point' | 'shared'
   virtualVlan?: number
   description?: string
   connectedLinkId?: string
@@ -208,6 +210,11 @@ export interface DeviceConfig {
   ipv6Routing?: boolean
   accessLists?: AccessList[]
   stpPriorities?: Record<string,number>
+  stpMode?: 'pvst' | 'rapid-pvst' | 'mst'
+  mstName?: string
+  mstRevision?: number
+  mstInstances?: Array<{ instance: number; vlans: number[] }>
+  mstPriorities?: Record<string,number>
   portfastDefault?: boolean
   hostname: string
   banner?: string
@@ -252,6 +259,8 @@ export interface DeviceConfig {
   tftpClientFiles?: Array<{ serverIp: string; name: string; contents: string; receivedAtMs: number }>
   htmlContent?: string
   vlans?: Array<{ id: number; name: string }>
+  apMode?: 'autonomous' | 'lightweight'
+  wlans?: WlanProfile[]
   ripNetworks?: string[]
   ripVersion?: 1 | 2
   ripAutoSummary?: boolean
@@ -349,12 +358,82 @@ export interface EmailAccountConfig {
   sent: EmailMessage[]
 }
 
+export interface WlanProfile {
+  id: number
+  name: string
+  ssid: string
+  enabled: boolean
+  vlan: number
+  security: 'none' | 'wep' | 'wpa2-psk'
+  passphrase?: string
+  wepKey?: string
+}
+
+export type CapwapMessageKind =
+  | 'discovery-request'
+  | 'discovery-response'
+  | 'join-request'
+  | 'join-response'
+  | 'config-update-request'
+  | 'config-update-response'
+  | 'echo-request'
+  | 'echo-response'
+  | 'data'
+
+export interface CapwapMessage {
+  kind: CapwapMessageKind
+  seq: number
+  apDeviceId?: string
+  apName?: string
+  controllerDeviceId?: string
+  controllerName?: string
+  wlans?: WlanProfile[]
+  configSeq?: number
+  ackSeq?: number
+}
+
+export interface ApRuntime {
+  mode: 'autonomous' | 'lightweight'
+  state: 'idle' | 'discovery' | 'join' | 'run'
+  selectedWlcId?: string
+  wlcMac?: string
+  wlcPortId?: string
+  lastDiscoveryTick?: number
+  lastJoinTick?: number
+  lastEchoTick?: number
+  lastEchoResponseTick?: number
+  joinedAtTick?: number
+  appliedConfigSeq?: number
+  wlans?: WlanProfile[]
+}
+
+export interface WlcApEntry {
+  apId: string
+  apMac: string
+  portId: string
+  linkId: string
+  state: 'run'
+  joinedAtTick: number
+  lastSeenTick: number
+}
+
+export interface WlcRuntime {
+  aps: WlcApEntry[]
+  clientTunnels: Array<{ macAddress: string; apId: string }>
+  configSeq: number
+  lastConfigFingerprint?: string
+  pendingConfig: Array<{ apId: string; seq: number; sentAtTick: number }>
+  seq: number
+}
+
 export interface NetworkDevice {
   stpRuntime?: StpRuntime
   ospf?: OspfRuntime
   ospfv3?: Ospfv3Runtime
   rip?: RipRuntime
   eigrp?: EigrpRuntime
+  apRuntime?: ApRuntime
+  wlcRuntime?: WlcRuntime
   asaNatTranslations?: AsaNatTranslation[]
   ospfSequence?: number
   ipv6OspfSequence?: number
@@ -373,7 +452,7 @@ export interface NetworkDevice {
   ipv6RoutingTable?: Ipv6RouteEntry[]
   macTable: MacTableEntry[]
   cliHistory: string[]
-  currentCliMode: 'user' | 'priv' | 'config' | 'config-if' | 'config-subif' | 'config-vlan' | 'config-line' | 'config-router' | 'config-ipv6-router' | 'config-dhcp' | 'config-dhcpv6' | 'config-telephony' | 'config-ephone' | 'config-ephone-dn'
+  currentCliMode: 'user' | 'priv' | 'config' | 'config-if' | 'config-subif' | 'config-vlan' | 'config-line' | 'config-router' | 'config-ipv6-router' | 'config-dhcp' | 'config-dhcpv6' | 'config-telephony' | 'config-ephone' | 'config-ephone-dn' | 'config-mst'
   activeVoiceId?: number
   activeDhcpPool?: string
   activeRoutingProtocol?: 'rip' | 'ospf' | 'eigrp'
@@ -454,7 +533,7 @@ export interface NetworkAnnotation {
   borderColor?: string
 }
 
-export type PacketProtocol = 'ARP' | 'ICMP' | 'ICMPv6' | 'DHCP' | 'DHCPv6' | 'DNS' | 'UDP' | 'HTTP' | 'TCP' | 'OSPF' | 'RIP' | 'EIGRP' | 'GRE' | 'STP'
+export type PacketProtocol = 'ARP' | 'ICMP' | 'ICMPv6' | 'DHCP' | 'DHCPv6' | 'DNS' | 'UDP' | 'HTTP' | 'TCP' | 'OSPF' | 'RIP' | 'EIGRP' | 'GRE' | 'STP' | 'CAPWAP'
 
 export interface RipEntry { network: string; netmask: string; metric: number }
 export interface RipPacket { command: 'request' | 'response'; version: 1 | 2; entries: RipEntry[] }
@@ -633,6 +712,8 @@ export interface PacketPdu {
     stpLlcControl?: string
     greInnerPacket?: PacketPdu
     greTunnelInterface?: string
+    capwap?: CapwapMessage
+    capwapInnerPacket?: PacketPdu
     greKeepaliveType?: 'request' | 'reply'
     greKeepaliveTunnel?: string
     greKeepaliveSequence?: number

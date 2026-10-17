@@ -29,6 +29,8 @@ const STP_HELLO_TICKS=34
 const STP_MAX_AGE_TICKS=Math.ceil(20_000/60)
 const STP_FORWARD_DELAY_TICKS=Math.ceil(15_000/60)
 const STP_HOLD_TICKS=Math.ceil(1_000/60)
+/** Rapid PVST+/MSTP sync window that replaces the two 15-second 802.1D forward delays (models proposal/agreement). */
+export const STP_RAPID_SYNC_TICKS=Math.ceil(1_000/60)
 const STP_MULTICAST='01:80:c2:00:00:00'
 const sameVlanStates=(a:NetworkPort['stpVlanStates'],b:NetworkPort['stpVlanStates'])=>{
  if(a===b)return true
@@ -36,8 +38,44 @@ const sameVlanStates=(a:NetworkPort['stpVlanStates'],b:NetworkPort['stpVlanState
  const keys=Object.keys(a)
  return keys.length===Object.keys(b).length&&keys.every(key=>a[key]?.state===b[key]?.state&&a[key]?.sinceTick===b[key]?.sinceTick)
 }
-const bridgeId=(device:NetworkDevice,vlan:number)=>`${String(device.config.stpPriorities?.[String(vlan)]??32768).padStart(5,'0')}:${(device.macAddress||device.ports[0]?.macAddress||device.id).replace(/[:.]/g,'').toLowerCase()}:${device.id}`
+const bridgeId=(device:NetworkDevice,vlan:number)=>`${String(stpPriorityForVlan(device,vlan)).padStart(5,'0')}:${(device.macAddress||device.ports[0]?.macAddress||device.id).replace(/[:.]/g,'').toLowerCase()}:${device.id}`
 const portCost=(port:NetworkPort)=>port.stpCost??(port.type==='gigabitethernet'?4:19)
+
+export type StpMode='pvst'|'rapid-pvst'|'mst'
+export const stpModeOf=(device:NetworkDevice):StpMode=>device.config.stpMode??'pvst'
+/** MST instance that carries a VLAN: configured mapping, otherwise the CIST (instance 0). PVST modes always report instance 0. */
+export function mstInstanceForVlan(device:NetworkDevice,vlan:number):number{
+ if(stpModeOf(device)!=='mst')return 0
+ for(const entry of device.config.mstInstances??[])if(entry.vlans.includes(vlan))return entry.instance
+ return 0
+}
+/** Bridge priority for a VLAN: MST reads the instance priority, PVST modes read the per-VLAN priority. */
+export function stpPriorityForVlan(device:NetworkDevice,vlan:number):number{
+ if(stpModeOf(device)==='mst')return device.config.mstPriorities?.[String(mstInstanceForVlan(device,vlan))]??32768
+ return device.config.stpPriorities?.[String(vlan)]??32768
+}
+/** VLANs mapped to an MST instance; instance 0 receives every VLAN without an explicit mapping. */
+export function stpInstanceVlans(device:NetworkDevice,instance:number):number[]{
+ const mapped=device.config.mstInstances??[]
+ if(instance!==0)return [...(mapped.find(entry=>entry.instance===instance)?.vlans??[])].sort((a,b)=>a-b)
+ const taken=new Set(mapped.flatMap(entry=>entry.vlans))
+ const remainder:number[]=[]
+ for(let vlan=1;vlan<=4094;vlan++)if(!taken.has(vlan))remainder.push(vlan)
+ return remainder
+}
+export function compressVlanRanges(vlans:number[]):string{
+ const sorted=[...new Set(vlans)].sort((a,b)=>a-b)
+ const parts:string[]=[]
+ for(let index=0;index<sorted.length;){
+  let end=index
+  while(end+1<sorted.length&&sorted[end+1]===sorted[end]+1)end++
+  parts.push(end>index?`${sorted[index]}-${sorted[end]}`:`${sorted[index]}`)
+  index=end+1
+ }
+ return parts.join(',')
+}
+const formatPriorityWithSysId=(priority:number,sysId:number)=>priority+sysId
+const stpProtocolLabel=(device:NetworkDevice)=>{const mode=stpModeOf(device);return mode==='mst'?'mstp':mode==='rapid-pvst'?'rstp':'ieee'}
 
 function activeSwitchLink(devices:NetworkDevice[],link:NetworkLink){
  const e=endpoints(devices,link)
@@ -86,6 +124,9 @@ export function advanceStpPortStates(devices:NetworkDevice[],links:NetworkLink[]
    const previousStates=port.stpVlanStates
    const nextStates:NonNullable<NetworkPort['stpVlanStates']>={}
    const fast=port.portfast||original.config.portfastDefault
+   const mode=stpModeOf(original)
+   const peerDevice=ends!.a.id===original.id?ends!.b:ends!.a
+   const rapidLink=(mode==='rapid-pvst'||mode==='mst')&&(port.stpLinkType?port.stpLinkType==='point-to-point':peerDevice.type==='switch')
    for(const vlan of vlans){
     if(!roleCache.has(vlan))roleCache.set(vlan,getStpTopology(devices,links,vlan))
     const role=roleCache.get(vlan)!.ports.get(`${original.id}|${port.id}`)?.role
@@ -95,6 +136,14 @@ export function advanceStpPortStates(devices:NetworkDevice[],links:NetworkLink[]
     let entered=previous?.sinceTick??(previousStates?tick:port.stpSinceTick)
     if(fast){if(state!=='forwarding'){state='forwarding';entered=tick}}
     else if(role==='Altn'){if(state!=='blocking'){state='blocking';entered=tick}}
+    else if(rapidLink){
+     if(state==='blocking'||state==='listening'){state='learning';entered=tick}
+     else if(state==='learning'){
+      const started=Number.isInteger(entered)?entered!:tick
+      if(tick>=started&&tick-started>=STP_RAPID_SYNC_TICKS){state='forwarding';entered=started+STP_RAPID_SYNC_TICKS}
+      else if(entered===undefined)entered=tick
+     }
+    }
     else if(state==='blocking'){state='listening';entered=tick}
     else if(state==='listening'||state==='learning'){
      const started=Number.isInteger(entered)?entered!:tick
@@ -207,7 +256,7 @@ export function receiveStpBpdu(device:NetworkDevice,portId:string,linkId:string,
 export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:number){
  const roots=new Map<string,string>(),ports=new Map<string,{role:'Root'|'Desg'|'Altn';state:'FWD'|'BLK'|'LIS'|'LRN';cost:number}>(),forwardingLinks=new Set<string>()
  const bridges=devices.filter(isBridge),byId=new Map(devices.map(d=>[d.id,d])),linksById=new Map(links.map(link=>[link.id,link]))
- const bid=(d:NetworkDevice)=>`${String(d.config.stpPriorities?.[String(vlan)]??32768).padStart(5,'0')}:${(d.macAddress||d.ports[0]?.macAddress||d.id).replace(/[:.]/g,'').toLowerCase()}:${d.id}`
+ const bid=(d:NetworkDevice)=>`${String(stpPriorityForVlan(d,vlan)).padStart(5,'0')}:${(d.macAddress||d.ports[0]?.macAddress||d.id).replace(/[:.]/g,'').toLowerCase()}:${d.id}`
  const cost=(p:NetworkPort)=>p.stpCost??(p.type==='gigabitethernet'?4:19)
  const compareVector=(a:{root:string;cost:number;bridge:string;port:string},b:{root:string;cost:number;bridge:string;port:string})=>a.root.localeCompare(b.root)||a.cost-b.cost||a.bridge.localeCompare(b.bridge)||a.port.localeCompare(b.port,undefined,{numeric:true})
  const portLabel=(device:NetworkDevice,portId:string)=>device.ports.find(port=>port.id===portId)?.name??portId
@@ -308,4 +357,72 @@ export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:
   if(!blocked)for(const member of ls)forwardingLinks.add(member.id)
  }
  return {roots,ports,forwardingLinks,costs}
+}
+
+export function formatStpVlanView(devices:NetworkDevice[],links:NetworkLink[],deviceId:string,vlan:number){
+ const device=devices.find(candidate=>candidate.id===deviceId)
+ const tree=getStpTopology(devices,links,vlan),root=devices.find(d=>d.id===tree.roots.get(deviceId))
+ if(!device||!root)return '% Spanning tree is available on bridge devices only.'
+ const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${p.stpCost??(p.type==='gigabitethernet'?4:19)}`]:[]})
+ return `VLAN${String(vlan).padStart(4,'0')}\n  Spanning tree enabled protocol ${stpProtocolLabel(device)}\n  Root ID Priority ${formatPriorityWithSysId(stpPriorityForVlan(root,vlan),vlan)}\n          Address ${root.macAddress||root.ports[0]?.macAddress}\n  ${root.id===deviceId?'This bridge is the root':`Root path cost ${tree.costs.get(deviceId)}`}\n  Bridge ID Priority ${formatPriorityWithSysId(stpPriorityForVlan(device,vlan),vlan)}\n\nInterface        Role Sts Cost\n${rows.join('\n')}`
+}
+
+export function formatStpInstanceView(devices:NetworkDevice[],links:NetworkLink[],deviceId:string,instance:number){
+ const device=devices.find(candidate=>candidate.id===deviceId)
+ if(!device)return '% Spanning tree is available on bridge devices only.'
+ const instanceVlans=stpInstanceVlans(device,instance)
+ const carried=bridgeVlans(devices)
+ const vlan=carried.find(candidate=>instanceVlans.includes(candidate))??instanceVlans[0]??1
+ const tree=getStpTopology(devices,links,vlan),root=devices.find(d=>d.id===tree.roots.get(deviceId))
+ if(!root)return '% Spanning tree is available on bridge devices only.'
+ const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${p.stpCost??(p.type==='gigabitethernet'?4:19)}`]:[]})
+ const rootEntry=device.ports.map(p=>({port:p,state:tree.ports.get(`${device.id}|${p.id}`)})).find(entry=>entry.state?.role==='Root')
+ const rootCost=rootEntry?.state?.cost??0
+ return `###### MST${instance}        vlans mapped:   ${compressVlanRanges(stpInstanceVlans(device,instance))}\nBridge        address ${root.macAddress||root.ports[0]?.macAddress||'-'}  priority ${formatPriorityWithSysId(stpPriorityForVlan(root,vlan),instance)}\nRoot          address ${device.macAddress||device.ports[0]?.macAddress||'-'}  priority ${formatPriorityWithSysId(stpPriorityForVlan(device,vlan),instance)}\n              cost ${rootCost}\n\nInterface        Role Sts Cost\n${rows.join('\n')}`
+}
+
+export function formatMstConfiguration(device:NetworkDevice){
+ const instances=new Map<number,number[]>()
+ for(const entry of device.config.mstInstances??[])instances.set(entry.instance,[...entry.vlans].sort((a,b)=>a-b))
+ instances.set(0,stpInstanceVlans(device,0))
+ const keys=[...instances.keys()].sort((a,b)=>a-b)
+ const name=device.config.mstName?`[${device.config.mstName}]`:'[]'
+ const revision=device.config.mstRevision??0
+ const table=keys.map(instance=>`${String(instance).padEnd(10)}${compressVlanRanges(instances.get(instance)!)}`).join('\n')
+ return `Name      ${name}\nRevision  ${revision}     Instances configured ${keys.length}\n\nInstance  Vlans mapped\n--------  ---------------------------------------------------------------------\n${table}`
+}
+
+export function formatStpSummary(device:NetworkDevice){
+ const mode=stpModeOf(device)
+ const roots=new Set<string>()
+ for(const [key,vlan] of Object.entries(device.stpRuntime?.vlans??{}))if(vlan.rootDeviceId===device.id){
+  roots.add(mode==='mst'?`MST${mstInstanceForVlan(device,Number(key))}`:`VLAN${String(key).padStart(4,'0')}`)
+ }
+ const stateOf=(p:NetworkPort,key:string)=>p.stpVlanStates?.[key]?.state
+ const instanceOfVlan=(vlan:number)=>mstInstanceForVlan(device,vlan)
+ const units:string[]=[]
+ if(mode==='mst'){
+  const configured=(device.config.mstInstances??[]).map(entry=>entry.instance)
+  const seen=new Set<number>([0,...configured])
+  for(const instance of [...seen].sort((a,b)=>a-b))units.push(`MST${instance}`)
+ }else{
+  const vlans=[...new Set(device.ports.flatMap(p=>Object.keys(p.stpVlanStates??{})).map(Number))].sort((a,b)=>a-b)
+  if(!vlans.length&&device.ports.some(p=>p.stpState))vlans.push(1)
+  for(const vlan of vlans)units.push(`VLAN${String(vlan).padStart(4,'0')}`)
+ }
+ const rows=units.map(unit=>{
+  const counts={blocking:0,listening:0,learning:0,forwarding:0}
+  if(mode==='mst'){
+   const instance=Number(unit.slice(3))
+   const vlans=[...new Set(device.ports.flatMap(p=>Object.keys(p.stpVlanStates??{})).map(Number))].filter(vlan=>instanceOfVlan(vlan)===instance)
+   const vlan=vlans[0]??stpInstanceVlans(device,instance)[0]??1
+   for(const p of device.ports){const state=stateOf(p,String(vlan))??(p.stpState&&!p.stpVlanStates?p.stpState:undefined);if(state&&state in counts)counts[state as keyof typeof counts]++}
+  }else{
+   const vlan=Number(unit.slice(4))
+   for(const p of device.ports){const state=stateOf(p,String(vlan))??(!p.stpVlanStates?p.stpState:undefined);if(state&&state in counts)counts[state as keyof typeof counts]++}
+  }
+  const active=counts.blocking+counts.listening+counts.learning+counts.forwarding
+  return `${unit.padEnd(22)}${String(counts.blocking).padStart(8)}${String(counts.listening).padStart(10)}${String(counts.learning).padStart(9)}${String(counts.forwarding).padStart(11)}${String(active).padStart(11)}`
+ })
+ return `Switch is in ${mode} mode\nRoot bridge for: ${[...roots].sort().join(', ')||'none'}\nPortfast Default             ${device.config.portfastDefault?'is enabled':'is disabled'}\n\nName                   Blocking Listening Learning Forwarding STP Active\n---------------------- -------- --------- -------- ---------- ----------\n${rows.join('\n')}`
 }

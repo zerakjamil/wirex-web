@@ -286,4 +286,77 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/GigabitEthernet0\/0 is (up|down), area 0/i)
     await expect(modal).toContainText(/ipv6 router ospf 1/i)
   })
+
+  test('F11: EIGRP process and network from the router CLI appear in show ip protocols', async ({ page }) => {
+    await page.goto('/')
+
+    const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
+    await expect(routerBtn).toBeVisible({ timeout: 10000 })
+    await routerBtn.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const cliTab = modal.locator('button', { hasText: /^CLI$/i })
+    if (await cliTab.isVisible()) {
+      await cliTab.click()
+    }
+    const cliInput = modal.locator('input[type="text"]').last()
+    await expect(cliInput).toBeVisible()
+    for (const command of [
+      'enable',
+      'configure terminal',
+      'router eigrp 1',
+      'no auto-summary',
+      'network 10.0.0.0',
+      'end',
+      'show ip protocols',
+      'show ip eigrp topology',
+      'show running-config',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    await expect(modal).toContainText(/Routing Protocol is "eigrp 1"/i)
+    await expect(modal).toContainText(/EIGRP-IPv4 Topology Table for AS\(1\)/i)
+    await expect(modal).toContainText(/network 10\.0\.0\.0/i)
+  })
+
+  test('F12: switch CLI configures rapid PVST+ mode and an MST region', async ({ page }) => {
+    await page.goto('/')
+
+    const switchBtn = page.getByRole('button', { name: /Switch1/i }).first()
+    await expect(switchBtn).toBeVisible({ timeout: 10000 })
+    await switchBtn.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const cliTab = modal.locator('button', { hasText: /^CLI$/i })
+    if (await cliTab.isVisible()) {
+      await cliTab.click()
+    }
+    const cliInput = modal.locator('input[type="text"]').last()
+    await expect(cliInput).toBeVisible()
+    for (const command of [
+      'enable',
+      'configure terminal',
+      'spanning-tree mode rapid-pvst',
+      'spanning-tree mst configuration',
+      'name WIREX',
+      'revision 7',
+      'instance 1 vlan 10,20',
+      'exit',
+      'end',
+      'show spanning-tree mst configuration',
+      'show spanning-tree summary',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    await expect(modal).toContainText(/Name\s+\[WIREX\]/)
+    await expect(modal).toContainText(/Revision\s+7\s+Instances configured/)
+    await expect(modal).toContainText(/1\s+10,20/)
+    await expect(modal).toContainText(/Switch is in rapid-pvst mode/)
+  })
 })

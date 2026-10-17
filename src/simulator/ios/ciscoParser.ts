@@ -7,6 +7,7 @@ import { ospfArea, ospfCost, ospfDead, ospfHello, ospfNetwork, ospfPassive, ospf
 import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost } from '../ospfv3'
 import { ripMajorNetwork, ripConfigLines } from '../rip'
 import { eigrpConfigLines, eigrpEnabled, eigrpPassive, eigrpRouterId, classfulWildcard } from '../eigrp'
+import { compressVlanRanges, formatMstConfiguration, formatStpSummary } from '../spanningTree'
 import { isValidSnmpCommunity } from '../snmp'
 
 export function parseVlanList(input:string):number[]|null {
@@ -57,6 +58,7 @@ export interface IosExecutionResult {
     | 'config-telephony'
     | 'config-ephone'
     | 'config-ephone-dn'
+    | 'config-mst'
   newHostname?: string
   newActiveInterface?: string
   newActiveSubInterface?: string
@@ -140,6 +142,8 @@ export function getPrompt(device: NetworkDevice): string {
       return `${host}(config-ephone)#`
     case 'config-ephone-dn':
       return `${host}(config-ephone-dn)#`
+    case 'config-mst':
+      return `${host}(config-mst)#`
     default:
       return `${host}>`
   }
@@ -320,7 +324,8 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       device.currentCliMode === 'config-dhcpv6' ||
       device.currentCliMode === 'config-telephony' ||
       device.currentCliMode === 'config-ephone' ||
-      device.currentCliMode === 'config-ephone-dn'
+      device.currentCliMode === 'config-ephone-dn' ||
+      device.currentCliMode === 'config-mst'
     ) {
       return {
         output: '',
@@ -513,6 +518,45 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
   }
 
   // 4. Config-Line Mode: Router(config-line)#
+  // 4b. Config-MST Mode: Switch(config-mst)#
+  if (device.currentCliMode === 'config-mst') {
+    const negated = cmd === 'no'
+    const body = negated ? parts.slice(1) : parts
+    if (body[0] === 'name') {
+      if (negated) return { output: '', newDeviceConfig: { mstName: undefined } }
+      const name = body.slice(1).join(' ')
+      if (!name) return { output: '% Incomplete command. Specify the region name.' }
+      if (name.length > 32) return { output: '% Region name must be 32 characters or fewer.' }
+      return { output: '', newDeviceConfig: { mstName: name } }
+    }
+    if (body[0] === 'revision') {
+      if (negated) return { output: '', newDeviceConfig: { mstRevision: undefined } }
+      const revision = Number(body[1])
+      if (!Number.isInteger(revision) || revision < 0 || revision > 65535) return { output: '% Revision must be an integer 0-65535.' }
+      return { output: '', newDeviceConfig: { mstRevision: revision } }
+    }
+    if (body[0] === 'instance') {
+      const instance = Number(body[1])
+      if (!Number.isInteger(instance) || instance < 1 || instance > 4094) return { output: '% Instance must be an integer 1-4094.' }
+      if (negated) return { output: '', newDeviceConfig: { mstInstances: (device.config.mstInstances ?? []).filter(entry => entry.instance !== instance) } }
+      if (body[2] !== 'vlan') return { output: '% Incomplete command. Use instance <1-4094> vlan <list>.' }
+      const vlans = parseVlanList(body.slice(3).join(''))
+      if (!vlans || !vlans.length) return { output: '% Invalid VLAN list. Use comma-separated ids or ranges (1-4094).' }
+      const moved = new Set(vlans)
+      const next = (device.config.mstInstances ?? [])
+        .filter(entry => entry.instance !== instance)
+        .map(entry => ({ ...entry, vlans: entry.vlans.filter(vlan => !moved.has(vlan)) }))
+        .filter(entry => entry.vlans.length)
+      const existing = device.config.mstInstances?.find(entry => entry.instance === instance)?.vlans ?? []
+      next.push({ instance, vlans: [...new Set([...existing, ...vlans])].sort((a, b) => a - b) })
+      next.sort((a, b) => a.instance - b.instance)
+      return { output: '', newDeviceConfig: { mstInstances: next } }
+    }
+    if (cmd === 'do') return handleDoCommand(device, parts.slice(1))
+    if (cmd === 'show' || cmd === 'sh') return handleShowCommands(device, parts.slice(1))
+    return { output: `% Invalid input detected at '^' marker.` }
+  }
+
   if (device.currentCliMode === 'config-line') {
     if (cmd === 'password' && parts[1]) {
       return {
@@ -1002,11 +1046,39 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     }
 
     // Spanning-Tree commands
-    if (cmd === 'spanning-tree' || cmd === 'span') {
-      if(parts[1]==='portfast'&&parts[2]==='default')return {output:'',newDeviceConfig:{portfastDefault:true}}
-      const vlan=Number(parts[2]),priority=parts[3]==='root'?(parts[4]==='primary'?24576:parts[4]==='secondary'?28672:NaN):parts[3]==='priority'?Number(parts[4]):NaN
-      if(parts[1]!=='vlan'||!Number.isInteger(vlan)||vlan<1||vlan>4094||!Number.isInteger(priority)||priority<0||priority>61440||priority%4096)return {output:'% Specify spanning-tree vlan <1-4094> root primary|secondary or priority <multiple of 4096>.'}
-      return {output:'',newDeviceConfig:{stpPriorities:{...device.config.stpPriorities,[vlan]:priority}}}
+    if (cmd === 'spanning-tree' || cmd === 'span' || (cmd === 'no' && (parts[1] === 'spanning-tree' || parts[1] === 'span'))) {
+      const negated = cmd === 'no'
+      const body = (negated ? parts.slice(2) : parts.slice(1)).map(token => token.toLowerCase())
+      if (body[0] === 'mode') {
+        if (negated && !body[1]) return { output: '', newDeviceConfig: { stpMode: undefined } }
+        if (!['pvst', 'rapid-pvst', 'mst'].includes(body[1] ?? '')) return { output: '% Specify spanning-tree mode pvst|rapid-pvst|mst.' }
+        return { output: '', newDeviceConfig: { stpMode: body[1] as 'pvst' | 'rapid-pvst' | 'mst' } }
+      }
+      if (body[0] === 'portfast' && body[1] === 'default') return { output: '', newDeviceConfig: { portfastDefault: !negated } }
+      if (body[0] === 'mst' && body[1] === 'configuration') {
+        if (negated) return { output: '', newDeviceConfig: { mstName: undefined, mstRevision: undefined, mstInstances: [] } }
+        return { output: '', newMode: 'config-mst' }
+      }
+      if (body[0] === 'mst') {
+        const instance = Number(body[1])
+        const priority = body[2] === 'root' ? (body[3] === 'primary' ? 24576 : body[3] === 'secondary' ? 28672 : NaN) : body[2] === 'priority' ? Number(body[3]) : NaN
+        if (negated && body[2] === 'priority' && Number.isInteger(instance) && instance >= 1 && instance <= 4094) {
+          const next = { ...device.config.mstPriorities }
+          delete next[String(instance)]
+          return { output: '', newDeviceConfig: { mstPriorities: next } }
+        }
+        if (!Number.isInteger(instance) || instance < 1 || instance > 4094 || !Number.isInteger(priority) || priority < 0 || priority > 61440 || priority % 4096) return { output: '% Specify spanning-tree mst <1-4094> priority <multiple of 4096> or root primary|secondary.' }
+        return { output: '', newDeviceConfig: { mstPriorities: { ...device.config.mstPriorities, [String(instance)]: priority } } }
+      }
+      const vlan = Number(body[1])
+      const priority = body[2] === 'root' ? (body[3] === 'primary' ? 24576 : body[3] === 'secondary' ? 28672 : NaN) : body[2] === 'priority' ? Number(body[3]) : NaN
+      if (negated && body[2] === 'priority' && Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094) {
+        const next = { ...device.config.stpPriorities }
+        delete next[String(vlan)]
+        return { output: '', newDeviceConfig: { stpPriorities: next } }
+      }
+      if (body[0] !== 'vlan' || !Number.isInteger(vlan) || vlan < 1 || vlan > 4094 || !Number.isInteger(priority) || priority < 0 || priority > 61440 || priority % 4096) return { output: '% Specify spanning-tree vlan <1-4094> root primary|secondary or priority <multiple of 4096>.' }
+      return { output: '', newDeviceConfig: { stpPriorities: { ...device.config.stpPriorities, [vlan]: priority } } }
     }
 
     // Access-list configuration: access-list <1-199> permit|deny ...
@@ -1404,10 +1476,13 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       }
     }
 
-    // Spanning-Tree on interface (portfast, bpduguard)
-    if (cmd === 'spanning-tree' || cmd === 'span') {
-      if(parts[1]==='portfast')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,portfast:true}))}
-      if(parts[1]==='cost'&&Number(parts[2])>0)return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpCost:Number(parts[2])}))}
+    // Spanning-Tree on interface (portfast, link-type, bpduguard)
+    if (cmd === 'spanning-tree' || cmd === 'span' || (cmd === 'no' && (parts[1] === 'spanning-tree' || parts[1] === 'span'))) {
+      const negated=cmd==='no',body=negated?parts.slice(2):parts.slice(1)
+      const sub=body[0]?.toLowerCase()
+      if(sub==='portfast')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,portfast:negated?undefined:true}))}
+      if(sub==='cost'&&(negated||Number(body[1])>0))return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpCost:negated?undefined:Number(body[1])}))}
+      if(sub==='link-type'&&(negated||body[1]==='point-to-point'||body[1]==='shared'))return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpLinkType:negated?undefined:body[1] as 'point-to-point'|'shared'}))}
       return {output:'% This spanning-tree interface command is not implemented.'}
     }
 
@@ -1990,24 +2065,10 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     }
   }
 
-  // show spanning-tree (sh span)
+  // show spanning-tree (sh span): device-local views; the workspace CLI adds live topology (roles, root cost)
   if (sub1 === 'spanning-tree' || sub1 === 'span') {
-    let out = 'VLAN0001\n'
-    out += '  Spanning tree enabled protocol ieee\n'
-    out += '  Root ID    Priority    32769\n'
-    out += '             Address     0001.42a8.7701\n'
-    out += '             Cost        19\n'
-    out += '             Port        1 (FastEthernet0/1)\n\n'
-    out += '  Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)\n'
-    out += '             Address     0002.164c.90b2\n\n'
-    out += 'Interface        Role Sts Cost      Prio.Nbr Type\n'
-    out += '---------------- ---- --- --------- -------- --------------------------------\n'
-    for (const p of device.ports) {
-      if (p.status === 'up') {
-        out += `${p.shortName.padEnd(17)}Desg FWD 19        128.1    P2p\n`
-      }
-    }
-    return { output: out.trimEnd() }
+    if (sub2 === 'mst' && sub3 === 'configuration') return { output: formatMstConfiguration(device) }
+    return { output: formatStpSummary(device) }
   }
 
   // show version (sh ver)
@@ -2087,6 +2148,14 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (device.config.snmpSystemLocation) out += `snmp-server location ${device.config.snmpSystemLocation}\n`
     for(const [vlan,priority] of Object.entries(device.config.stpPriorities||{}))out+=`spanning-tree vlan ${vlan} priority ${priority}\n`
     if(device.config.portfastDefault)out+='spanning-tree portfast default\n'
+    if(device.config.stpMode)out+=`spanning-tree mode ${device.config.stpMode}\n`
+    for(const [instance,priority] of Object.entries(device.config.mstPriorities||{}))out+=`spanning-tree mst ${instance} priority ${priority}\n`
+    if(device.config.mstName!==undefined||device.config.mstRevision!==undefined||(device.config.mstInstances?.length??0)>0){
+      out+='spanning-tree mst configuration\n'
+      if(device.config.mstName!==undefined)out+=` name ${device.config.mstName}\n`
+      if(device.config.mstRevision!==undefined)out+=` revision ${device.config.mstRevision}\n`
+      for(const entry of device.config.mstInstances??[])out+=` instance ${entry.instance} vlan ${compressVlanRanges(entry.vlans)}\n`
+    }
 
     if (device.config.secretPassword) {
       out += `enable secret ${device.config.secretPassword}\n!\n`
@@ -2129,6 +2198,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       if(p.channelGroup)out+=` channel-group ${p.channelGroup} mode ${p.channelMode}\n`
       if(p.portfast)out+=' spanning-tree portfast\n'
       if(p.stpCost)out+=` spanning-tree cost ${p.stpCost}\n`
+      if(p.stpLinkType)out+=` spanning-tree link-type ${p.stpLinkType}\n`
       if (p.dot1qVlan !== undefined) out += ` encapsulation dot1Q ${p.dot1qVlan}${p.dot1qNative ? ' native' : ''}\n`
       for (const [option, value] of [['network', p.ospfNetworkType], ['cost', p.ospfCost], ['priority', p.ospfPriority], ['hello-interval', p.ospfHelloInterval], ['dead-interval', p.ospfDeadInterval]]) if (value !== undefined) out += ` ip ospf ${option} ${value}\n`
       if (p.ipAddress && p.subnetMask) {
