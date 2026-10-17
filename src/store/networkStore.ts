@@ -1461,6 +1461,9 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const error = validateTrafficGeneratorSettings(settings)
     if (error) return { ok: false as const, error }
     if (!get().devices.some(device => device.id === deviceId)) return { ok: false as const, error: 'device-missing' as const }
+    if (!Number.isFinite(intervalSeconds) || intervalSeconds < TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS || intervalSeconds > TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS) {
+      return { ok: false as const, error: 'interval-range' as const }
+    }
     const tick = get().simulationTick
     const run: TrafficGeneratorRun = {
       id: crypto.randomUUID(),

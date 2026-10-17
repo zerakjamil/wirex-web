@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useNetworkStore } from '@/store/networkStore'
 import { useI18n } from '@/i18n/useI18n'
@@ -33,6 +33,18 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
 
   const update = (patch: Partial<TrafficGeneratorSettings>) => setSettings(current => ({ ...current, ...patch }))
 
+  // PT muscle memory: Ctrl+F4 closes the Traffic Generator window.
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 'F4') {
+        event.preventDefault()
+        onBack()
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [onBack])
+
   const errorMessage = (code: TrafficGeneratorError): string => {
     switch (code) {
       case 'device-missing': return t('The selected device is no longer available.')
@@ -59,6 +71,12 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
     }
     setManualSent(count => count + 1)
     setError('')
+  }
+
+  const stopRun = () => {
+    if (!run) return
+    setManualSent(count => count + run.sentCount)
+    stopTrafficGenerator(run.id)
   }
 
   const startRun = () => {
@@ -227,7 +245,7 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={dispatchOnce} className="min-h-[40px] rounded border border-slate-400 bg-white px-5 text-xs font-bold text-slate-700 hover:bg-slate-100">{t('Test')}</button>
             {run
-              ? <button type="button" onClick={() => stopTrafficGenerator(run.id)} className="min-h-[40px] rounded border border-rose-800 bg-rose-700 px-5 text-xs font-bold text-white hover:bg-rose-800">{t('Stop')}</button>
+              ? <button type="button" onClick={stopRun} className="min-h-[40px] rounded border border-rose-800 bg-rose-700 px-5 text-xs font-bold text-white hover:bg-rose-800">{t('Stop')}</button>
               : <button type="button" onClick={mode === 'periodic' ? startRun : dispatchOnce} className="min-h-[40px] rounded border border-sky-800 bg-sky-800 px-5 text-xs font-bold text-white hover:bg-sky-900">{t('Send')}</button>}
             <button type="button" onClick={onBack} className="min-h-[40px] rounded border border-slate-300 bg-white px-5 text-xs font-semibold text-slate-700 hover:bg-slate-100">{t('Close')}</button>
           </div>

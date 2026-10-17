@@ -28,6 +28,7 @@ function packetWith(pdu: Partial<PacketPdu>): InFlightPacket {
     sourceIp: '10.0.0.1',
     destIp: '10.0.0.2',
     ttl: 128,
+    explanation: { layer1: 'l1', layer2: 'l2', layer3: 'l3', layer4AndAbove: 'l4', deviceDecision: 'decision' },
     payload: {},
     ...pdu,
   }
