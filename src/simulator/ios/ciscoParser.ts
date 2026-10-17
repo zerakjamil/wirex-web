@@ -1,11 +1,12 @@
 import { NetworkDevice, RouteEntry, Ipv6RouteEntry } from '@/types/network'
-import { isValidIpv4, getNetworkAddress, numberToIp, isInSameSubnet } from '../protocols/ip'
+import { isValidIpv4, getNetworkAddress, numberToIp, isInSameSubnet, ipToNumber } from '../protocols/ip'
 import { isValidIpv6, parseIpv6, parseIpv6WithPrefix, formatIpv6, ipv6NetworkAddress, ipv6PrefixMask, ipv6InterfaceIdFromMac, ipv6LinkLocalFromMac, isIpv6Multicast, isIpv6Unspecified, isIpv6Loopback, isIpv6LinkLocal } from '../protocols/ipv6'
 import { parseVoiceIos } from './voiceIos'
 import { parseAclRule, formatAccessLists, formatAclRunningConfig } from '../acl'
 import { ospfArea, ospfCost, ospfDead, ospfHello, ospfNetwork, ospfPassive, ospfConfigLines } from '../ospf'
 import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost } from '../ospfv3'
 import { ripMajorNetwork, ripConfigLines } from '../rip'
+import { eigrpConfigLines, eigrpEnabled, eigrpPassive, eigrpRouterId, classfulWildcard } from '../eigrp'
 import { isValidSnmpCommunity } from '../snmp'
 
 export function parseVlanList(input:string):number[]|null {
@@ -36,10 +37,11 @@ export interface IosExecutionResult {
   newPorts?: NetworkDevice['ports']
   newActiveVoiceId?: number
   newActiveDhcpPool?: string
-  newActiveRoutingProtocol?: 'rip' | 'ospf'
+  newActiveRoutingProtocol?: 'rip' | 'ospf' | 'eigrp'
   resetOspf?: boolean
   resetOspfv3?: boolean
   resetRip?: boolean
+  resetEigrp?: boolean
   newMode?:
     | 'user'
     | 'priv'
@@ -68,6 +70,7 @@ export interface IosExecutionResult {
   newDhcpPool?: { name: string; network: string; mask: string; defaultRouter?: string; dnsServer?: string }
   newExcludedDhcpIp?: string
   newRipNetwork?: string
+  newEigrpNetwork?: { network: string; wildcard: string }
   newOspfNetwork?: { network: string; wildcard: string; area: number }
   modifiedPorts?: Array<Partial<NetworkDevice['ports'][number]> & {portId:string}>
   newRoutes?: RouteEntry[]
@@ -563,6 +566,35 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
         return { output: '', newDeviceConfig: { ripNetworks: (device.config.ripNetworks ?? []).filter(n => ripMajorNetwork(n) !== ripMajorNetwork(parts[2])) } }
       }
     }
+    if (device.activeRoutingProtocol === 'eigrp') {
+      const no = cmd === 'no', action = no ? parts[1] : cmd
+      if (action === 'auto-summary') {
+        if (parts.length !== (no ? 2 : 1)) return { output: '% Invalid auto-summary command.' }
+        return { output: '', newDeviceConfig: { eigrpAutoSummary: !no } }
+      }
+      if (action === 'passive-interface') {
+        const name = parts[no ? 2 : 1]
+        if (parts.length !== (no ? 3 : 2)) return { output: '% Invalid passive interface.' }
+        if (name === 'default') return { output: '', newDeviceConfig: { eigrpPassiveDefault: !no, eigrpPassiveInterfaces: [], eigrpActiveInterfaces: [] } }
+        const id = normalizeInterfaceName(name || '', device.ports), port = device.ports.find(p => p.id === id)
+        if (!port) return { output: '% Invalid passive interface.' }
+        const passive = (device.config.eigrpPassiveInterfaces ?? []).filter(n => n !== port.name), active = (device.config.eigrpActiveInterfaces ?? []).filter(n => n !== port.name)
+        if (no) active.push(port.name); else passive.push(port.name)
+        return { output: '', newDeviceConfig: { eigrpPassiveInterfaces: passive, eigrpActiveInterfaces: active } }
+      }
+      if (cmd === 'eigrp' && parts[1]?.toLowerCase() === 'router-id') {
+        if (parts.length !== 3 || !isValidIpv4(parts[2]) || parts[2] === '0.0.0.0') return { output: '% Invalid EIGRP router ID.' }
+        return { output: '', newDeviceConfig: { eigrpRouterId: parts[2] } }
+      }
+      if (no && action === 'eigrp' && parts[2]?.toLowerCase() === 'router-id' && parts.length === 3) {
+        return { output: '', newDeviceConfig: { eigrpRouterId: undefined } }
+      }
+      if (no && action === 'network') {
+        if ((parts.length !== 3 && parts.length !== 4) || !isValidIpv4(parts[2] || '') || (parts.length === 4 && !isValidIpv4(parts[3] || ''))) return { output: '% Invalid EIGRP network removal.' }
+        const wildcard = parts[3] ?? classfulWildcard(parts[2])
+        return { output: '', newDeviceConfig: { eigrpNetworks: (device.config.eigrpNetworks ?? []).filter(n => !(n.network === parts[2] && n.wildcard === wildcard)) } }
+      }
+    }
     if (device.activeRoutingProtocol === 'ospf' && cmd === 'router-id') {
       if (parts.length !== 2 || !isValidIpv4(parts[1]) || parts[1] === '0.0.0.0') return { output: '% Invalid OSPF router ID.' }
       return { output: '', newDeviceConfig: { ospfRouterId: parts[1] }, resetOspf: true }
@@ -601,6 +633,12 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
           output: '',
           newOspfNetwork: { network: net, wildcard, area },
         }
+      }
+      if (device.activeRoutingProtocol === 'eigrp') {
+        if ((parts.length !== 2 && parts.length !== 3) || !isValidIpv4(net || '') || (parts.length === 3 && !isValidIpv4(wildcard || ''))) {
+          return { output: '% Invalid EIGRP network statement. Use network <IPv4> [wildcard].' }
+        }
+        return { output: '', newEigrpNetwork: { network: net!, wildcard: wildcard ?? classfulWildcard(net!) } }
       }
       if (device.activeRoutingProtocol !== 'rip' || parts.length !== 2 || !isValidIpv4(net || '')) {
         return { output: '% Invalid RIP network statement. Use network <IPv4> inside router rip.' }
@@ -866,8 +904,13 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       if (protocol === 'rip' && parts.length === 2) {
         return { output: '', newMode: 'config-router', newActiveRoutingProtocol: 'rip' }
       }
+      if (protocol === 'eigrp') {
+        if (parts.length !== 3 || !/^\d+$/.test(parts[2]) || processId < 1 || processId > 65535) return { output: '% Invalid EIGRP autonomous system. Use router eigrp <1-65535>.' }
+        if (device.config.eigrpAs !== undefined && device.config.eigrpAs !== processId) return { output: '% Multiple EIGRP autonomous systems are not implemented. Existing configuration was left unchanged.' }
+        return { output: '', newMode: 'config-router', newActiveRoutingProtocol: 'eigrp', newDeviceConfig: { eigrpAs: processId } }
+      }
       if (protocol !== 'ospf' || parts.length !== 3 || !/^\d+$/.test(parts[2]) || processId < 1 || processId > 65535) {
-        return { output: '% Supported configuration: router rip or router ospf <1-65535>.' }
+        return { output: '% Supported configuration: router rip, router ospf <1-65535>, or router eigrp <1-65535>.' }
       }
       if (device.config.ospfProcessId && device.config.ospfProcessId !== processId) {
         return { output: '% Multiple OSPF processes are not implemented. Existing configuration was left unchanged.' }
@@ -881,6 +924,10 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     }
     if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'rip' && parts.length === 3) {
       return { output: '', newDeviceConfig: { ripNetworks: [], ripVersion: undefined, ripAutoSummary: undefined, ripPassiveDefault: undefined, ripPassiveInterfaces: [], ripActiveInterfaces: [] }, resetRip: true }
+    }
+    if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'eigrp') {
+      if (parts.length !== 4 || Number(parts[3]) !== (device.config.eigrpAs ?? 1)) return { output: '% EIGRP process not found.' }
+      return { output: '', newDeviceConfig: { eigrpAs: undefined, eigrpNetworks: [], eigrpRouterId: undefined, eigrpAutoSummary: undefined, eigrpPassiveDefault: undefined, eigrpPassiveInterfaces: [], eigrpActiveInterfaces: [] }, resetEigrp: true }
     }
     if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'ospf') {
       if (parts.length !== 4 || Number(parts[3]) !== (device.config.ospfProcessId ?? 1)) return { output: '% OSPF process not found.' }
@@ -1676,6 +1723,43 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (sub3 === 'interface' || sub3 === 'int') return { output: device.ports.filter(p => ospfArea(device, p) !== undefined).map(p => `${p.name} is ${p.status}, area ${ospfArea(device, p)}\n  Network Type ${ospfNetwork(p)}, Cost: ${ospfCost(p)}\n  Hello ${ospfHello(p)}, Dead ${ospfDead(p)}${ospfPassive(device, p) ? '\n  No Hellos (Passive interface)' : ''}`).join('\n\n') || 'No OSPF interfaces configured.' }
   }
 
+  // show ip eigrp neighbors | topology | interfaces
+  if (sub1 === 'ip' && sub2 === 'eigrp') {
+    if (device.config.eigrpAs === undefined) return { output: '% EIGRP is not configured on this device.' }
+    const as = device.config.eigrpAs
+    const maskLength = (mask: string) => (ipToNumber(mask).toString(2).match(/1/g) ?? []).length
+    if (sub3 === 'neighbors' || sub3 === 'nei') {
+      let out = `EIGRP-IPv4 Neighbors for AS(${as})\nH   Address                 Interface              Hold Uptime   SRTT   RTO  Q  Seq\n                                   (sec)         (ms)       Cnt Num\n`
+      const neighbors = [...(device.eigrp?.neighbors ?? [])].sort((a, b) => ipToNumber(a.address) - ipToNumber(b.address))
+      neighbors.forEach((n, index) => {
+        const port = device.ports.find(candidate => candidate.id === n.portId)
+        const hold = Math.max(0, Math.ceil((n.holdTimeMs - (device.eigrp!.clock - n.lastHello)) / 1000))
+        const uptime = Math.floor((device.eigrp!.clock - n.since) / 1000)
+        const stamp = [Math.floor(uptime / 3600), Math.floor(uptime % 3600 / 60), uptime % 60].map(v => String(v).padStart(2, '0')).join(':')
+        out += `${String(index).padEnd(4)}${n.address.padEnd(24)}${(port?.shortName ?? n.portId).padEnd(23)}${String(hold).padEnd(5)}${stamp.padEnd(9)}${'1'.padEnd(7)}${'100'.padEnd(5)}${'0'.padEnd(3)}${index + 1}\n`
+      })
+      if (device.eigrp?.lastError) out += `\n% Last rejected packet: ${device.eigrp.lastError}`
+      return { output: out.trimEnd() }
+    }
+    if (sub3 === 'topology' || sub3 === 'top' || sub3 === undefined) {
+      let out = `EIGRP-IPv4 Topology Table for AS(${as})/ID(${eigrpRouterId(device) ?? 'unset'})\n\nCodes: P - Passive, A - Active, U - Update, Q - Query, R - Reply,\n       r - reply Status, s - sia Status\n`
+      for (const route of device.routingTable.filter(r => r.type === 'D')) {
+        const candidates = (device.eigrp?.candidates ?? []).filter(c => c.network === route.network && c.netmask === route.netmask).sort((a, b) => a.metric - b.metric)
+        out += `\nP ${route.network}/${maskLength(route.netmask)}, ${candidates.length || 1} successors, FD is ${route.metric}\n`
+        for (const c of candidates) out += `        via ${c.nextHop} (${c.metric}/${c.reportedMetric}), ${device.ports.find(p => p.id === c.portId)?.name ?? c.portId}\n`
+      }
+      return { output: out.trimEnd() }
+    }
+    if (sub3 === 'interfaces' || sub3 === 'int') {
+      let out = `EIGRP-IPv4 Interfaces for AS(${as})\n                              Xmit Queue   PeerQ        Mean   Pacing Time   Multicast    Pending\nInterface              Peers  Un/Reliable  Un/Reliable  SRTT   Un/Reliable   Flow Timer   Routes\n`
+      for (const p of device.ports.filter(candidate => eigrpEnabled(device, candidate))) {
+        const peers = (device.eigrp?.neighbors ?? []).filter(n => n.portId === p.id).length
+        out += `${p.shortName.padEnd(23)}${String(peers).padEnd(7)}0/0          0/0          0      0/1           50           0\n`
+      }
+      return { output: out.trimEnd() }
+    }
+  }
+
   // show ip interface brief (sh ip int br) vs show ip interface [name]
   if (sub1 === 'ip' && (sub2 === 'int' || sub2 === 'interface')) {
     if (!sub3 || sub3 === 'brief' || sub3 === 'br') {
@@ -1716,7 +1800,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
 
   // show ip route (sh ip ro / show ip route)
   if (sub1 === 'ip' && (sub2 === 'route' || sub2 === 'ro')) {
-    let out = `Codes: C - connected, S - static, R - RIP, O - OSPF\nGateway of last resort is not set\n\n`
+    let out = `Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP\nGateway of last resort is not set\n\n`
     for (const r of device.routingTable) {
       if (r.type === 'C') {
         const port = device.ports.find(p => p.name === r.interfaceName)
@@ -1730,6 +1814,8 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
         out += `O    ${r.network}/${r.netmask} [110/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       } else if (r.type === 'R') {
         out += `R    ${r.network}/${r.netmask} [120/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
+      } else if (r.type === 'D') {
+        out += `D    ${r.network}/${r.netmask} [90/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       }
     }
     return { output: out.trimEnd() }
@@ -1968,6 +2054,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (device.config.ospfNetworks?.length) lines.push(`Routing Protocol is "ospf ${device.config.ospfProcessId ?? 1}"\n  Router ID ${device.ospf?.routerId ?? device.config.ospfRouterId ?? 'pending startup'}\n  Intra-area OSPFv2, administrative distance 110\n  Routing for Networks:\n${device.config.ospfNetworks.map(n => `    ${n.network} ${n.wildcard} area ${n.area}`).join('\n')}`)
     if (device.config.ipv6OspfProcessId !== undefined) lines.push(`Routing Protocol is "ospfv3 ${device.config.ipv6OspfProcessId}"\n  Router ID ${device.ospfv3?.routerId ?? device.config.ipv6OspfRouterId ?? 'pending startup'}\n  Intra-area OSPFv3, administrative distance 110\n  Interfaces:\n${device.ports.filter((p) => p.ipv6OspfArea !== undefined).map((p) => `    ${p.name} area ${p.ipv6OspfArea}`).join('\n')}`)
     if (device.config.ripNetworks?.length) lines.push(`Routing Protocol is "rip"\n  Sending updates every 30 seconds, invalid after 180, flushed 60 seconds after invalidation\n  Default version control: send version ${device.config.ripVersion ?? 1}, receive ${device.config.ripVersion ?? 'any version'}\n  Automatic network summarization is ${device.config.ripAutoSummary === false ? 'not in effect' : 'in effect'}\n  Administrative distance: 120\n  Routing for Networks:\n${device.config.ripNetworks.map(n => `    ${n}`).join('\n')}\n  Passive Interfaces:\n${device.ports.filter(p => device.config.ripPassiveInterfaces?.includes(p.name) || device.config.ripPassiveDefault && !device.config.ripActiveInterfaces?.includes(p.name)).map(p => `    ${p.name}`).join('\n')}\n  Routing Information Sources:\n${device.rip?.neighbors.map(n => `    ${n.address} on ${device.ports.find(p => p.id === n.portId)?.name}, last update ${Math.floor((device.rip!.clock - n.lastUpdate) / 1000)} seconds ago`).join('\n') || '    none'}${device.rip?.lastError ? `\n  Last rejected update: ${device.rip.lastError}` : ''}`)
+    if (device.config.eigrpAs !== undefined) lines.push(`Routing Protocol is "eigrp ${device.config.eigrpAs}"\n  EIGRP router ID: ${eigrpRouterId(device) ?? 'not selected'}\n  Administrative distance: internal 90\n  Automatic network summarization is ${device.config.eigrpAutoSummary ? 'in effect' : 'not in effect'}\n  Routing for Networks:\n${(device.config.eigrpNetworks ?? []).map(n => `    ${n.network} ${n.wildcard}`).join('\n')}\n  Passive Interfaces:\n${device.ports.filter(p => eigrpPassive(device, p)).map(p => `    ${p.name}`).join('\n')}\n  EIGRP Neighbors:\n${device.eigrp?.neighbors.map(n => `    ${n.address} on ${device.ports.find(p => p.id === n.portId)?.name ?? n.portId}, hold ${Math.max(0, Math.ceil((n.holdTimeMs - (device.eigrp!.clock - n.lastHello)) / 1000))} seconds`).join('\n') || '    none'}${device.eigrp?.lastError ? `\n  Last rejected packet: ${device.eigrp.lastError}` : ''}`)
     return { output: lines.join('\n\n') || 'No dynamic routing protocols configured.' }
   }
 
@@ -2094,6 +2181,8 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     }
 
     if (device.config.ripNetworks?.length) out += `${ripConfigLines(device).join('\n')}\n`
+
+    if (device.config.eigrpAs !== undefined) out += `${eigrpConfigLines(device).join('\n')}\n`
 
     const ospfLines = ospfConfigLines(device)
     const processStart = ospfLines.findIndex(line => line.startsWith('router ospf '))
