@@ -6,8 +6,8 @@ Canvas Sticky Notes and Colored Zone Boxes,Workspace Canvas,must,yes,yes,Place N
 Categorized Device Bottom Shelf Dock,Workspace Canvas,must,yes,yes,Routers Switches Hubs Wireless Security WAN End Devices
 Cabling Tool with Auto and Manual Types,Workspace Canvas,must,yes,yes,Straight Crossover Fiber Serial Console Coaxial Phone Wireless
 Per-Port Link Status LEDs,Workspace Canvas,must,yes,yes,Green forwarding triangles and orange STP blocking circles
-Physical Rack and Wiring Closet View,Workspace Canvas,could,yes,no,19-inch equipment rack and multi-room wiring closet view
-Cluster Sub-level Grouping,Workspace Canvas,could,yes,no,Hierarchical nested sub-networks inside logical canvas
+Physical Rack and Wiring Closet View,Workspace Canvas,could,yes,no,"19-inch equipment rack and multi-room wiring closet view. Landed as a reduced model 2026-10-17: physical workspace with city/building/wiring-closet/rack/table containers, drag-and-drop or Move-popover device placement, inline rename/delete with undo, and .wf.json/autosave/share-link persistence; PT exotic containers (intercity, shelf, pegboard, wall mount, patch panel) deferred (docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md)"
+Cluster Sub-level Grouping,Workspace Canvas,could,yes,no,"Hierarchical nested sub-networks inside logical canvas. Landed as a reduced model 2026-10-17: flat named logical clusters (PT clusters are not nested) with boundary zones, double-click canvas focus, [Root] > [Cluster] path strip, create-from-selection (Shift+U), rename and disband with undo; PT Cluster Associations dialog (logical<->physical mapping) deferred (docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md)"
 Dark Mode Theme Toggle,Workspace Canvas,should,no,yes,Scoped dark mode toggle preserving authentic device LEDs
 Multi-Language RTL Localization,Workspace Canvas,should,no,yes,English Arabic and Central Kurdish Sorani with RTL layout
 3D Isometric Cisco Hardware Vector Engine,Device Library,must,yes,yes,15 authentic 3D device types matching CPT and PTAnywhere

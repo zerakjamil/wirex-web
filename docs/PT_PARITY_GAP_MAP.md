@@ -20,19 +20,22 @@ Classification legend:
 | Simulation Back | Back button steps the simulation and event list backwards (Alt+B) | `Back` button first in the Simulation controls row (disabled while the journal is empty) plus `Alt+B`; one step restores the tick, in-flight packets, TCP state, application results and event rows captured before the previous step. Adaptive journal: 50/20/8 steps by topology size; new traffic, edits, resets and mode switches restart the run | `networkStore.stepSimulationBack`; `src/simulator/backstep.test.ts` (10 tests); e2e `backstep.spec.ts`; `docs/SIMULATION_BACKSTEP_IMPLEMENTATION.md` |
 | Edit Filters / Show All-None | Protocol filter dialog for the event list | `Edit Filters` opens a dialog with one checkbox per protocol plus `Show All` / `Show None`; a `Show All / None` toggle sits in the Events sidebar. Hidden protocols affect rendering only | `CiscoBottomBar.tsx`, `workspaceStore.hiddenEventProtocols`; e2e `backstep.spec.ts` |
 | Event list data model | Per-hop rows: Time · Last Device · At Device · Type | The Events tab renders one row per delivery with those columns and protocol chips; the buffer is capped at 300 events and is part of the Back snapshot, so it rewinds consistently | `engine.ts` `collectEvents` seventh parameter, `networkStore.simulationEvents`; e2e `backstep.spec.ts` |
+| Physical workspace | Intercity → city → corporate office → building → wiring closet → rack/shelf containers; breadcrumb; drag devices between racks | The Physical view navigates `[Root] › [Corporate Office] › [Main Wiring Closet]` across city/building/closet containers with every rack and table side by side; devices move by drag-and-drop or the Move popover; create/rename/delete with Undo; the layout persists in `.wf.json`, the autosave, SQLite and share links | `src/simulator/physical.ts`, `PhysicalWorkspace.tsx`; `e2e/physical.spec.ts`; `docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md` |
+| Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster actions; `e2e/physical.spec.ts` |
 
-Every item above is exercised by the automated suites: unit 489/489, Playwright
-E2E 40 flows against the production build (the machine-load-sensitive realtime
-scale case passes every functional assertion and only its pacing bound flags
-under sustained external load), `tsc` clean, ESLint clean, `next build` green.
+Every item above is exercised by the automated suites: unit 504/504, Playwright
+E2E 43 flows against the production build (the realtime scale case met its pacing
+bound on the 2026-10-17 quiet-machine run — p95 tick interval 88.3 ms — and its
+pacing bound only flags under sustained external load), `tsc` clean, ESLint
+clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)
 
 | Area | PT 9 behavior | wireX today | Rationale for deferral |
 | --- | --- | --- | --- |
 | Play speed slider | Adjustable simulation speed | Fast Forward button covers acceleration | Cosmetic/comfort; no workflow dependency |
-| Cluster navigation strip | Named clusters + navigation icons | Back button + breadcrumb of physical path | Simple topologies are fully navigable; named-cluster UX is an enhancement |
-| Exotic physical containers | Pegboard, Wall Mount, Shelf, Patch Panel, Intercity… | Campus/building/wiring closet/rack containers shipped | Core physical labs run; rare container types deferred |
+| Cluster Associations dialog | Logical ↔ physical mapping (Move Devices, Create New Container, Copy Background Images, Copy Cluster Icons) | Clusters and containers are independent grouping systems; no mapping dialog | Mapping is a large-deployment convenience; both grouping systems work independently |
+| Exotic physical containers | Pegboard, Wall Mount, Shelf, Patch Panel, Intercity… | City/building/wiring-closet/rack/table containers shipped (`docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md`) | Core physical labs run; rare container types deferred |
 | Programming tab | Python / Blockly / JS editors for IoT & scripting | Tab present with an honest disclosure dialog | Shipping a scripting engine is a post-launch track; the tab is not a dead end — disclosure explains status |
 | Attributes tab | Power draw, cost, tech specs | Tab present with disclosure | Reference data only; no simulation dependency |
 | Device box search field | Search inside the component box | Search lives in the left device navigator | Same capability, different (extra) location; students find devices either way |
