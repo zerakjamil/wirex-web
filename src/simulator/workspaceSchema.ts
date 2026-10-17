@@ -33,7 +33,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
   uniqueIds(devices)
   for (const device of devices) {
     string(device.name); string(device.model); finite(device.x); finite(device.y)
-    oneOf(device.type, ['router', 'switch', 'pc', 'laptop', 'server', 'printer', 'phone', 'tv', 'tablet', 'smartphone', 'wireless', 'wlc', 'security', 'hub', 'cloud', 'modem'])
+    oneOf(device.type, ['router', 'switch', 'pc', 'laptop', 'server', 'printer', 'phone', 'tv', 'tablet', 'smartphone', 'wireless', 'wlc', 'iot', 'security', 'hub', 'cloud', 'modem'])
     const config = object(device.config); string(config.hostname)
     textFields(config, [], ['defaultGateway', 'dnsServer', 'banner', 'htmlContent', 'secretPassword', 'snmpSystemContact', 'snmpSystemLocation'])
     textFields(config, [], ['ospfRouterId'])

@@ -1,5 +1,5 @@
 // wireX Offline Service Worker
-const CACHE_NAME = 'wirex-cache-9Ek3mp6KBno6q562okNbP'
+const CACHE_NAME = 'wirex-cache-ieY06b1iiexOyUfshtc6J'
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.json',

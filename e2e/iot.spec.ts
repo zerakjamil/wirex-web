@@ -105,21 +105,21 @@ test('the smart-home lab registers every IoT device and forwards server commands
   await expect(serviceSection).toBeVisible()
   await expect(serviceSection.locator('[data-iot-client]')).toHaveCount(6)
 
-  const lampRow = serviceSection.locator('[data-iot-client]').filter({ hasText: 'Lamp1' })
+  const lampRow = serviceSection.locator('[data-iot-client]').filter({ hasText: 'Lamp0' })
   await expect(lampRow).toBeVisible()
   await lampRow.locator('[data-iot-action="on"]').click()
   await page.waitForFunction(() => {
     const store = (window as unknown as { __wireforgeNetworkStore?: BrowserNetworkStore }).__wireforgeNetworkStore
-    const lamp = store?.getState().devices.find(device => device.name === 'Lamp1')
+    const lamp = store?.getState().devices.find(device => device.name === 'Lamp0')
     return lamp?.config?.iotState?.power === true && (lamp?.iotRuntime?.controlsApplied ?? 0) >= 1
   }, undefined, { timeout: 30_000 })
 
-  const doorRow = serviceSection.locator('[data-iot-client]').filter({ hasText: 'Door1' })
+  const doorRow = serviceSection.locator('[data-iot-client]').filter({ hasText: 'Door2' })
   await expect(doorRow).toBeVisible()
   await doorRow.locator('[data-iot-action="open"]').click()
   await page.waitForFunction(() => {
     const store = (window as unknown as { __wireforgeNetworkStore?: BrowserNetworkStore }).__wireforgeNetworkStore
-    const door = store?.getState().devices.find(device => device.name === 'Door1')
+    const door = store?.getState().devices.find(device => device.name === 'Door2')
     return door?.config?.iotState?.open === true && (door?.iotRuntime?.controlsApplied ?? 0) >= 1
   }, undefined, { timeout: 30_000 })
 })

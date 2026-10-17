@@ -60,7 +60,6 @@ function IotThingSession({ device }: { device: NetworkDevice }) {
   const opened = state.open === true
   const level = Math.max(0, Math.min(100, state.level ?? 0))
   const temperature = state.temperature ?? 22
-  const ipPort = device.ports.find(port => port.ipAddress && port.adminStatus === 'up')
   const ageSeconds = runtime?.lastReportTick !== undefined ? Math.max(0, (simulationTick - runtime.lastReportTick) * 0.06) : undefined
   const saveServerAddress = () => {
     const value = serverAddressDraft.trim() || 'auto'
