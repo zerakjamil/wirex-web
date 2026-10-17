@@ -22,12 +22,13 @@ Classification legend:
 | Event list data model | Per-hop rows: Time · Last Device · At Device · Type | The Events tab renders one row per delivery with those columns and protocol chips; the buffer is capped at 300 events and is part of the Back snapshot, so it rewinds consistently | `engine.ts` `collectEvents` seventh parameter, `networkStore.simulationEvents`; e2e `backstep.spec.ts` |
 | Physical workspace | Intercity → city → corporate office → building → wiring closet → rack/shelf containers; breadcrumb; drag devices between racks | The Physical view navigates `[Root] › [Corporate Office] › [Main Wiring Closet]` across city/building/closet containers with every rack and table side by side; devices move by drag-and-drop or the Move popover; create/rename/delete with Undo; the layout persists in `.wf.json`, the autosave, SQLite and share links | `src/simulator/physical.ts`, `PhysicalWorkspace.tsx`; `e2e/physical.spec.ts`; `docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md` |
 | Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster actions; `e2e/physical.spec.ts` |
+| Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups, applications ICMP/HTTP/TFTP/UDP/DNS/NTP, a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` and a frozen-on-stop counter; dispatches reuse the real application flows, colored + DSCP-labeled packets ride the canvas and PDU details, runs are runtime-only and one run per device; outgoing port is a read-only route preview | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (8), `src/store/trafficGenerator.test.ts` (7), `e2e/traffic-generator.spec.ts` (2); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 504/504, Playwright
-E2E 43 flows against the production build (the realtime scale case met its pacing
-bound on the 2026-10-17 quiet-machine run — p95 tick interval 88.3 ms — and its
-pacing bound only flags under sustained external load), `tsc` clean, ESLint
-clean, `next build` green.
+Every item above is exercised by the automated suites: unit 519/519, Playwright
+E2E 45 flows against the production build (the realtime scale case met its pacing
+bound again on the latest 2026-10-17 run — p95 tick interval 66.7 ms, engine tick
+p95 8.2 ms, queue peak 2,132 drained clean — and its pacing bound only flags under
+sustained external load), `tsc` clean, ESLint clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)
 
@@ -44,7 +45,7 @@ clean, `next build` green.
 | Additional locales (~30) | Full Qt locale catalog | English, Arabic, Kurdish Sorani (RTL complete, unit-tested) | Adding locales is incremental; no functional gap |
 | PKZ/PKC source formats | Proprietary project archives | JSON workspace + PKT read/write codec + PKT export/import APIs | wireX interops with `.pkt`; its own format is open and inspectable |
 | Template library breadth | 91 shipped templates | Curated sample labs across topics | Breadth is content work; learning paths already ship |
-| Desktop app breadth | VPN, Traffic Generator, Firewall editor, Bluetooth, IoT maker… | Browser, email, terminal, IP/DHCP clients, traffic tools per labs | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
+| Desktop app breadth | VPN, Firewall editor, Bluetooth, IoT maker… (Traffic Generator landed) | Browser, email, terminal, IP/DHCP clients plus the Traffic Generator reduced model (no raw UDP/TCP injection, no Auto Select Port) | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
 | Extensions menu contents | MQTT/Marvel/etc. integrations + Activity Wizard entry | Extensions entry with availability note; Activity Wizard on toolbar | Kept honest: no fake integrations |
 | Boards / module expansion breadth | Very large HW catalog | Core module/slot system shipped (Physical tab) | Catalog breadth is data-entry work post-launch |
 

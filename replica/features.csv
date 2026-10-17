@@ -38,7 +38,7 @@ Web Browser Desktop App,Desktop Apps,must,yes,yes,HTTP client rendering HTML pag
 Cisco IP Communicator / Phone GUI,Desktop Apps,should,yes,yes,Interactive dial pad LCD screen dialing ringing and call audio
 Email Client Desktop App (SMTP/POP3),Desktop Apps,must,yes,yes,Esmtp AUTH PLAIN submission and POP3 retrieval/deletion per command turn over simulated TCP 25 and 110
 SNMP Manager Desktop App (GET/GETNEXT),Desktop Apps,should,yes,yes,SNMPv2c read-only GET and GETNEXT over UDP/161 for four system scalars with Agent config in Server-PT
-Traffic Generator Desktop App,Desktop Apps,could,yes,no,Configurable UDP/TCP test packet injector
+Traffic Generator Desktop App,Desktop Apps,could,yes,no,"Configurable UDP/TCP test packet injector. Landed as a reduced model 2026-10-17: PC/laptop Desktop Traffic Generator with PT's five groups, ICMP/HTTP/TFTP/UDP/DNS/NTP applications, Single Shot and Periodic (0.001-1000000 s) modes, Test/Send/Stop with a frozen-on-stop counter, packet-color and DSCP-labeled PDUs on the canvas and in PDU details, one runtime-only run per device (docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md). Clone stays no: no raw UDP/TCP injection, no Auto Select Port control, no L2/L3 override, no per-application payload-size editors, runs do not survive reload"
 Cisco IOS Multi-Mode CLI Hierarchy,Cisco IOS CLI,must,yes,yes,User Privileged Global Config Interface Subif Line Router
 IOS Contextual Help and Tab Completion,Cisco IOS CLI,must,yes,yes,Question mark help tab auto-completion and standard shortcuts
 IOS Command Abbreviations,Cisco IOS CLI,must,yes,yes,Accepts sh ip int br conf t no shut int fa0/1 sw mo acc
