@@ -590,6 +590,25 @@ export interface NetworkAnnotation {
   borderColor?: string
 }
 
+export const PHYSICAL_CONTAINER_KINDS = ['city', 'building', 'closet', 'rack', 'table'] as const
+export type PhysicalContainerKind = (typeof PHYSICAL_CONTAINER_KINDS)[number]
+export interface PhysicalContainer {
+  id: string
+  kind: PhysicalContainerKind
+  name: string
+  parentId: string | null
+}
+export interface NetworkCluster {
+  id: string
+  name: string
+  deviceIds: string[]
+}
+export interface PhysicalWorkspaceState {
+  containers: PhysicalContainer[]
+  assignment: Record<string, string>
+  clusters: NetworkCluster[]
+}
+
 export const PACKET_PROTOCOLS = ['ARP', 'ICMP', 'ICMPv6', 'DHCP', 'DHCPv6', 'DNS', 'UDP', 'HTTP', 'TCP', 'OSPF', 'RIP', 'EIGRP', 'GRE', 'STP', 'CAPWAP'] as const
 export type PacketProtocol = (typeof PACKET_PROTOCOLS)[number]
 

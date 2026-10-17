@@ -18,7 +18,9 @@ import {
 import { useNetworkStore } from '@/store/networkStore'
 import { DeviceNode } from './DeviceNode'
 import { AnnotationNode } from './AnnotationNode'
+import { ClusterNode } from './ClusterNode'
 import { CableEdge } from './CableEdge'
+import { PhysicalWorkspace } from './PhysicalWorkspace'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { newWorkspace, saveWorkspace } from '@/store/workspaceStore'
 import { Cisco3DIcon } from './Cisco3DIcons'
@@ -34,6 +36,7 @@ import { useI18n } from '@/i18n/useI18n'
 const nodeTypes = {
   deviceNode: DeviceNode as NodeTypes[string],
   annotationNode: AnnotationNode as NodeTypes[string],
+  clusterNode: ClusterNode as NodeTypes[string],
 }
 
 const edgeTypes = {
@@ -61,8 +64,10 @@ function InnerTopologyCanvas() {
     setSimulationPlaying,
     inFlightPackets,
     stepSimulation,
+    clusters,
   } = useNetworkStore(useShallow(state => ({
     devices: selectCanvasDevices(state.devices), links: state.links, annotations: state.annotations,
+    clusters: state.clusters,
     updateDevicePosition: state.updateDevicePosition, deleteDevice: state.deleteDevice,
     updateAnnotation: state.updateAnnotation, deleteAnnotation: state.deleteAnnotation,
     addAnnotation: state.addAnnotation, activeTool: state.activeTool,
@@ -86,13 +91,21 @@ function InnerTopologyCanvas() {
   const [placementPointer,setPlacementPointer]=useState<{x:number;y:number}|null>(null)
   const drawing = useRef<{ tool: 'rect' | 'ellipse' | 'line' | 'freeform'; points: {x:number;y:number}[] } | null>(null)
   const [drawingPreview, setDrawingPreview] = useState<{x:number;y:number}[]>([])
-  const [selectedIds,setSelectedIds]=useState<Set<string>>(new Set())
+  const selectedIds = useMemo(() => new Set(workspace.canvasSelectionIds), [workspace.canvasSelectionIds])
 
   useEffect(()=>useWorkspaceStore.subscribe((state,previous)=>{
     if(state.tool===previous.tool)return
     drawing.current=null
     setDrawingPreview([])
   }),[])
+
+  // Logical clusters filter the canvas: inside a cluster only its devices and internal links show.
+  const activeCluster = workspace.activeClusterId ? clusters.find(cluster => cluster.id === workspace.activeClusterId) ?? null : null
+  const memberIds = useMemo(() => activeCluster ? new Set(activeCluster.deviceIds) : null, [activeCluster])
+  const visibleDevices = useMemo(() => memberIds ? devices.filter(device => memberIds.has(device.id)) : devices, [devices, memberIds])
+  const visibleLinks = useMemo(() => memberIds ? links.filter(link => memberIds.has(link.fromDeviceId) && memberIds.has(link.toDeviceId)) : links, [links, memberIds])
+  const visibleAnnotations = useMemo(() => memberIds ? [] : annotations, [annotations, memberIds])
+  const zoneClusters = useMemo(() => activeCluster ? [] : clusters, [activeCluster, clusters])
 
   useEffect(() => {
     const action = workspace.canvasAction?.kind
@@ -103,11 +116,11 @@ function InnerTopologyCanvas() {
     if (action?.startsWith('pan-')) void setViewport({ ...viewport, x: viewport.x + (action === 'pan-left' ? 100 : action === 'pan-right' ? -100 : 0), y: viewport.y + (action === 'pan-up' ? 100 : action === 'pan-down' ? -100 : 0) })
   }, [workspace.canvasAction, getViewport, zoomIn, zoomOut, setViewport, fitView])
 
-  const fitNodes = useMemo(() => getTopologyFitNodes(devices, links), [devices, links])
-  const topologyIds = devices.map(device => device.id).join('|')
+  const fitNodes = useMemo(() => getTopologyFitNodes(visibleDevices, visibleLinks), [visibleDevices, visibleLinks])
+  const topologyIds = visibleDevices.map(device => device.id).join('|') + '|' + (activeCluster?.id ?? '')
 
   const doFitView = useCallback((duration = 200) => {
-    if (devices.length === 0) return
+    if (visibleDevices.length === 0) return
     const targetNodes = fitNodes.length ? fitNodes : undefined
     void fitView({
       nodes: targetNodes,
@@ -116,7 +129,7 @@ function InnerTopologyCanvas() {
       maxZoom: 1.15,
       duration,
     })
-  }, [devices.length, fitNodes, fitView])
+  }, [visibleDevices.length, fitNodes, fitView])
 
   useEffect(() => {
     if (workspace.view !== 'logical' || devices.length === 0) return
@@ -164,6 +177,16 @@ function InnerTopologyCanvas() {
       if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return
       if (event.altKey) return
       if (!(event.metaKey || event.ctrlKey)) {
+        if (event.shiftKey && event.key.toLowerCase() === 'u') {
+          event.preventDefault()
+          workspace.createClusterFromSelection()
+          return
+        }
+        if (event.shiftKey && event.key.toLowerCase() === 'b') {
+          event.preventDefault()
+          workspace.createPhysicalContainer('building')
+          return
+        }
         if (event.key.toLowerCase() === 'p') {
           event.preventDefault()
           workspace.setTool(workspace.tool === 'pdu' ? 'select' : 'pdu')
@@ -188,27 +211,27 @@ function InnerTopologyCanvas() {
     return () => clearInterval(interval)
   }, [tickSimulation])
 
-  const nodes = useMemo(() => createCanvasNodes(devices, annotations, measurements, selectedIds), [annotations, devices, measurements,selectedIds])
+  const nodes = useMemo(() => createCanvasNodes(visibleDevices, visibleAnnotations, measurements, selectedIds, zoneClusters), [visibleAnnotations, visibleDevices, measurements, selectedIds, zoneClusters])
 
   const edges: Edge[] = useMemo(() => {
-    const stp=getStpTopology(devices,links,trainingActive?10:1)
-    return links.map((l) => ({
+    const stp=getStpTopology(visibleDevices,visibleLinks,trainingActive?10:1)
+    return visibleLinks.map((l) => ({
       id: l.id,
       source: l.fromDeviceId,
       target: l.toDeviceId,
       type: 'cableEdge',
       data: { link: l,sourceBlocked:stp.ports.get(`${l.fromDeviceId}|${l.fromPortId}`)?.state==='BLK',targetBlocked:stp.ports.get(`${l.toDeviceId}|${l.toPortId}`)?.state==='BLK' },
     }))
-  }, [links,devices,trainingActive])
+  }, [visibleLinks,visibleDevices,trainingActive])
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
       const selections=changes.filter(change=>change.type==='select')
-      if(selections.length)setSelectedIds(previous=>{
-        const next=new Set(previous)
+      if(selections.length){
+        const next=new Set(useWorkspaceStore.getState().canvasSelectionIds)
         for(const change of selections)if(change.type==='select'){if(change.selected)next.add(change.id);else next.delete(change.id)}
-        return next
-      })
+        useWorkspaceStore.getState().setCanvasSelection([...next])
+      }
       const dimensions = changes.filter(change => change.type === 'dimensions' && change.dimensions)
       if (dimensions.length) setMeasurements(previous => {
         const next = { ...previous }
@@ -312,13 +335,7 @@ function InnerTopologyCanvas() {
       addAnnotation(annotation)
       workspace.setTool('select')
     }}>
-      {workspace.view === 'physical' ? <div className="pt-physical-workspace">
-        <h2>{t('Main Wiring Closet')}</h2>
-        <div className="pt-physical-rack">{devices.map(device => <button key={device.id} className="pt-rack-device" onClick={() => { useNetworkStore.getState().setActiveTab('physical'); setActiveModal({ type: 'device', deviceId: device.id }) }}>
-          <Cisco3DIcon type={device.type} model={device.model} size={36}/><span>{device.name}</span><span>{device.model}</span>
-        </button>)}</div>
-        {devices.length === 0 && <p>{t('No devices in this closet. Add a device using the device box below.')}</p>}
-      </div> : <>
+      {workspace.view === 'physical' ? <PhysicalWorkspace/> : <>
       <ReactFlow
         nodes={nodes}
         edges={edges}

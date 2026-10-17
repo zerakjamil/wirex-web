@@ -20,8 +20,26 @@ import {
   TcpOutstandingSegment,
   IotThingState,
   SimulationEvent,
+  PhysicalContainer,
+  PhysicalContainerKind,
+  PhysicalWorkspaceState,
+  NetworkCluster,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
+import {
+  addContainer,
+  addCluster,
+  canHoldDevices,
+  defaultPhysicalContainers,
+  deleteContainerTree,
+  moveDeviceAssignment,
+  nextContainerName,
+  purgeDeviceFromClusters,
+  removeCluster,
+  renameCluster,
+  renameContainer,
+  sanitizePhysical,
+} from '@/simulator/physical'
 import {getHardwareProfile,getModulePortIds,modulePorts,canCableConnect} from '@/simulator/physicalHardware'
 import {
   stepSimulationTick,
@@ -146,6 +164,17 @@ interface NetworkStore {
   updateAnnotation: (id: string, updates: Partial<NetworkAnnotation>) => void
   deleteAnnotation: (id: string) => void
 
+  physicalContainers: PhysicalContainer[]
+  physicalAssignment: Record<string, string>
+  clusters: NetworkCluster[]
+  addPhysicalContainer: (kind: PhysicalContainerKind, parentId: string | null) => string
+  renamePhysicalContainer: (id: string, name: string) => void
+  deletePhysicalContainer: (id: string) => void
+  moveDeviceToContainer: (deviceId: string, containerId: string) => void
+  createCluster: (name: string, deviceIds: string[]) => string
+  renameClusterGroup: (id: string, name: string) => void
+  removeClusterGroup: (id: string) => void
+
   updatePortConfig: (deviceId: string, portId: string, updates: Partial<NetworkPort>) => void
   updateDeviceConfig: (deviceId: string, updates: Partial<DeviceConfig>) => void
 
@@ -172,7 +201,7 @@ interface NetworkStore {
   stepSimulationBack: () => void
   clearSimulation: () => void
 
-  loadLab: (devices: NetworkDevice[], links: NetworkLink[], annotations?: NetworkAnnotation[]) => void
+  loadLab: (devices: NetworkDevice[], links: NetworkLink[], annotations?: NetworkAnnotation[], physical?: PhysicalWorkspaceState) => void
   resetTopology: () => void
 }
 
@@ -484,6 +513,9 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   devices: initialLab.devices,
   links: initialLab.links,
   annotations: initialLab.annotations || [],
+  physicalContainers: defaultPhysicalContainers(),
+  physicalAssignment: {},
+  clusters: [],
   showPortLabels: true,
   selectedDeviceId: null,
   selectedLinkId: null,
@@ -776,6 +808,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         devices: updatedDevices,
         links: remainingLinks,
         selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId,
+        physicalAssignment: id in state.physicalAssignment ? Object.fromEntries(Object.entries(state.physicalAssignment).filter(([deviceId]) => deviceId !== id)) : state.physicalAssignment,
+        clusters: purgeDeviceFromClusters(state.clusters, id),
       }
     })
   },
@@ -959,6 +993,55 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     set((state) => ({
       annotations: state.annotations.filter((a) => a.id !== id),
     }))
+  },
+
+  addPhysicalContainer: (kind, parentId) => {
+    const id = `phys-${kind}-${crypto.randomUUID()}`
+    set((state) => ({
+      physicalContainers: addContainer(state.physicalContainers, { id, kind, name: nextContainerName(state.physicalContainers, kind), parentId }),
+    }))
+    return id
+  },
+
+  renamePhysicalContainer: (id, name) => {
+    set((state) => ({ physicalContainers: renameContainer(state.physicalContainers, id, name) }))
+  },
+
+  deletePhysicalContainer: (id) => {
+    set((state) => {
+      if (!state.physicalContainers.some(container => container.id === id)) return state
+      const remaining = deleteContainerTree(state.physicalContainers, id)
+      const sanitized = sanitizePhysical(remaining, state.physicalAssignment, state.clusters, state.devices.map(device => device.id))
+      return { physicalContainers: sanitized.containers, physicalAssignment: sanitized.assignment, clusters: sanitized.clusters }
+    })
+  },
+
+  moveDeviceToContainer: (deviceId, containerId) => {
+    set((state) => {
+      if (!state.devices.some(device => device.id === deviceId)) return state
+      const target = state.physicalContainers.find(container => container.id === containerId)
+      if (!target || !canHoldDevices(target.kind)) return state
+      if (state.physicalAssignment[deviceId] === containerId) return state
+      return { physicalAssignment: moveDeviceAssignment(state.physicalAssignment, deviceId, containerId) }
+    })
+  },
+
+  createCluster: (name, deviceIds) => {
+    const id = `cluster-${crypto.randomUUID()}`
+    set((state) => {
+      const members = [...new Set(deviceIds)].filter(candidate => state.devices.some(device => device.id === candidate) && !state.clusters.some(cluster => cluster.deviceIds.includes(candidate)))
+      if (!members.length) return state
+      return { clusters: addCluster(state.clusters, { id, name: name.trim().slice(0, 64) || `Cluster ${state.clusters.length + 1}`, deviceIds: members }) }
+    })
+    return id
+  },
+
+  renameClusterGroup: (id, name) => {
+    set((state) => ({ clusters: renameCluster(state.clusters, id, name) }))
+  },
+
+  removeClusterGroup: (id) => {
+    set((state) => ({ clusters: removeCluster(state.clusters, id) }))
   },
 
   updatePortConfig: (deviceId, portId, updates) => {
@@ -1695,18 +1778,22 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     return requestId
   },
 
-  loadLab: (devices, links, annotations) => {
+  loadLab: (devices, links, annotations, physical) => {
     const restoredDevices=devices.map(device=>{
       const ports=device.ports.map(port=>port.stpState||port.stpSinceTick!==undefined||port.stpVlanStates?{...port,stpState:undefined,stpSinceTick:undefined,stpVlanStates:undefined}:port)
       const macTable=stripMacAgingRuntime(device.macTable)
       const changed=!!device.stpRuntime||ports.some((port,index)=>port!==device.ports[index])||macTable.some((entry,index)=>entry!==device.macTable[index])
       return changed?{...device,stpRuntime:undefined,ports,macTable}:device
     })
+    const sanitizedPhysical=sanitizePhysical(physical?.containers ?? defaultPhysicalContainers(), physical?.assignment ?? {}, physical?.clusters ?? [], restoredDevices.map(device=>device.id))
     set({
       devices:restoredDevices,
       simulationTick:0,
       links,
       annotations: annotations || [],
+      physicalContainers: sanitizedPhysical.containers,
+      physicalAssignment: sanitizedPhysical.assignment,
+      clusters: sanitizedPhysical.clusters,
       selectedDeviceId: null,
       selectedLinkId: null,
       inFlightPackets: [],
@@ -1730,6 +1817,9 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       simulationTick:0,
       links: [],
       annotations: [],
+      physicalContainers: defaultPhysicalContainers(),
+      physicalAssignment: {},
+      clusters: [],
       selectedDeviceId: null,
       selectedLinkId: null,
       inFlightPackets: [],

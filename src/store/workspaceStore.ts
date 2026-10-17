@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { useNetworkStore } from './networkStore'
 import { isValidIpv4 } from '@/simulator/protocols/ip'
+import { allowedChildKinds, nextContainerName } from '@/simulator/physical'
 import { PACKET_PROTOCOLS } from '@/types/network'
-import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceType, PacketPdu } from '@/types/network'
+import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceType, PacketPdu, PhysicalWorkspaceState, PhysicalContainerKind } from '@/types/network'
 
-type Snapshot = { devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[] }
+type Snapshot = { devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[]; physical: PhysicalWorkspaceState }
 type Deletion = {deviceIds?:string[];linkIds?:string[];annotationIds?:string[]}
 type NoteDraft = {x:number;y:number;text:string;annotationId?:string}
 export type CanvasAction = 'zoom-in' | 'zoom-out' | 'zoom-reset' | 'fit' | 'fit-topology' | 'pan-left' | 'pan-right' | 'pan-up' | 'pan-down'
@@ -64,6 +65,20 @@ interface WorkspaceStore {
   showAllEventFilters: () => void
   showNoneEventFilters: () => void
   toggleEventFilters: () => void
+  physicalPath: string[]
+  activeClusterId: string | null
+  canvasSelectionIds: string[]
+  setCanvasSelection: (ids: string[]) => void
+  enterPhysicalContainer: (id: string) => void
+  setPhysicalPath: (ids: string[]) => void
+  pathBack: () => void
+  enterCluster: (id: string) => void
+  exitCluster: () => void
+  createPhysicalContainer: (kind: PhysicalContainerKind) => void
+  deleteActivePhysicalContainer: () => void
+  createClusterFromSelection: () => void
+  renameActiveCluster: (name: string) => void
+  disbandActiveCluster: () => void
   setView: (view: WorkspaceStore['view']) => void
   setTool: (tool: WorkspaceTool) => void
   command: (kind: CanvasAction) => void
@@ -76,8 +91,8 @@ interface WorkspaceStore {
   redo: () => void
 }
 const snapshot = (): Snapshot => {
-  const { devices, links, annotations } = useNetworkStore.getState()
-  return structuredClone({ devices, links, annotations })
+  const { devices, links, annotations, physicalContainers, physicalAssignment, clusters } = useNetworkStore.getState()
+  return structuredClone({ devices, links, annotations, physical: { containers: physicalContainers, assignment: physicalAssignment, clusters } })
 }
 const usableIp = (ip?:string) => !!ip && ip !== '0.0.0.0' && isValidIpv4(ip)
 const addressError = (device:NetworkDevice) => {
@@ -92,6 +107,7 @@ const pduErrorState = (device:NetworkDevice,message:string) => ({
 })
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   view: 'logical', tool: 'select', inspectedDeviceId:null, hoveredConnection: null,
+  physicalPath: [], activeClusterId: null, canvasSelectionIds: [],
   setHoveredConnection: (info) => set({ hoveredConnection: info }),
   placement: null, canvasAction: null, past: [], future: [], clipboard: null, dialog: null,
   status: '', fileName: '', showGrid: false, showPduList: true, pduView: 'pdus', hiddenEventProtocols: [], pduSource: null, pduDestination: null,
@@ -196,6 +212,61 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   showAllEventFilters: () => set({ hiddenEventProtocols: [] }),
   showNoneEventFilters: () => set({ hiddenEventProtocols: [...PACKET_PROTOCOLS] }),
   toggleEventFilters: () => set(state => ({ hiddenEventProtocols: state.hiddenEventProtocols.length === 0 ? [...PACKET_PROTOCOLS] : [] })),
+  setCanvasSelection: (ids) => set({ canvasSelectionIds: ids }),
+  enterPhysicalContainer: (id) => set(state => ({ physicalPath: [...state.physicalPath, id] })),
+  setPhysicalPath: (ids) => set({ physicalPath: ids }),
+  pathBack: () => {
+    const { view, physicalPath, activeClusterId } = get()
+    if (view === 'physical') {
+      if (physicalPath.length) set({ physicalPath: physicalPath.slice(0, -1) })
+    } else if (activeClusterId) set({ activeClusterId: null, canvasSelectionIds: [] })
+  },
+  enterCluster: (id) => set({ activeClusterId: id, canvasSelectionIds: [] }),
+  exitCluster: () => set({ activeClusterId: null, canvasSelectionIds: [] }),
+  createPhysicalContainer: (kind) => {
+    const { view, physicalPath } = get()
+    if (view !== 'physical') return
+    const net = useNetworkStore.getState()
+    const containers = net.physicalContainers
+    const path = physicalPath.filter(id => containers.some(container => container.id === id))
+    const parent = path.length ? containers.find(container => container.id === path[path.length - 1]) ?? null : null
+    if (!allowedChildKinds(parent?.kind ?? null).includes(kind)) { set({ status: 'That container type cannot be created here.' }); return }
+    get().checkpoint()
+    const name = nextContainerName(containers, kind)
+    const id = net.addPhysicalContainer(kind, parent?.id ?? null)
+    if (kind === 'rack' || kind === 'table') set({ status: `Created ${name} in ${parent?.name ?? 'the campus'}.` })
+    else set({ physicalPath: [...path, id], status: `Created ${name}. Rename it or add the next container.` })
+  },
+  deleteActivePhysicalContainer: () => {
+    const { view, physicalPath } = get()
+    if (view !== 'physical' || !physicalPath.length) return
+    const net = useNetworkStore.getState()
+    const id = physicalPath[physicalPath.length - 1]
+    const container = net.physicalContainers.find(candidate => candidate.id === id)
+    if (!container) { set({ physicalPath: physicalPath.slice(0, -1) }); return }
+    get().checkpoint()
+    net.deletePhysicalContainer(id)
+    set({ physicalPath: physicalPath.slice(0, -1), status: `${container.name} and its contents were removed. Undo restores.` })
+  },
+  createClusterFromSelection: () => {
+    const net = useNetworkStore.getState()
+    const candidates = get().canvasSelectionIds.filter(id => net.devices.some(device => device.id === id) && !net.clusters.some(cluster => cluster.deviceIds.includes(id)))
+    if (candidates.length < 2) { set({ status: 'Select at least two unclustered devices, then create the cluster.' }); return }
+    get().checkpoint()
+    net.createCluster(`Cluster ${net.clusters.length + 1}`, candidates)
+    set({ status: `Created a cluster of ${candidates.length} devices. Double-click its label to work inside it.` })
+  },
+  renameActiveCluster: (name) => {
+    const id = get().activeClusterId
+    if (id) useNetworkStore.getState().renameClusterGroup(id, name)
+  },
+  disbandActiveCluster: () => {
+    const id = get().activeClusterId
+    if (!id) return
+    get().checkpoint()
+    useNetworkStore.getState().removeClusterGroup(id)
+    set({ activeClusterId: null, status: 'Cluster disbanded. Devices stay in place; Undo restores the cluster.' })
+  },
   checkpoint: () => set({ past: [...get().past.slice(-49), snapshot()], future: [] }),
   copyDevice: () => {
     const net=useNetworkStore.getState(); const device=net.devices.find(d=>d.id===net.selectedDeviceId)
@@ -222,13 +293,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const { past, future } = get(); const previous = past.at(-1)
     if (!previous) return
     set({ past: past.slice(0, -1), future: [...future, snapshot()] })
-    useNetworkStore.getState().loadLab(previous.devices, previous.links, previous.annotations)
+    useNetworkStore.getState().loadLab(previous.devices, previous.links, previous.annotations, previous.physical)
   },
   redo: () => {
     const { past, future } = get(); const next = future.at(-1)
     if (!next) return
     set({ past: [...past, snapshot()], future: future.slice(0, -1) })
-    useNetworkStore.getState().loadLab(next.devices, next.links, next.annotations)
+    useNetworkStore.getState().loadLab(next.devices, next.links, next.annotations, next.physical)
   },
 }))
 

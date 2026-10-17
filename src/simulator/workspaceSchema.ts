@@ -1,4 +1,6 @@
-import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceWindow } from '@/types/network'
+import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceWindow, PhysicalContainer, PhysicalContainerKind, PhysicalWorkspaceState, NetworkCluster } from '@/types/network'
+import { PHYSICAL_CONTAINER_KINDS } from '@/types/network'
+import { allowedChildKinds, canHoldDevices } from './physical'
 import { isInSameSubnet, isValidIpv4 } from './protocols/ip'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from './tftp'
 import { isValidSnmpCommunity } from './snmp'
@@ -26,7 +28,7 @@ function validateEmailMessage(value: unknown) {
   if (!Number.isSafeInteger(message.sentAtTick) || Number(message.sentAtTick) < 0) throw new Error('Invalid email message timestamp.')
 }
 
-export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[]; deviceWindows: DeviceWindow[]; fileName: string } {
+export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[]; deviceWindows: DeviceWindow[]; fileName: string; physical?: PhysicalWorkspaceState } {
   const data = object(input)
   if (data.version !== undefined && data.version !== 1 && data.version !== '1.0') throw new Error('Unsupported workspace version.')
   const devices = array(data.devices, 2000).map(object)
@@ -289,5 +291,59 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
   }
   const deviceWindows = array(data.deviceWindows ?? [], 2000).map(object).filter(frame => deviceMap.has(frame.deviceId) && ['x', 'y', 'width', 'height', 'z'].every(key => typeof frame[key] === 'number' && Number.isFinite(frame[key])) && Number(frame.width) >= 100 && Number(frame.height) >= 100)
   if (data.fileName !== undefined) string(data.fileName)
-  return { version: 1, devices: devices as unknown as NetworkDevice[], links: links as unknown as NetworkLink[], annotations: annotations as unknown as NetworkAnnotation[], deviceWindows: deviceWindows as unknown as DeviceWindow[], fileName: (data.fileName as string) || '' }
+  const physical = validatePhysical(data.physical, deviceMap)
+  return { version: 1, devices: devices as unknown as NetworkDevice[], links: links as unknown as NetworkLink[], annotations: annotations as unknown as NetworkAnnotation[], deviceWindows: deviceWindows as unknown as DeviceWindow[], fileName: (data.fileName as string) || '', physical }
+}
+
+function validatePhysical(value: unknown, deviceMap: Map<unknown, RecordValue>): PhysicalWorkspaceState | undefined {
+  if (value === undefined) return undefined
+  const raw = object(value)
+  const containers = array(raw.containers, 512).map(object)
+  uniqueIds(containers)
+  for (const container of containers) {
+    textFields(container, ['id', 'name', 'kind'])
+    if (!container.name) throw new Error('Physical container name is missing.')
+    if (String(container.name).length > 64) throw new Error('Physical container name is too long.')
+    oneOf(container.kind, [...PHYSICAL_CONTAINER_KINDS])
+    if (container.parentId !== null && container.parentId !== undefined) string(container.parentId)
+  }
+  const containerMap = new Map(containers.map(container => [String(container.id), container]))
+  for (const container of containers) {
+    const parentId = container.parentId === null || container.parentId === undefined ? null : String(container.parentId)
+    const parent = parentId === null ? undefined : containerMap.get(parentId)
+    if (parentId !== null && !parent) throw new Error('Physical container parent is missing.')
+    if (!allowedChildKinds((parent?.kind as PhysicalContainerKind | undefined) ?? null).includes(container.kind as PhysicalContainerKind)) throw new Error('Invalid physical container nesting.')
+    const seen = new Set<string>([String(container.id)])
+    let current = parent
+    while (current) {
+      if (seen.has(String(current.id))) throw new Error('Physical container cycle detected.')
+      seen.add(String(current.id))
+      current = current.parentId === null || current.parentId === undefined ? undefined : containerMap.get(String(current.parentId))
+    }
+  }
+  const assignmentInput = object(raw.assignment ?? {})
+  const assignment: Record<string, string> = {}
+  for (const [deviceId, containerId] of Object.entries(assignmentInput)) {
+    if (!deviceMap.has(deviceId) || typeof containerId !== 'string') throw new Error('Invalid physical device assignment.')
+    const container = containerMap.get(containerId)
+    if (!container || !canHoldDevices(container.kind as PhysicalContainerKind)) throw new Error('Physical device assignment targets an invalid container.')
+    assignment[deviceId] = containerId
+  }
+  const clusters = array(raw.clusters ?? [], 512).map(object)
+  uniqueIds(clusters)
+  for (const cluster of clusters) {
+    textFields(cluster, ['id', 'name'])
+    if (!cluster.name) throw new Error('Cluster name is missing.')
+    if (String(cluster.name).length > 64) throw new Error('Cluster name is too long.')
+    const members = array(cluster.deviceIds ?? [], 2000)
+    if (!members.length) throw new Error('Cluster has no devices.')
+    const seen = new Set<string>()
+    for (const member of members) {
+      string(member)
+      if (!deviceMap.has(String(member))) throw new Error('Cluster references an unknown device.')
+      if (seen.has(String(member))) throw new Error('Cluster member listed twice.')
+      seen.add(String(member))
+    }
+  }
+  return { containers: containers as unknown as PhysicalContainer[], assignment, clusters: clusters as unknown as NetworkCluster[] }
 }

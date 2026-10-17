@@ -17,7 +17,13 @@ export function saveWorkspaceToStorage(storage: WorkspaceStorage): boolean {
       ? training.backup
       : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
     const { devices, links, annotations, deviceWindows, fileName } = snapshot
-    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName }))
+    // Physical layout is saved with the live workspace; while a training backup is active the
+    // saved devices differ from the live ones, so the layout is omitted to avoid dangling references.
+    const live = useNetworkStore.getState()
+    const physical = !training.active || !training.backup
+      ? { containers: live.physicalContainers, assignment: live.physicalAssignment, clusters: live.clusters }
+      : undefined
+    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical }))
     return true
   } catch {
     return false
@@ -30,7 +36,7 @@ export function restoreWorkspaceFromStorage(storage: WorkspaceStorage, restoreWi
     if (!raw || raw.length > 32 * 1024 * 1024) return false
     const saved = parseWorkspace(JSON.parse(raw))
     const frames = saved.deviceWindows
-    useNetworkStore.getState().loadLab(saved.devices, saved.links, saved.annotations)
+    useNetworkStore.getState().loadLab(saved.devices, saved.links, saved.annotations, saved.physical)
     useNetworkStore.setState({ deviceWindows: restoreWindows ? frames : [] })
     useWorkspaceStore.setState({ fileName: saved.fileName || '', status: `Restored ${saved.fileName || 'workspace'} from local storage.` })
     useWorkspaceStore.getState().command('fit-topology')
@@ -49,13 +55,17 @@ export async function saveWorkspaceToSqlite(): Promise<boolean> {
       : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
     const { devices, links, annotations, deviceWindows, fileName } = snapshot
     if (!Array.isArray(devices) || devices.length === 0) return false
+    const live = useNetworkStore.getState()
+    const physical = !training.active || !training.backup
+      ? { containers: live.physicalContainers, assignment: live.physicalAssignment, clusters: live.clusters }
+      : undefined
     const res = await fetch('/api/sqlite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'save-autosave',
         fileName: fileName || 'Active Workspace',
-        snapshot: { version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName },
+        snapshot: { version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical },
       }),
     })
     return res.ok
@@ -73,7 +83,7 @@ export async function restoreWorkspaceFromSqlite(restoreWindows = true): Promise
       if (data.ok && data.checkpoint && data.checkpoint.snapshotJson) {
         const saved = parseWorkspace(JSON.parse(data.checkpoint.snapshotJson))
         if (saved && Array.isArray(saved.devices) && saved.devices.length > 0) {
-          useNetworkStore.getState().loadLab(saved.devices, saved.links || [], saved.annotations || [])
+          useNetworkStore.getState().loadLab(saved.devices, saved.links || [], saved.annotations || [], saved.physical)
           const frames = (saved.deviceWindows || []).filter((frame: DeviceWindow) =>
             saved.devices.some((device: NetworkDevice) => device.id === frame.deviceId) &&
             [frame.x, frame.y, frame.width, frame.height, frame.z].every(Number.isFinite) &&
@@ -98,7 +108,7 @@ export async function restoreWorkspaceFromSqlite(restoreWindows = true): Promise
         const latest = chkData.checkpoints[0]
         const saved = parseWorkspace(JSON.parse(latest.snapshotJson))
         if (saved && Array.isArray(saved.devices) && saved.devices.length > 0) {
-          useNetworkStore.getState().loadLab(saved.devices, saved.links || [], saved.annotations || [])
+          useNetworkStore.getState().loadLab(saved.devices, saved.links || [], saved.annotations || [], saved.physical)
           const frames = (saved.deviceWindows || []).filter((frame: DeviceWindow) =>
             saved.devices.some((device: NetworkDevice) => device.id === frame.deviceId) &&
             [frame.x, frame.y, frame.width, frame.height, frame.z].every(Number.isFinite) &&
@@ -131,7 +141,7 @@ export function restoreLabFromUrl(): boolean {
     const jsonStr = decodeURIComponent(escape(atob(rawBase64)))
     const data = parseWorkspace(JSON.parse(jsonStr))
     if (data && Array.isArray(data.devices)) {
-      useNetworkStore.getState().loadLab(data.devices, data.links || [], data.annotations || [])
+      useNetworkStore.getState().loadLab(data.devices, data.links || [], data.annotations || [], data.physical)
       useWorkspaceStore.setState({
         fileName: data.fileName || 'Shared Lab',
         status: 'Loaded shared network lab from URL.'
@@ -154,7 +164,8 @@ export function generateShareableUrl(): string | null {
       devices: stripRoutingRuntime(net.devices),
       links: net.links,
       annotations: net.annotations,
-      fileName: useWorkspaceStore.getState().fileName || 'Shared Lab'
+      fileName: useWorkspaceStore.getState().fileName || 'Shared Lab',
+      physical: { containers: net.physicalContainers, assignment: net.physicalAssignment, clusters: net.clusters },
     }
     const jsonStr = JSON.stringify(payload)
     const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
@@ -242,7 +253,10 @@ export function initializeWorkspacePersistence(): () => void {
       deviceChanged ||
       state.links !== previous.links ||
       state.annotations !== previous.annotations ||
-      state.deviceWindows !== previous.deviceWindows
+      state.deviceWindows !== previous.deviceWindows ||
+      state.physicalContainers !== previous.physicalContainers ||
+      state.physicalAssignment !== previous.physicalAssignment ||
+      state.clusters !== previous.clusters
     ) {
       schedule()
     }

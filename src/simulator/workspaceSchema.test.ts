@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createDevice } from './deviceFactory'
 import { parseWorkspace } from './workspaceSchema'
+import { defaultPhysicalContainers } from './physical'
 import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab } from './starterLabs'
 import { createTrainingLab, lessonIds } from './trainingLabs'
 
@@ -182,4 +183,35 @@ test('devices created in the same millisecond cannot collide when Math.random re
   context.mock.method(Math, 'random', () => 0.5)
   const ids = Array.from({length: 30}, () => createDevice('pc', 0, 0).id)
   assert.equal(new Set(ids).size, ids.length)
+})
+test('physical containers, assignments and clusters round-trip through save and restore', () => {
+  const pc = createDevice('pc', 10, 20)
+  const physical = {
+    containers: [...defaultPhysicalContainers(), { id: 'phys-table-1', kind: 'table', name: 'Bench', parentId: 'phys-closet-main' }],
+    assignment: { [pc.id]: 'phys-table-1' },
+    clusters: [{ id: 'cluster-1', name: 'Cluster 1', deviceIds: [pc.id] }],
+  }
+  const saved = JSON.parse(JSON.stringify({ version: 1, devices: [pc], links: [], physical })) as Record<string, unknown>
+  const restored = parseWorkspace(saved)
+  assert.deepEqual(restored.physical?.assignment, physical.assignment)
+  assert.deepEqual(restored.physical?.clusters, physical.clusters)
+  assert.equal(restored.physical?.containers.length, 4)
+  assert.equal(restored.physical?.containers[3].name, 'Bench')
+  assert.equal(restored.physical?.containers[3].kind, 'table')
+  assert.equal(parseWorkspace({ version: 1, devices: [pc], links: [] }).physical, undefined, 'workspaces without physical state stay loadable')
+})
+test('workspace validation rejects malformed physical containers, assignments and clusters', () => {
+  const pc = createDevice('pc', 10, 20)
+  const containers = defaultPhysicalContainers()
+  const base = { version: 1, devices: [pc], links: [] }
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers: [{ id: 'r1', kind: 'rack', name: 'R9', parentId: null }], assignment: {}, clusters: [] } }), /nesting/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers: [{ id: 'x1', kind: 'palace', name: 'P', parentId: null }], assignment: {}, clusters: [] } }), /Unsupported network value/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers: [{ id: 'b1', kind: 'building', name: 'B', parentId: 'ghost' }], assignment: {}, clusters: [] } }), /parent is missing/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers: [containers[0], containers[0]], assignment: {}, clusters: [] } }), /Duplicate/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: { [pc.id]: 'phys-building-main' }, clusters: [] } }), /invalid container/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: { ghost: 'phys-rack-1' }, clusters: [] } }), /assignment/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'C', deviceIds: ['ghost'] }] } }), /unknown device/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'C', deviceIds: [] }] } }), /no devices/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'C', deviceIds: [pc.id, pc.id] }] } }), /twice/)
+  assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'x'.repeat(65), deviceIds: [pc.id] }] } }), /too long/)
 })

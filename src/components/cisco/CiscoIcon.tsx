@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-export type IconName = 'new' | 'open' | 'save' | 'print' | 'info' | 'user' | 'activity' | 'copy' | 'paste' | 'undo' | 'redo' | 'zoom-in' | 'zoom-out' | 'zoom-reset' | 'fit' | 'list' | 'rack' | 'select' | 'inspect' | 'delete' | 'marquee' | 'note' | 'line' | 'rect' | 'ellipse' | 'freeform' | 'pdu' | 'complex-pdu' | 'back' | 'cluster' | 'move' | 'background' | 'clock' | 'fast' | 'play' | 'pause' | 'physical' | 'logical' | 'folder' | 'network' | 'end' | 'connections' | 'components' | 'multiuser'
+export type IconName = 'new' | 'open' | 'save' | 'print' | 'info' | 'user' | 'activity' | 'copy' | 'paste' | 'undo' | 'redo' | 'zoom-in' | 'zoom-out' | 'zoom-reset' | 'fit' | 'list' | 'rack' | 'select' | 'inspect' | 'delete' | 'marquee' | 'note' | 'line' | 'rect' | 'ellipse' | 'freeform' | 'pdu' | 'complex-pdu' | 'back' | 'cluster' | 'move' | 'background' | 'clock' | 'fast' | 'play' | 'pause' | 'physical' | 'logical' | 'folder' | 'network' | 'end' | 'connections' | 'components' | 'multiuser' | 'city' | 'building' | 'table'
 export function CiscoIcon({ name, size = 22 }: { name: IconName; size?: number }) {
   const icons: Record<IconName, ReactNode> = {
     new: <><path d="M5 2h10l5 5v15H5z" fill="#eee"/><path d="M15 2v6h5M8 12h9M8 16h9"/></>,
@@ -46,6 +46,9 @@ export function CiscoIcon({ name, size = 22 }: { name: IconName; size?: number }
     connections: <path d="m14 1-12 13h9l-2 9L23 9H13z" fill="#e59a23" stroke="#b96a19"/>,
     components: <><path d="M3 3h18v18H3z" fill="#729ca4"/><path d="M7 7h10v10H7zM1 7h3M1 12h3M1 17h3M20 7h3M20 12h3M20 17h3"/></>,
     multiuser: <><circle cx="8" cy="7" r="4" fill="#6b9da9"/><circle cx="18" cy="10" r="3" fill="#6b9da9"/><path d="M1 22v-5q7-10 14 0v5zm14 0v-4q4-8 8 0v4z" fill="#6b9da9"/></>,
+    city: <><path d="M2 22V10h6v12M8 22V4h8v18M16 22v-8h6v8"/><path d="M4 13h2m-2 3h2m10-9h2m-2 3h2m-2 3h2M18 17h2m-2 3h2"/></>,
+    building: <><path d="M5 22V3h14v19z"/><path d="M8 7h3m2 0h3M8 11h3m2 0h3M8 15h3m2 0h3M10 22v-4h4v4"/></>,
+    table: <><path d="M2 9h20v3H2z" fill="currentColor"/><path d="M5 12v9m14-9v9"/></>,
   }
   return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">{icons[name]}</svg>
 }

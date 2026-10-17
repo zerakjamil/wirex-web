@@ -67,7 +67,7 @@ export function CiscoMenuBar() {
       } else data=JSON.parse(await file.text())
       const validated = parseWorkspace(data)
       if(useTrainingStore.getState().active)useTrainingStore.getState().exit()
-      ws.checkpoint();net.loadLab(validated.devices,validated.links,validated.annotations);ws.command('fit-topology')
+      ws.checkpoint();net.loadLab(validated.devices,validated.links,validated.annotations,validated.physical);ws.command('fit-topology')
       useWorkspaceStore.setState({fileName:file.name})
       ws.setStatus(`Opened ${file.name}: ${data.devices.length} devices, ${data.links.length} links.${data.warnings?.length ? ' '+data.warnings.join(' ') : ''}`)
     } catch(error) {ws.setStatus(error instanceof Error ? error.message : 'Could not open the network file.')}

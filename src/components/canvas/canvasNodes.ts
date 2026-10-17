@@ -1,5 +1,5 @@
 import type { Node } from '@xyflow/react'
-import type { NetworkAnnotation, NetworkDevice, NetworkLink } from '@/types/network'
+import type { NetworkAnnotation, NetworkCluster, NetworkDevice, NetworkLink } from '@/types/network'
 
 export type NodeMeasurements = Record<string, { width: number; height: number }>
 
@@ -45,13 +45,16 @@ function sameNode(previous: Node | undefined, node: Node): Node {
     && previous.selected === node.selected
     && previous.style === node.style
     && previous.data.annotation === node.data.annotation
+    && previous.data.cluster === node.data.cluster
+    && previous.data.width === node.data.width
+    && previous.data.height === node.data.height
     && previous.data.device === node.data.device) {
     return previous
   }
   return node
 }
 
-export function createCanvasNodes(devices: NetworkDevice[], annotations: NetworkAnnotation[], measurements: NodeMeasurements, selectedIds?: ReadonlySet<string>): Node[] {
+export function createCanvasNodes(devices: NetworkDevice[], annotations: NetworkAnnotation[], measurements: NodeMeasurements, selectedIds?: ReadonlySet<string>, clusters?: NetworkCluster[]): Node[] {
   const nodes: Node[] = [
     ...annotations.map(a => sameNode(nodeCache.get(a.id), {
       id: a.id,
@@ -62,6 +65,30 @@ export function createCanvasNodes(devices: NetworkDevice[], annotations: Network
       style: a.type === 'note' ? NODE_STYLE_ANNOTATION : NODE_STYLE_ZONE,
       measured: measurements[a.id],
     })),
+    ...(clusters ?? []).flatMap(cluster => {
+      const members = devices.filter(device => cluster.deviceIds.includes(device.id))
+      if (!members.length) return []
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const member of members) {
+        const size = measurements[member.id] ?? { width: 120, height: 96 }
+        minX = Math.min(minX, member.x); minY = Math.min(minY, member.y)
+        maxX = Math.max(maxX, member.x + size.width); maxY = Math.max(maxY, member.y + size.height)
+      }
+      const width = Math.max(80, maxX - minX + 48)
+      const height = Math.max(60, maxY - minY + 68)
+      return [sameNode(nodeCache.get(`zone:${cluster.id}`), {
+        id: `zone:${cluster.id}`,
+        type: 'clusterNode' as const,
+        position: { x: minX - 24, y: minY - 44 },
+        data: { cluster, width, height },
+        zIndex: 1,
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        style: NODE_STYLE_ZONE,
+        measured: measurements[`zone:${cluster.id}`],
+      })]
+    }),
     ...devices.map(d => sameNode(nodeCache.get(d.id), {
       id: d.id,
       type: 'deviceNode' as const,
