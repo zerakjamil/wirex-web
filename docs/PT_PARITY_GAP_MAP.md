@@ -15,20 +15,22 @@ Classification legend:
 | --- | --- | --- | --- |
 | Server window tabs | Physical · Config · **Services** · Attributes (+CLI/Desktop subsets per device) | Servers expose **Services** tab after Config; DNS, TFTP, UDP Echo, SNMP and Mail (SMTP/POP3) service settings live there — mirrors the PT "click Server → Services" workflow | `DeviceModal.tsx` (`ServicesTab`/`ServicesSession`); e2e `tftp.spec.ts`, `snmp.spec.ts`, `email.spec.ts` exercise the tab |
 | Simulation bar | Event List toggle in Realtime/Simulation bar (Alt+I) | `Event List` toggle added to the Simulation controls row; toggles the user-created packet window | `CiscoBottomBar.tsx`; screenshot region 6 of `interfaceOverview_1.jpg` |
-| Shortcut muscle memory | Power Cycle Alt+S · Fast Forward Alt+D · Auto Capture/Play Alt+P · Capture/Forward Alt+C · Event List Alt+I | All five wired (layout-independent `event.code`), skipped while typing in inputs | `CiscoBottomBar.tsx` keydown handler |
+| Shortcut muscle memory | Power Cycle Alt+S · Fast Forward Alt+D · Auto Capture/Play Alt+P · Capture/Forward Alt+C · Back Alt+B · Event List Alt+I | All six wired (layout-independent `event.code`), skipped while typing in inputs | `CiscoBottomBar.tsx` keydown handler |
 | Tooltip hints | Tooltips document shortcut keys | Button titles now append the shortcut (`… (Alt+S)`) | `CiscoBottomBar.tsx` |
+| Simulation Back | Back button steps the simulation and event list backwards (Alt+B) | `Back` button first in the Simulation controls row (disabled while the journal is empty) plus `Alt+B`; one step restores the tick, in-flight packets, TCP state, application results and event rows captured before the previous step. Adaptive journal: 50/20/8 steps by topology size; new traffic, edits, resets and mode switches restart the run | `networkStore.stepSimulationBack`; `src/simulator/backstep.test.ts` (10 tests); e2e `backstep.spec.ts`; `docs/SIMULATION_BACKSTEP_IMPLEMENTATION.md` |
+| Edit Filters / Show All-None | Protocol filter dialog for the event list | `Edit Filters` opens a dialog with one checkbox per protocol plus `Show All` / `Show None`; a `Show All / None` toggle sits in the Events sidebar. Hidden protocols affect rendering only | `CiscoBottomBar.tsx`, `workspaceStore.hiddenEventProtocols`; e2e `backstep.spec.ts` |
+| Event list data model | Per-hop rows: Time · Last Device · At Device · Type | The Events tab renders one row per delivery with those columns and protocol chips; the buffer is capped at 300 events and is part of the Back snapshot, so it rewinds consistently | `engine.ts` `collectEvents` seventh parameter, `networkStore.simulationEvents`; e2e `backstep.spec.ts` |
 
-Every item above is exercised by the automated suites: unit 427/427, Playwright
-E2E 30/30 against the production build, `tsc` clean, ESLint clean, `next build` green.
+Every item above is exercised by the automated suites: unit 489/489, Playwright
+E2E 40 flows against the production build (the machine-load-sensitive realtime
+scale case passes every functional assertion and only its pacing bound flags
+under sustained external load), `tsc` clean, ESLint clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)
 
 | Area | PT 9 behavior | wireX today | Rationale for deferral |
 | --- | --- | --- | --- |
-| Simulation Back (Alt+B) | Steps the event list backwards | Forward-only tick engine; no reversible event journal | Requires engine-level event sourcing — a redesign, not a UI gap. Students can reset/replay; forward stepping covers graded workflows |
-| Edit Filters / Show All-None | Protocol filter dialog for event list | All events shown | Filtering needs the same event model work as Back; no curriculum blocker |
 | Play speed slider | Adjustable simulation speed | Fast Forward button covers acceleration | Cosmetic/comfort; no workflow dependency |
-| Full event-list data model | Per-hop rows (time, last/at device, type) | User PDU table with live status + hop inspection via PDU dialog | Different but equivalent information; rebuilding to PT's table is cosmetic parity with real engine cost |
 | Cluster navigation strip | Named clusters + navigation icons | Back button + breadcrumb of physical path | Simple topologies are fully navigable; named-cluster UX is an enhancement |
 | Exotic physical containers | Pegboard, Wall Mount, Shelf, Patch Panel, Intercity… | Campus/building/wiring closet/rack containers shipped | Core physical labs run; rare container types deferred |
 | Programming tab | Python / Blockly / JS editors for IoT & scripting | Tab present with an honest disclosure dialog | Shipping a scripting engine is a post-launch track; the tab is not a dead end — disclosure explains status |

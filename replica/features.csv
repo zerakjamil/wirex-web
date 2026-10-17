@@ -77,10 +77,10 @@ Standard and Extended IPv4 Access Control Lists,Security and WAN,must,yes,yes,St
 Switch Port Security (Max MAC and Violations),Security and WAN,must,yes,yes,Sticky MAC max addresses protect/restrict/shutdown modes
 GRE Tunnel Interfaces (tunnel source/dest),Security and WAN,must,yes,yes,Point-to-point IP GRE tunnels across WAN core
 Realtime Simulation Mode,Simulation Engine,must,yes,yes,Continuous packet processing without artificial pauses
-Event-Driven Simulation Mode with Step Forward,Simulation Engine,must,yes,yes,Play pause step forward and reset simulation controls
+Event-Driven Simulation Mode with Step Forward,Simulation Engine,must,yes,yes,Play pause step forward and step back with reset simulation controls
 Visual PDU Mail Envelope Links,Simulation Engine,must,yes,yes,Animated yellow Packet Tracer mail envelopes with protocol tags
 7-Layer OSI PDU Details Inspection,Simulation Engine,must,yes,yes,Layer by layer incoming and outgoing frame decision breakdown
-Simulation Event List Buffer,Simulation Engine,must,yes,yes,Event list recording in-flight and delivered frames
+Simulation Event List Buffer,Simulation Engine,must,yes,yes,"Per-hop event list (time, last device, at device, type) recorded in flight and on delivery, with per-protocol edit filters and Show All / None"
 Official .PKT Binary Decryption and Import,File IO Interop,must,yes,yes,Twofish cipher decoding of encrypted Packet Tracer files
 Packet Tracer XML Project Import and Export,File IO Interop,must,yes,yes,Standard XML network description and configuration import
 Browser LocalStorage Persistence,File IO Interop,must,yes,yes,Auto-save and recovery across reloads and tab closures
@@ -90,4 +90,4 @@ Real-State Assessment Grader,Training Engine,should,no,yes,Evaluates live networ
 Network Connection Diagnostics Engine,Training Engine,should,no,yes,Detailed device interface expected vs actual checks and CLI fix scripts
 Server Services Tab (DNS/TFTP/SNMP/Mail Service Enablement),Network Services,must,yes,yes,Packet Tracer-style Services tab on server windows; service settings split from Config exactly where PT students look for them
 Simulation Event List Toggle,Simulation Engine,should,yes,yes,Event List button in the simulation bar toggles the user-created packet window (mirrors the PT Alt+I affordance)
-Packet Tracer Keyboard Shortcuts,Workspace Canvas,could,yes,yes,"Alt+S power cycle, Alt+D fast forward, Alt+P/C/I simulation play, capture and event list; shortcut hints in tooltips"
+Packet Tracer Keyboard Shortcuts,Workspace Canvas,could,yes,yes,"Alt+S power cycle, Alt+D fast forward, Alt+B simulation step back, Alt+P/C/I simulation play, capture and event list; shortcut hints in tooltips"
