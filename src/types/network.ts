@@ -109,7 +109,7 @@ export interface RouteEntry {
   nextHop: string
   interfaceName: string
   metric: number
-  type: 'C' | 'S' | 'O' | 'R' | 'D'
+  type: 'C' | 'S' | 'O' | 'R' | 'D' | 'B'
   area?: number
 }
 
@@ -280,6 +280,10 @@ export interface DeviceConfig {
   eigrpPassiveDefault?: boolean
   eigrpPassiveInterfaces?: string[]
   eigrpActiveInterfaces?: string[]
+  bgpAs?: number
+  bgpRouterId?: string
+  bgpNeighbors?: Array<{ ip: string; remoteAs: number }>
+  bgpNetworks?: Array<{ network: string; mask: string }>
   ospfNetworks?: Array<{ network: string; wildcard: string; area: number }>
   ospfProcessId?: number
   ospfRouterId?: string
@@ -487,6 +491,7 @@ export interface NetworkDevice {
   ospfv3?: Ospfv3Runtime
   rip?: RipRuntime
   eigrp?: EigrpRuntime
+  bgp?: BgpRuntime
   apRuntime?: ApRuntime
   wlcRuntime?: WlcRuntime
   iotRuntime?: IotRuntime
@@ -512,7 +517,7 @@ export interface NetworkDevice {
   currentCliMode: 'user' | 'priv' | 'config' | 'config-if' | 'config-subif' | 'config-vlan' | 'config-line' | 'config-router' | 'config-ipv6-router' | 'config-dhcp' | 'config-dhcpv6' | 'config-telephony' | 'config-ephone' | 'config-ephone-dn' | 'config-mst'
   activeVoiceId?: number
   activeDhcpPool?: string
-  activeRoutingProtocol?: 'rip' | 'ospf' | 'eigrp'
+  activeRoutingProtocol?: 'rip' | 'ospf' | 'eigrp' | 'bgp'
   activeInterface?: string
   activeSubInterface?: string
   activeRangePorts?: string[]
@@ -609,7 +614,7 @@ export interface PhysicalWorkspaceState {
   clusters: NetworkCluster[]
 }
 
-export const PACKET_PROTOCOLS = ['ARP', 'ICMP', 'ICMPv6', 'DHCP', 'DHCPv6', 'DNS', 'UDP', 'HTTP', 'TCP', 'OSPF', 'RIP', 'EIGRP', 'GRE', 'STP', 'CAPWAP'] as const
+export const PACKET_PROTOCOLS = ['ARP', 'ICMP', 'ICMPv6', 'DHCP', 'DHCPv6', 'DNS', 'UDP', 'HTTP', 'TCP', 'OSPF', 'RIP', 'EIGRP', 'BGP', 'GRE', 'STP', 'CAPWAP'] as const
 export type PacketProtocol = (typeof PACKET_PROTOCOLS)[number]
 
 export interface RipEntry { network: string; netmask: string; metric: number }
@@ -641,6 +646,45 @@ export interface EigrpRuntime {
   neighbors: EigrpNeighbor[]
   candidates: EigrpCandidate[]
   lastHelloAt: Record<string, number>
+  signature: string
+  lastError?: string
+}
+
+export interface BgpEntry { network: string; netmask: string; nextHop: string; asPath: number[] }
+export interface BgpPacket {
+  type: 'open' | 'keepalive' | 'update' | 'notification'
+  asNumber: number
+  routerId?: string
+  holdTimeSeconds?: number
+  entries?: BgpEntry[]
+  withdrawn?: Array<{ network: string; netmask: string }>
+  complete?: boolean
+  notification?: string
+}
+export type BgpPeerState = 'idle' | 'opensent' | 'openconfirm' | 'established'
+export interface BgpPath extends BgpEntry { updatedAt: number }
+export interface BgpPeer {
+  address: string
+  portId: string
+  macAddress: string
+  remoteAs: number
+  state: BgpPeerState
+  remoteRouterId?: string
+  remoteHoldTimeSeconds?: number
+  lastKeepalive: number
+  since: number
+  learned: BgpPath[]
+  messagesSent: number
+  messagesReceived: number
+}
+export interface BgpRuntime {
+  clock: number
+  routerId: string
+  peers: BgpPeer[]
+  lastOpenAt: Record<string, number>
+  lastKeepaliveAt: Record<string, number>
+  advertised: string[]
+  localAdvertised: string[]
   signature: string
   lastError?: string
 }
@@ -779,6 +823,7 @@ export interface PacketPdu {
     ospfv3?: Ospfv3Packet
     rip?: RipPacket
     eigrp?: EigrpPacket
+    bgp?: BgpPacket
     stpVlan?: number
     stpRootBridgeId?: string
     stpRootDeviceId?: string

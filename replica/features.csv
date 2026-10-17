@@ -61,7 +61,7 @@ Default Gateway Forwarding,Layer 3 Routing,must,yes,yes,Forwarding packets outsi
 OSPF Area 0 Single-Area Routing,Layer 3 Routing,must,yes,yes,Router ospf network statements and route table insertion
 Dynamic OSPF Neighbor Adjacency and DR/BDR,Layer 3 Routing,should,yes,yes,OSPF Hello state tracking with show ip ospf neighbor command
 EIGRP Routing Protocol (DUAL FSM),Layer 3 Routing,could,yes,no,Cisco proprietary DUAL finite state machine and metrics; IPv4 exchange/adjacency/composite-metric/D-route model landed 2026-10-17 as a reduced DUAL without active/query states or EIGRPv6; see docs/EIGRP_IMPLEMENTATION.md
-BGP Border Gateway Protocol,Layer 3 Routing,could,yes,no,Autonomous system path vector eBGP peering
+BGP Border Gateway Protocol,Layer 3 Routing,could,yes,no,Autonomous system path vector eBGP peering; IPv4 OPEN/KEEPALIVE/UPDATE exchange with AS-path loop prevention and B routes landed 2026-10-17 as a reduced eBGP without TCP-handshake modeling or iBGP; see docs/BGP_IMPLEMENTATION.md
 IPv6 Addressing and Routing (OSPFv3 / SLAAC),Layer 3 Routing,could,yes,no,"Dual-stack IPv6 routing and auto-configuration; slices 1-5 landed 2026-10-17 (address layer, engine ICMPv6/NDP, CLI/Config UI with show commands and ping, SLAAC + DHCPv6 client/server with Desktop mode selector, OSPFv3 with prefix LSAs and O-route installation; see docs/IPV6_IMPLEMENTATION.md)"
 DHCP Server Pools and Exclusions,Network Services,must,yes,yes,Ip dhcp pool network default-router dns-server and excluded-address
 DHCP Option 150 for Cisco IP Telephony,Network Services,should,yes,yes,Option 150 TFTP server IP allocation for VoIP phones

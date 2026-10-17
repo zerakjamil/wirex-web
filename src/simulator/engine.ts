@@ -12,6 +12,8 @@ import { prepareRipTick, receiveRipPacket, hasRip, ripEnabled } from './rip'
 import type { RipOutbound } from './rip'
 import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './eigrp'
 import type { EigrpOutbound } from './eigrp'
+import { prepareBgpTick, receiveBgpPacket, hasBgp } from './bgp'
+import type { BgpOutbound } from './bgp'
 import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
 import { applyIotControl, iotKindOf, iotServerRuntimeOf, iotStateOf, iotStateSummary, isIotServer, isIotThing, markIotRegistered, prepareIotTick, recordIotClient, touchIotClient, IOT_BROADCAST_ADDRESS, IOT_CLIENT_PORT, IOT_SERVER_PORT, type IotIntent } from './iot'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES, TFTP_BLOCK_SIZE, tftpBlockCount, tftpBlockDataHex } from './tftp'
@@ -859,7 +861,8 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
   const ospfv3Control = prepareIpv6OspfTick(ospfControl.devices)
   const ripControl = prepareRipTick(ospfv3Control.devices)
   const eigrpControl = prepareEigrpTick(ripControl.devices)
-  const capwapControl = prepareCapwapTick(eigrpControl.devices, links, simulationTick)
+  const bgpControl = prepareBgpTick(eigrpControl.devices)
+  const capwapControl = prepareCapwapTick(bgpControl.devices, links, simulationTick)
   const iotControl = prepareIotTick(capwapControl.devices, links, simulationTick)
   const control = { devices: iotControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
   const stpControl=prepareStpTick(control.devices,links,simulationTick)
@@ -1099,6 +1102,14 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     ipFrames(device, route, { ...intent.pdu, sourceMac: route.port.macAddress, sourceIp: route.port.ipAddress }, updatedDevices, links, 0).forEach(enqueue)
   }
   iotControl.outbound.forEach(sendIot)
+  const sendBgp = (intent: BgpOutbound) => {
+    const device = byId.get(intent.deviceId)
+    if (!device) return
+    const route = outgoingRoute(device, intent.pdu.destIp)
+    if (!route || !route.port.ipAddress) return
+    ipFrames(device, route, { ...intent.pdu, sourceMac: route.port.macAddress, sourceIp: route.port.ipAddress }, updatedDevices, links, 0).forEach(enqueue)
+  }
+  bgpControl.outbound.forEach(sendBgp)
   const learnArp = (device: NetworkDevice, port: NetworkPort, ip: string, mac: string) => {
     const existing = device.arpTable.find(a => a.ipAddress === ip && a.interfaceName === port.name)
     if (existing?.macAddress === mac) return
@@ -1710,6 +1721,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     const ospfRecipient = pdu.protocol === 'OSPF' && hasOspf(receiver) && ospfArea(receiver, logicalPort) !== undefined
     const ripRecipient = pdu.protocol === 'RIP' && hasRip(receiver) && ripEnabled(receiver, logicalPort)
     const eigrpRecipient = pdu.protocol === 'EIGRP' && hasEigrp(receiver) && eigrpEnabled(receiver, logicalPort)
+    const bgpRecipient = pdu.protocol === 'BGP' && hasBgp(receiver) && receiver.ports.some(port => port.ipAddress === pdu.destIp)
     if (isBridge(receiver) && !localIp && !gatewayFrame) {
       const known = receiver.type === 'hub' ? undefined : byId.get(receiver.id)!.macTable.find(m => m.macAddress === pdu.destMac && m.vlan === vlan)
       const outPorts = known && pdu.destMac !== BROADCAST
@@ -1739,7 +1751,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       continue
     }
     if (!serial && !ospfMulticast && pdu.destMac !== BROADCAST && pdu.destMac.toLowerCase() !== receivingPort.macAddress.toLowerCase() && pdu.destMac.toLowerCase()!==svi?.macAddress.toLowerCase()&&!activeHsrpMac) { drop(packet, 'Unicast frame is addressed to another interface.'); continue }
-    if (pdu.protocol !== 'ARP' && (receiver.type === 'router' || receiver.type === 'security' || ospfRecipient || ripRecipient || eigrpRecipient) && logicalPort.inboundAcl) {
+    if (pdu.protocol !== 'ARP' && (receiver.type === 'router' || receiver.type === 'security' || ospfRecipient || ripRecipient || eigrpRecipient || bgpRecipient) && logicalPort.inboundAcl) {
       const acl = receiver.config.accessLists?.find((a) => a.id === logicalPort.inboundAcl)
       if (acl) {
         const evalResult = evaluateAcl(acl, {
@@ -1798,6 +1810,15 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           ? { ...translation, remoteDestinationPort: learnedTftpPort ?? translation.remoteDestinationPort, expiresAtMs: receivedAtMs + ASA_NAT_TIMEOUT_MS }
           : { ...translation, expiresAtMs: receivedAtMs + ASA_NAT_TIMEOUT_MS }
         : translation)
+    }
+    if (pdu.protocol === 'BGP' && bgpRecipient) {
+      const received = receiveBgpPacket(byId.get(receiver.id)!, logicalPort, pdu)
+      updatedDevices[deviceIndices.get(receiver.id)!] = received.device
+      byId.set(receiver.id, received.device); mutable.add(receiver.id)
+      received.outbound.forEach(sendBgp)
+      if (received.reason) { drop(packet, received.reason); continue }
+      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} processed BGP ${pdu.payload.bgp?.type}.` })
+      continue
     }
     if (pdu.protocol === 'OSPF' || pdu.protocol === 'RIP' || pdu.protocol === 'EIGRP') {
       const received = pdu.protocol === 'OSPF' ? receiveOspfPacket(byId.get(receiver.id)!, logicalPort, pdu) : pdu.protocol === 'RIP' ? receiveRipPacket(byId.get(receiver.id)!, logicalPort, pdu) : receiveEigrpPacket(byId.get(receiver.id)!, logicalPort, pdu)
@@ -2123,6 +2144,15 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
               received.outbound.forEach(sendControl)
               packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} decapsulated and processed EIGRP ${inner.payload.eigrp?.type ?? 'control'} on ${tunnel.name}.` })
             }
+            continue
+          }
+          if (inner.protocol === 'BGP' && hasBgp(byId.get(receiver.id)!) && receiver.ports.some(port => port.ipAddress === inner.destIp)) {
+            const received = receiveBgpPacket(byId.get(receiver.id)!, tunnel, inner)
+            updatedDevices[deviceIndices.get(receiver.id)!] = received.device
+            byId.set(receiver.id, received.device); mutable.add(receiver.id)
+            received.outbound.forEach(sendBgp)
+            if (received.reason) drop(packet, received.reason)
+            else packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} decapsulated and processed BGP ${inner.payload.bgp?.type ?? 'control'} on ${tunnel.name}.` })
             continue
           }
           if (receiver.config.ipRouting === false) { drop(packet, `IP routing is disabled on ${receiver.name}; GRE traffic cannot be forwarded.`); continue }

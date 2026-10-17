@@ -24,11 +24,13 @@ Classification legend:
 | Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster actions; `e2e/physical.spec.ts` |
 | Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups, applications ICMP/HTTP/TFTP/UDP/DNS/NTP, a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` and a frozen-on-stop counter; dispatches reuse the real application flows, colored + DSCP-labeled packets ride the canvas and PDU details, runs are runtime-only and one run per device; outgoing port is a read-only route preview | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (8), `src/store/trafficGenerator.test.ts` (7), `e2e/traffic-generator.spec.ts` (2); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 519/519, Playwright
-E2E 45 flows against the production build (the realtime scale case met its pacing
-bound again on the latest 2026-10-17 run — p95 tick interval 66.7 ms, engine tick
-p95 8.2 ms, queue peak 2,132 drained clean — and its pacing bound only flags under
-sustained external load), `tsc` clean, ESLint clean, `next build` green.
+Every item above is exercised by the automated suites: unit 525/525, Playwright
+E2E 45 of 46 flows against the production build on the latest 2026-10-17 run —
+every functional flow passes, including BGP flow F13; the realtime scale case
+passes every functional assertion (8/8 pings, queue peak 2,132, drained clean, no
+warnings — identical to its landing-day numbers) and its pacing bound (p95 tick
+interval 66.7 ms, engine tick p95 8.2 ms on landing day) only flags under sustained
+external host load — `tsc` clean, ESLint clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)
 

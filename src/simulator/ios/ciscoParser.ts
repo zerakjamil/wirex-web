@@ -7,6 +7,7 @@ import { ospfArea, ospfCost, ospfDead, ospfHello, ospfNetwork, ospfPassive, ospf
 import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost } from '../ospfv3'
 import { ripMajorNetwork, ripConfigLines } from '../rip'
 import { eigrpConfigLines, eigrpEnabled, eigrpPassive, eigrpRouterId, classfulWildcard } from '../eigrp'
+import { bgpConfigLines, bgpRouterId, classfulMask } from '../bgp'
 import { compressVlanRanges, formatMstConfiguration, formatStpSummary } from '../spanningTree'
 import { isValidSnmpCommunity } from '../snmp'
 
@@ -38,11 +39,13 @@ export interface IosExecutionResult {
   newPorts?: NetworkDevice['ports']
   newActiveVoiceId?: number
   newActiveDhcpPool?: string
-  newActiveRoutingProtocol?: 'rip' | 'ospf' | 'eigrp'
+  newActiveRoutingProtocol?: 'rip' | 'ospf' | 'eigrp' | 'bgp'
   resetOspf?: boolean
   resetOspfv3?: boolean
   resetRip?: boolean
   resetEigrp?: boolean
+  resetBgp?: boolean
+  clearBgpSessions?: boolean
   newMode?:
     | 'user'
     | 'priv'
@@ -73,6 +76,7 @@ export interface IosExecutionResult {
   newExcludedDhcpIp?: string
   newRipNetwork?: string
   newEigrpNetwork?: { network: string; wildcard: string }
+  newBgpNetwork?: { network: string; mask: string }
   newOspfNetwork?: { network: string; wildcard: string; area: number }
   modifiedPorts?: Array<Partial<NetworkDevice['ports'][number]> & {portId:string}>
   newRoutes?: RouteEntry[]
@@ -435,6 +439,12 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     }
     if (cmd === 'clear') {
       if (parts.slice(1).join(' ').toLowerCase() === 'ip ospf process') return { output: 'OSPF process restarted. Neighbor discovery will run again.', resetOspf: true }
+      if (parts[1]?.toLowerCase() === 'ip' && parts[2]?.toLowerCase() === 'bgp') {
+        if (parts[3] !== '*') return { output: '% Usage: clear ip bgp *. Per-neighbor session clearing is not supported in this reduced model.' }
+        if (device.config.bgpAs === undefined) return { output: '% BGP is not configured on this device.' }
+        if (!device.bgp?.peers.length) return { output: '% No BGP sessions to clear.' }
+        return { output: 'BGP sessions cleared. Peering re-establishes on the next update cycle.', clearBgpSessions: true }
+      }
       if (parts[1]?.toLowerCase()==='ip'&&parts[2]?.toLowerCase()==='dhcp'&&parts[3]?.toLowerCase()==='binding') {
         const target=parts[4]
         if(!target)return {output:'% Incomplete command. Specify an IP address or *.'}
@@ -640,6 +650,36 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
         return { output: '', newDeviceConfig: { eigrpNetworks: (device.config.eigrpNetworks ?? []).filter(n => !(n.network === parts[2] && n.wildcard === wildcard)) } }
       }
     }
+    if (device.activeRoutingProtocol === 'bgp') {
+      const no = cmd === 'no', action = no ? parts[1] : cmd
+      if (cmd === 'bgp' && parts[1]?.toLowerCase() === 'router-id') {
+        if (parts.length !== 3 || !isValidIpv4(parts[2]) || parts[2] === '0.0.0.0') return { output: '% Invalid BGP router ID.' }
+        return { output: '', newDeviceConfig: { bgpRouterId: parts[2] } }
+      }
+      if (no && action === 'bgp' && parts[2]?.toLowerCase() === 'router-id' && parts.length === 3) {
+        return { output: '', newDeviceConfig: { bgpRouterId: undefined } }
+      }
+      if (cmd === 'neighbor' || no && parts[1] === 'neighbor') {
+        const address = no ? parts[2] : parts[1]
+        if (!isValidIpv4(address || '')) return { output: '% Invalid BGP neighbor address.' }
+        if (no) {
+          const valid = parts.length === 3 || parts.length === 5 && parts[3]?.toLowerCase() === 'remote-as' && /^\d+$/.test(parts[4] ?? '')
+          if (!valid) return { output: '% Usage: no neighbor <A.B.C.D> [remote-as <1-65535>].' }
+          return { output: '', newDeviceConfig: { bgpNeighbors: (device.config.bgpNeighbors ?? []).filter(n => n.ip !== address) } }
+        }
+        if (parts.length !== 4 || parts[2]?.toLowerCase() !== 'remote-as' || !/^\d+$/.test(parts[3] ?? '')) return { output: '% Usage: neighbor <A.B.C.D> remote-as <1-65535>.' }
+        const remoteAs = Number(parts[3])
+        if (remoteAs < 1 || remoteAs > 65535) return { output: '% Invalid remote AS. Use <1-65535>.' }
+        if (remoteAs === device.config.bgpAs) return { output: '% iBGP (remote-as equal to the local AS) is not supported in this reduced model. Configure an eBGP neighbor.' }
+        if (device.config.bgpNeighbors?.some(n => n.ip === address && n.remoteAs === remoteAs)) return { output: '' }
+        return { output: '', newDeviceConfig: { bgpNeighbors: [...(device.config.bgpNeighbors ?? []).filter(n => n.ip !== address), { ip: address, remoteAs }] } }
+      }
+      if (no && action === 'network') {
+        if ((parts.length !== 3 && parts.length !== 5) || !isValidIpv4(parts[2] || '') || (parts.length === 5 && (parts[3]?.toLowerCase() !== 'mask' || !isValidIpv4(parts[4] ?? '')))) return { output: '% Usage: no network <A.B.C.D> [mask <A.B.C.D>].' }
+        const mask = parts[4] ?? classfulMask(parts[2])
+        return { output: '', newDeviceConfig: { bgpNetworks: (device.config.bgpNetworks ?? []).filter(n => !(n.network === parts[2] && n.mask === mask)) } }
+      }
+    }
     if (device.activeRoutingProtocol === 'ospf' && cmd === 'router-id') {
       if (parts.length !== 2 || !isValidIpv4(parts[1]) || parts[1] === '0.0.0.0') return { output: '% Invalid OSPF router ID.' }
       return { output: '', newDeviceConfig: { ospfRouterId: parts[1] }, resetOspf: true }
@@ -684,6 +724,15 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
           return { output: '% Invalid EIGRP network statement. Use network <IPv4> [wildcard].' }
         }
         return { output: '', newEigrpNetwork: { network: net!, wildcard: wildcard ?? classfulWildcard(net!) } }
+      }
+      if (device.activeRoutingProtocol === 'bgp') {
+        const mask = parts[2]?.toLowerCase() === 'mask' ? parts[3] : undefined
+        const valid = mask !== undefined
+          ? parts.length === 4 && isValidIpv4(mask ?? '') && /^1*0*$/.test(ipToNumber(mask).toString(2).padStart(32, '0'))
+          : parts.length === 2 && isValidIpv4(net || '')
+        if (!valid || !isValidIpv4(net || '')) return { output: '% Invalid BGP network statement. Use network <A.B.C.D> [mask <A.B.C.D>].' }
+        const finalMask = mask ?? classfulMask(net!)
+        return { output: '', newBgpNetwork: { network: getNetworkAddress(net!, finalMask), mask: finalMask } }
       }
       if (device.activeRoutingProtocol !== 'rip' || parts.length !== 2 || !isValidIpv4(net || '')) {
         return { output: '% Invalid RIP network statement. Use network <IPv4> inside router rip.' }
@@ -954,8 +1003,13 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
         if (device.config.eigrpAs !== undefined && device.config.eigrpAs !== processId) return { output: '% Multiple EIGRP autonomous systems are not implemented. Existing configuration was left unchanged.' }
         return { output: '', newMode: 'config-router', newActiveRoutingProtocol: 'eigrp', newDeviceConfig: { eigrpAs: processId } }
       }
+      if (protocol === 'bgp') {
+        if (parts.length !== 3 || !/^\d+$/.test(parts[2]) || processId < 1 || processId > 65535) return { output: '% Invalid BGP autonomous system. Use router bgp <1-65535>.' }
+        if (device.config.bgpAs !== undefined && device.config.bgpAs !== processId) return { output: `% A different BGP autonomous system (${device.config.bgpAs}) is already configured. Remove it first or re-enter AS ${device.config.bgpAs}.` }
+        return { output: '', newMode: 'config-router', newActiveRoutingProtocol: 'bgp', newDeviceConfig: { bgpAs: processId } }
+      }
       if (protocol !== 'ospf' || parts.length !== 3 || !/^\d+$/.test(parts[2]) || processId < 1 || processId > 65535) {
-        return { output: '% Supported configuration: router rip, router ospf <1-65535>, or router eigrp <1-65535>.' }
+        return { output: '% Supported configuration: router rip, router ospf <1-65535>, router eigrp <1-65535>, or router bgp <1-65535>.' }
       }
       if (device.config.ospfProcessId && device.config.ospfProcessId !== processId) {
         return { output: '% Multiple OSPF processes are not implemented. Existing configuration was left unchanged.' }
@@ -973,6 +1027,10 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'eigrp') {
       if (parts.length !== 4 || Number(parts[3]) !== (device.config.eigrpAs ?? 1)) return { output: '% EIGRP process not found.' }
       return { output: '', newDeviceConfig: { eigrpAs: undefined, eigrpNetworks: [], eigrpRouterId: undefined, eigrpAutoSummary: undefined, eigrpPassiveDefault: undefined, eigrpPassiveInterfaces: [], eigrpActiveInterfaces: [] }, resetEigrp: true }
+    }
+    if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'bgp') {
+      if (parts.length !== 4 || Number(parts[3]) !== (device.config.bgpAs ?? 1)) return { output: '% BGP process not found.' }
+      return { output: '', newDeviceConfig: { bgpAs: undefined, bgpRouterId: undefined, bgpNeighbors: [], bgpNetworks: [] }, resetBgp: true }
     }
     if (cmd === 'no' && parts[1] === 'router' && parts[2] === 'ospf') {
       if (parts.length !== 4 || Number(parts[3]) !== (device.config.ospfProcessId ?? 1)) return { output: '% OSPF process not found.' }
@@ -1799,6 +1857,37 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (sub3 === 'interface' || sub3 === 'int') return { output: device.ports.filter(p => ospfArea(device, p) !== undefined).map(p => `${p.name} is ${p.status}, area ${ospfArea(device, p)}\n  Network Type ${ospfNetwork(p)}, Cost: ${ospfCost(p)}\n  Hello ${ospfHello(p)}, Dead ${ospfDead(p)}${ospfPassive(device, p) ? '\n  No Hellos (Passive interface)' : ''}`).join('\n\n') || 'No OSPF interfaces configured.' }
   }
 
+  // show ip bgp [summary | neighbors | table]
+  if (sub1 === 'ip' && sub2 === 'bgp') {
+    if (device.config.bgpAs === undefined) return { output: '% BGP is not configured on this device.' }
+    const as = device.config.bgpAs
+    const routerId = device.bgp?.routerId ?? bgpRouterId(device) ?? 'unset'
+    const prefixLength = (mask: string) => (ipToNumber(mask).toString(2).match(/1/g) ?? []).length
+    const stamp = (seconds: number) => [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':')
+    if (sub3 === 'summary' || sub3 === 'sum' || sub3 === 'neighbors' || sub3 === 'nei') {
+      let out = `BGP router identifier ${routerId}, local AS number ${as}\nBGP table version is 1, main routing table version 1\n\nNeighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd\n`
+      const peers = [...(device.bgp?.peers ?? [])].sort((a, b) => ipToNumber(a.address) - ipToNumber(b.address))
+      for (const peer of peers) {
+        const state = peer.state === 'established' ? String(peer.learned.length) : peer.state === 'opensent' ? 'OpenSent' : peer.state === 'openconfirm' ? 'OpenConfirm' : 'Idle'
+        out += `${peer.address.padEnd(16)}${'4'.padEnd(5)}${String(peer.remoteAs).padEnd(6)}${String(peer.messagesReceived).padEnd(8)}${String(peer.messagesSent).padEnd(9)}${'1'.padEnd(9)}${'0'.padEnd(5)}${'0'.padEnd(5)}${stamp(Math.max(0, Math.floor(((device.bgp?.clock ?? 0) - peer.since) / 1000))).padEnd(9)}${state}\n`
+      }
+      const iBgp = (device.config.bgpNeighbors ?? []).filter(n => n.remoteAs === as)
+      for (const neighbor of iBgp) out += `% Neighbor ${neighbor.ip} is configured with the local AS ${as}; iBGP sessions are not supported in this reduced model.\n`
+      if (device.bgp?.lastError) out += `\n% Last rejected message: ${device.bgp.lastError}`
+      return { output: out.trimEnd() }
+    }
+    let out = `BGP table version is 1, local router ID is ${routerId}\nStatus codes: s suppressed, d damped, h history, * valid, > best\nOrigin codes: i - IGP, e - EGP, ? - incomplete\n\n   Network          Next Hop            Metric LocPrf Weight Path\n`
+    for (const local of device.config.bgpNetworks ?? []) {
+      const advertised = device.ports.some(p => p.ipAddress && p.subnetMask && getNetworkAddress(p.ipAddress, p.subnetMask) === local.network && p.subnetMask === local.mask)
+      out += `*> ${`${local.network}/${prefixLength(local.mask)}`.padEnd(17)}0.0.0.0              ${'0'.padEnd(7)}${' '.padEnd(7)}32768 i${advertised ? '' : '  (not in routing table)'}\n`
+    }
+    for (const path of [...(device.bgp?.peers ?? []).flatMap(peer => peer.learned.map(learned => ({ path: learned, peer })))].sort((a, b) => ipToNumber(a.path.network) - ipToNumber(b.path.network))) {
+      out += `*> ${`${path.path.network}/${prefixLength(path.path.netmask)}`.padEnd(17)}${path.path.nextHop.padEnd(20)}${'0'.padEnd(7)}${' '.padEnd(7)}${'0'.padEnd(6)}${path.path.asPath.join(' ')} i\n`
+    }
+    if (device.bgp?.lastError) out += `\n% Last rejected message: ${device.bgp.lastError}`
+    return { output: out.trimEnd() }
+  }
+
   // show ip eigrp neighbors | topology | interfaces
   if (sub1 === 'ip' && sub2 === 'eigrp') {
     if (device.config.eigrpAs === undefined) return { output: '% EIGRP is not configured on this device.' }
@@ -1876,7 +1965,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
 
   // show ip route (sh ip ro / show ip route)
   if (sub1 === 'ip' && (sub2 === 'route' || sub2 === 'ro')) {
-    let out = `Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP\nGateway of last resort is not set\n\n`
+    let out = `Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP, B - BGP\nGateway of last resort is not set\n\n`
     for (const r of device.routingTable) {
       if (r.type === 'C') {
         const port = device.ports.find(p => p.name === r.interfaceName)
@@ -1892,6 +1981,8 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
         out += `R    ${r.network}/${r.netmask} [120/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       } else if (r.type === 'D') {
         out += `D    ${r.network}/${r.netmask} [90/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
+      } else if (r.type === 'B') {
+        out += `B    ${r.network}/${r.netmask} [20/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       }
     }
     return { output: out.trimEnd() }
@@ -2117,6 +2208,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (device.config.ipv6OspfProcessId !== undefined) lines.push(`Routing Protocol is "ospfv3 ${device.config.ipv6OspfProcessId}"\n  Router ID ${device.ospfv3?.routerId ?? device.config.ipv6OspfRouterId ?? 'pending startup'}\n  Intra-area OSPFv3, administrative distance 110\n  Interfaces:\n${device.ports.filter((p) => p.ipv6OspfArea !== undefined).map((p) => `    ${p.name} area ${p.ipv6OspfArea}`).join('\n')}`)
     if (device.config.ripNetworks?.length) lines.push(`Routing Protocol is "rip"\n  Sending updates every 30 seconds, invalid after 180, flushed 60 seconds after invalidation\n  Default version control: send version ${device.config.ripVersion ?? 1}, receive ${device.config.ripVersion ?? 'any version'}\n  Automatic network summarization is ${device.config.ripAutoSummary === false ? 'not in effect' : 'in effect'}\n  Administrative distance: 120\n  Routing for Networks:\n${device.config.ripNetworks.map(n => `    ${n}`).join('\n')}\n  Passive Interfaces:\n${device.ports.filter(p => device.config.ripPassiveInterfaces?.includes(p.name) || device.config.ripPassiveDefault && !device.config.ripActiveInterfaces?.includes(p.name)).map(p => `    ${p.name}`).join('\n')}\n  Routing Information Sources:\n${device.rip?.neighbors.map(n => `    ${n.address} on ${device.ports.find(p => p.id === n.portId)?.name}, last update ${Math.floor((device.rip!.clock - n.lastUpdate) / 1000)} seconds ago`).join('\n') || '    none'}${device.rip?.lastError ? `\n  Last rejected update: ${device.rip.lastError}` : ''}`)
     if (device.config.eigrpAs !== undefined) lines.push(`Routing Protocol is "eigrp ${device.config.eigrpAs}"\n  EIGRP router ID: ${eigrpRouterId(device) ?? 'not selected'}\n  Administrative distance: internal 90\n  Automatic network summarization is ${device.config.eigrpAutoSummary ? 'in effect' : 'not in effect'}\n  Routing for Networks:\n${(device.config.eigrpNetworks ?? []).map(n => `    ${n.network} ${n.wildcard}`).join('\n')}\n  Passive Interfaces:\n${device.ports.filter(p => eigrpPassive(device, p)).map(p => `    ${p.name}`).join('\n')}\n  EIGRP Neighbors:\n${device.eigrp?.neighbors.map(n => `    ${n.address} on ${device.ports.find(p => p.id === n.portId)?.name ?? n.portId}, hold ${Math.max(0, Math.ceil((n.holdTimeMs - (device.eigrp!.clock - n.lastHello)) / 1000))} seconds`).join('\n') || '    none'}${device.eigrp?.lastError ? `\n  Last rejected packet: ${device.eigrp.lastError}` : ''}`)
+    if (device.config.bgpAs !== undefined) lines.push(`Routing Protocol is "bgp ${device.config.bgpAs}"\n  BGP router ID: ${device.bgp?.routerId ?? bgpRouterId(device) ?? 'not selected'}\n  External administrative distance: 20; internal: 200\n  eBGP path-vector peering, keepalive ${Math.floor(60000 / 1000)} seconds, hold time ${Math.floor(180000 / 1000)} seconds\n  Routing for Networks:\n${(device.config.bgpNetworks ?? []).map(n => `    ${n.network} mask ${n.mask}`).join('\n') || '    none'}\n  BGP Neighbors:\n${device.bgp?.peers.map(peer => `    ${peer.address}, remote AS ${peer.remoteAs}, ${peer.state === 'established' ? `up ${Math.max(0, Math.floor((device.bgp!.clock - peer.since) / 1000))} seconds, ${peer.learned.length} prefixes` : `state ${peer.state}`}`).join('\n') || '    none'}${device.bgp?.lastError ? `\n  Last rejected message: ${device.bgp.lastError}` : ''}`)
     return { output: lines.join('\n\n') || 'No dynamic routing protocols configured.' }
   }
 
@@ -2254,6 +2346,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (device.config.ripNetworks?.length) out += `${ripConfigLines(device).join('\n')}\n`
 
     if (device.config.eigrpAs !== undefined) out += `${eigrpConfigLines(device).join('\n')}\n`
+    if (device.config.bgpAs !== undefined) out += `${bgpConfigLines(device).join('\n')}\n`
 
     const ospfLines = ospfConfigLines(device)
     const processStart = ospfLines.findIndex(line => line.startsWith('router ospf '))

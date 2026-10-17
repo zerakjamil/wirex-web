@@ -676,6 +676,7 @@ export const messages = {
   'OSPF':['OSPF','بروتوكول OSPF','پرۆتۆکۆلی OSPF'],
   'RIP':['RIP','بروتوكول RIP','پرۆتۆکۆلی RIP'],
   'EIGRP':['EIGRP','بروتوكول EIGRP','پرۆتۆکۆلی EIGRP'],
+  'BGP':['BGP','بروتوكول BGP','پرۆتۆکۆلی BGP'],
   'GRE':['GRE','بروتوكول GRE','پرۆتۆکۆلی GRE'],
   'STP':['STP','بروتوكول STP','پرۆتۆکۆلی STP'],
   'CAPWAP':['CAPWAP','بروتوكول CAPWAP','پرۆتۆکۆلی CAPWAP'],

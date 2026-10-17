@@ -482,6 +482,12 @@ function PacketEnvelopes({ linkId, sourceX, sourceY, targetX, targetY }: {linkId
           strokeColor = '#7c2d12'
           badgeBg = '#ffedd5'
           badgeText = '#9a3412'
+        } else if (protocol.includes('BGP')) {
+          bodyFill = '#f43f5e'
+          flapFill = '#e11d48'
+          strokeColor = '#881337'
+          badgeBg = '#ffe4e6'
+          badgeText = '#9f1239'
         }
 
         const generatorColor = packet.pdu.generatorColor

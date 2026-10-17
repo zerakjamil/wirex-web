@@ -359,4 +359,46 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/1\s+10,20/)
     await expect(modal).toContainText(/Switch is in rapid-pvst mode/)
   })
+
+  test('F13: BGP process, neighbor and network from the router CLI appear in show ip bgp and show running-config', async ({ page }) => {
+    await page.goto('/')
+
+    const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
+    await expect(routerBtn).toBeVisible({ timeout: 10000 })
+    await routerBtn.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const cliTab = modal.locator('button', { hasText: /^CLI$/i })
+    if (await cliTab.isVisible()) {
+      await cliTab.click()
+    }
+    const cliInput = modal.locator('input[type="text"]').last()
+    await expect(cliInput).toBeVisible()
+    for (const command of [
+      'enable',
+      'configure terminal',
+      'router bgp 65001',
+      'bgp router-id 10.0.0.1',
+      'neighbor 10.0.0.2 remote-as 65002',
+      'network 10.0.0.0 mask 255.255.0.0',
+      'end',
+      'show ip bgp summary',
+      'show ip bgp',
+      'show ip protocols',
+      'show running-config',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    await expect(modal).toContainText(/BGP router identifier 10\.0\.0\.1, local AS number 65001/)
+    await expect(modal).toContainText(/Neighbor\s+V\s+AS/)
+    await expect(modal).toContainText(/10\.0\.0\.2\s+4\s+65002/)
+    await expect(modal).toContainText(/\*> 10\.0\.0\.0\/16\s+0\.0\.0\.0\s+0\s+32768 i/)
+    await expect(modal).toContainText(/Routing Protocol is "bgp 65001"/)
+    await expect(modal).toContainText(/router bgp 65001/)
+    await expect(modal).toContainText(/neighbor 10\.0\.0\.2 remote-as 65002/)
+    await expect(modal).toContainText(/network 10\.0\.0\.0 mask 255\.255\.0\.0/)
+  })
 })
