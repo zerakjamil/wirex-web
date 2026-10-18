@@ -41,12 +41,22 @@ export interface BgpBestPath { path: BgpPath; peer: BgpPeer }
 
 export function bgpBestPaths(d: NetworkDevice): Map<string, BgpBestPath> {
   const best = new Map<string, BgpBestPath>()
+  const localAs = d.config.bgpAs
   for (const peer of d.bgp?.peers ?? []) {
     if (peer.state !== 'established') continue
     for (const path of peer.learned) {
       const key = prefix(path.network, path.netmask)
       const previous = best.get(key)
-      if (!previous || path.asPath.length < previous.path.asPath.length || path.asPath.length === previous.path.asPath.length && ipToNumber(peer.address) < ipToNumber(previous.peer.address)) best.set(key, { path, peer })
+      if (!previous) { best.set(key, { path, peer }); continue }
+      if (path.asPath.length !== previous.path.asPath.length) {
+        if (path.asPath.length < previous.path.asPath.length) best.set(key, { path, peer })
+        continue
+      }
+      // Equal AS-path length: an external path beats an internal one, then the lowest peer address.
+      const external = peer.remoteAs !== localAs
+      const previousExternal = previous.peer.remoteAs !== localAs
+      if (external !== previousExternal) { if (external) best.set(key, { path, peer }); continue }
+      if (ipToNumber(peer.address) < ipToNumber(previous.peer.address)) best.set(key, { path, peer })
     }
   }
   return best
@@ -59,37 +69,70 @@ function selectBgpRoutes(d: NetworkDevice) {
     if (local.has(prefix(path.network, path.netmask))) continue
     const port = d.ports.find(p => p.id === peer.portId)
     if (!port) continue
-    routes.push({ network: path.network, netmask: path.netmask, metric: 0, nextHop: path.nextHop, interfaceName: port.name, type: 'B' })
+    routes.push({ network: path.network, netmask: path.netmask, metric: 0, nextHop: path.nextHop, interfaceName: port.name, type: 'B', distance: peer.remoteAs === d.config.bgpAs ? 200 : 20 })
   }
   d.routingTable = [...d.routingTable.filter(r => r.type !== 'B'), ...routes]
 }
 
 function advertisedEntries(d: NetworkDevice, peer: BgpPeer): BgpEntry[] {
+  const ibgp = peer.remoteAs === d.config.bgpAs
   const egressIp = d.ports.find(p => p.id === peer.portId)?.ipAddress
   const entries = new Map<string, BgpEntry>()
   for (const local of bgpLocalNetworks(d)) {
-    entries.set(prefix(local.network, local.netmask), { network: local.network, netmask: local.netmask, nextHop: egressIp ?? local.nextHop, asPath: [d.config.bgpAs!] })
+    entries.set(prefix(local.network, local.netmask), { network: local.network, netmask: local.netmask, nextHop: egressIp ?? local.nextHop, asPath: ibgp ? [] : [d.config.bgpAs!] })
   }
   for (const { path, peer: owner } of bgpBestPaths(d).values()) {
     if (owner.address === peer.address) continue
+    // iBGP-learned paths are not relayed to other iBGP peers (no route reflection).
+    if (ibgp && owner.remoteAs === d.config.bgpAs) continue
     const key = prefix(path.network, path.netmask)
-    if (!entries.has(key)) entries.set(key, { network: path.network, netmask: path.netmask, nextHop: egressIp ?? path.nextHop, asPath: [d.config.bgpAs!, ...path.asPath] })
+    if (!entries.has(key)) entries.set(key, ibgp
+      ? { network: path.network, netmask: path.netmask, nextHop: path.nextHop, asPath: [...path.asPath] }
+      : { network: path.network, netmask: path.netmask, nextHop: egressIp ?? path.nextHop, asPath: [d.config.bgpAs!, ...path.asPath] })
   }
   return [...entries.values()].slice(0, MAX_ROUTES)
 }
 
 function packet(d: NetworkDevice, p: NetworkPort, body: BgpPacket, peer: BgpPeer, summary: string, decision: string): PacketPdu {
+  const ibgp = peer.remoteAs === d.config.bgpAs
   return {
     id: `bgp-${crypto.randomUUID()}`, protocol: 'BGP', sourceIp: p.ipAddress!, destIp: peer.address, sourceMac: p.macAddress, destMac: peer.macAddress || UNRESOLVED_MAC, etherType: '0x0800', ttl: 1,
     summary, payload: { bgp: body },
     explanation: {
       layer1: `BGP outbound interface: ${p.name}.`,
       layer2: `${p.macAddress} to ${peer.macAddress || 'next-hop MAC resolved by ARP'}.`,
-      layer3: `IPv4, TCP port ${BGP_PORT}: ${p.ipAddress} to ${peer.address}, TTL 1 because eBGP peering is link-local.`,
-      layer4AndAbove: `BGP ${body.type.toUpperCase()} for autonomous system ${body.asNumber}.${body.type === 'open' ? ` Hold time ${body.holdTimeSeconds ?? Math.floor(BGP_HOLD_MS / 1000)} seconds, router ID ${body.routerId ?? d.bgp?.routerId ?? 'unset'}.` : ''}${body.type === 'update' ? ` ${body.entries?.length ?? 0} announced, ${body.withdrawn?.length ?? 0} withdrawn.` : ''}`,
+      layer3: `IPv4, TCP port ${BGP_PORT}: ${p.ipAddress} to ${peer.address}, TTL 1 because BGP peering is link-local in this model.`,
+      layer4AndAbove: `BGP ${body.type.toUpperCase()} for autonomous system ${body.asNumber}${ibgp ? ' (iBGP session, no AS-path prepending)' : ''}.${body.type === 'open' ? ` Hold time ${body.holdTimeSeconds ?? Math.floor(BGP_HOLD_MS / 1000)} seconds, router ID ${body.routerId ?? d.bgp?.routerId ?? 'unset'}.` : ''}${body.type === 'update' ? ` ${body.entries?.length ?? 0} announced, ${body.withdrawn?.length ?? 0} withdrawn.` : ''}`,
       deviceDecision: decision,
     },
   }
+}
+
+const BGP_TCP_LABELS: Record<'syn' | 'synack' | 'ack' | 'rst', string> = { syn: 'SYN', synack: 'SYN-ACK', ack: 'ACK', rst: 'RST' }
+function tcpPacket(d: NetworkDevice, p: NetworkPort, address: string, macAddress: string, flags: 'syn' | 'synack' | 'ack' | 'rst', decision: string): PacketPdu {
+  return {
+    id: `bgp-${crypto.randomUUID()}`, protocol: 'BGP', sourceIp: p.ipAddress!, destIp: address, sourceMac: p.macAddress, destMac: macAddress || UNRESOLVED_MAC, etherType: '0x0800', ttl: 1,
+    summary: `TCP ${BGP_TCP_LABELS[flags]} to port ${BGP_PORT} (${address})`,
+    payload: { bgpTcp: { flags } },
+    explanation: {
+      layer1: `BGP outbound interface: ${p.name}.`,
+      layer2: `${p.macAddress} to ${macAddress || 'next-hop MAC resolved by ARP'}.`,
+      layer3: `IPv4, TCP port ${BGP_PORT}: ${p.ipAddress} to ${address}, TTL 1 because BGP peering is link-local in this model.`,
+      layer4AndAbove: `TCP ${BGP_TCP_LABELS[flags]} on port ${BGP_PORT} — the transport handshake that precedes the BGP OPEN.`,
+      deviceDecision: decision,
+    },
+  }
+}
+
+function tcpOutbound(d: NetworkDevice, p: NetworkPort, peer: BgpPeer, flags: 'syn' | 'synack' | 'ack' | 'rst'): BgpOutbound {
+  const decision = flags === 'syn'
+    ? `${d.name} opens the TCP connection to ${peer.address} on port ${BGP_PORT}.`
+    : flags === 'synack'
+      ? `${d.name} accepts the TCP connection from ${peer.address} and answers SYN-ACK.`
+      : flags === 'ack'
+        ? `${d.name} completes the TCP handshake with ${peer.address} and can send the BGP OPEN.`
+        : `${d.name} refuses the TCP connection from ${peer.address}.`
+  return { deviceId: d.id, pdu: tcpPacket(d, p, peer.address, peer.macAddress, flags, decision) }
 }
 
 function openOutbound(d: NetworkDevice, p: NetworkPort, peer: BgpPeer): BgpOutbound {
@@ -133,11 +176,8 @@ export function prepareBgpTick(devices: NetworkDevice[]) {
     rt.routerId = bgpRouterId(d) ?? rt.routerId
     const configured = d.config.bgpNeighbors ?? []
     rt.peers = rt.peers.filter(peer => configured.some(n => n.ip === peer.address))
-    const iBgpNeighbor = configured.find(n => n.remoteAs === d.config.bgpAs)
-    if (iBgpNeighbor) rt.lastError = `Neighbor ${iBgpNeighbor.ip} is configured with the local autonomous system ${d.config.bgpAs}; iBGP sessions are not supported in this reduced model.`
 
     for (const neighbor of configured) {
-      if (neighbor.remoteAs === d.config.bgpAs) continue
       const port = bgpPeerPort(d, neighbor.ip)
       let peer = rt.peers.find(candidate => candidate.address === neighbor.ip)
       if (!peer) {
@@ -151,7 +191,7 @@ export function prepareBgpTick(devices: NetworkDevice[]) {
         peer.remoteRouterId = undefined
         peer.since = rt.clock
       }
-      if (port && peer.state === 'idle') peer.portId = port.id
+      if (port && (peer.state === 'idle' || peer.state === 'connecting')) peer.portId = port.id
       const holdTimeMs = (peer.remoteHoldTimeSeconds ?? Math.floor(BGP_HOLD_MS / 1000)) * 1000
       if ((peer.state === 'openconfirm' || peer.state === 'established') && rt.clock - peer.lastKeepalive > holdTimeMs) {
         peer.state = 'idle'
@@ -160,12 +200,16 @@ export function prepareBgpTick(devices: NetworkDevice[]) {
         peer.since = rt.clock
       }
       if (!port || !port.ipAddress || !up(d, port)) continue
-      if (peer.state === 'idle' || peer.state === 'opensent') {
+      if (peer.state === 'idle' || peer.state === 'connecting' || peer.state === 'opensent') {
         if (rt.clock - (rt.lastOpenAt[peer.address] ?? -BGP_RETRY_MS) >= BGP_RETRY_MS) {
           rt.lastOpenAt[peer.address] = rt.clock
-          peer.state = 'opensent'
-          peer.messagesSent += 1
-          outbound.push(openOutbound(d, port, peer))
+          if (peer.state === 'opensent') {
+            peer.messagesSent += 1
+            outbound.push(openOutbound(d, port, peer))
+          } else {
+            peer.state = 'connecting'
+            outbound.push(tcpOutbound(d, port, peer, 'syn'))
+          }
         }
       } else if (peer.state === 'established') {
         if (rt.clock - (rt.lastKeepaliveAt[peer.address] ?? -BGP_KEEPALIVE_MS) >= BGP_KEEPALIVE_MS) {
@@ -198,9 +242,53 @@ export function prepareBgpTick(devices: NetworkDevice[]) {
   return { devices: updated, outbound }
 }
 
+function receiveBgpTcp(original: NetworkDevice, p: NetworkPort, pdu: PacketPdu, flags: 'syn' | 'synack' | 'ack' | 'rst'): { device: NetworkDevice; outbound: BgpOutbound[]; reason?: string } {
+  const outbound: BgpOutbound[] = []
+  if (!up(original, p)) return { device: original, outbound, reason: `BGP rejected on ${p.name}: the interface is not operational.` }
+  const neighbor = original.config.bgpNeighbors?.find(n => n.ip === pdu.sourceIp)
+  // The transport handshake runs before any session state: a SYN is answered when a neighbor statement matches, refused with an RST when the device runs BGP without one, and ignored when the device does not run BGP at all.
+  if (flags === 'syn') {
+    if (!bgpRuns(original)) return { device: original, outbound }
+    if (!neighbor) {
+      outbound.push({ deviceId: original.id, pdu: tcpPacket(original, p, pdu.sourceIp, pdu.sourceMac, 'rst', `${original.name} has no BGP neighbor statement for ${pdu.sourceIp} and refuses the TCP connection (RST).`) })
+      return { device: original, outbound }
+    }
+    outbound.push({ deviceId: original.id, pdu: tcpPacket(original, p, pdu.sourceIp, pdu.sourceMac, 'synack', `${original.name} accepts the connection from neighbor ${pdu.sourceIp} and answers SYN-ACK.`) })
+    return { device: original, outbound }
+  }
+  if (!original.bgp) return { device: original, outbound }
+  const d = cloneRuntime(original)
+  const rt = d.bgp!
+  const peer = rt.peers.find(candidate => candidate.address === pdu.sourceIp)
+  if (!peer) return { device: d, outbound, reason: `TCP control from ${pdu.sourceIp} on ${p.name} ignored: not a tracked peer.` }
+  peer.macAddress = pdu.sourceMac || peer.macAddress
+  peer.portId = p.id
+  if (flags === 'synack') {
+    if (peer.state === 'connecting') {
+      peer.state = 'opensent'
+      peer.messagesSent += 1
+      rt.lastOpenAt[peer.address] = rt.clock
+      outbound.push(tcpOutbound(d, p, peer, 'ack'), openOutbound(d, p, peer))
+    }
+    return { device: d, outbound }
+  }
+  if (flags === 'rst') {
+    peer.state = 'idle'
+    peer.learned = []
+    peer.remoteRouterId = undefined
+    peer.since = rt.clock
+    rt.lastError = `TCP connection to ${pdu.sourceIp} was refused: the remote device has no BGP neighbor for ${p.ipAddress ?? p.name}. Retrying every 5 seconds.`
+    selectBgpRoutes(d)
+    return { device: d, outbound }
+  }
+  return { device: d, outbound }
+}
+
 export function receiveBgpPacket(original: NetworkDevice, p: NetworkPort, pdu: PacketPdu): { device: NetworkDevice; outbound: BgpOutbound[]; reason?: string } {
   const outbound: BgpOutbound[] = [], body = pdu.payload.bgp
   const reject = (reason: string) => ({ device: original.bgp ? { ...original, bgp: { ...original.bgp, lastError: reason } } : original, outbound, reason })
+  const tcp = pdu.payload.bgpTcp
+  if (tcp && (tcp.flags === 'syn' || tcp.flags === 'synack' || tcp.flags === 'ack' || tcp.flags === 'rst')) return receiveBgpTcp(original, p, pdu, tcp.flags)
   if (!hasBgp(original) || !original.bgp) return reject(`BGP is not configured on ${original.name}.`)
   if (!body) return reject(`Malformed BGP message rejected on ${p.name}.`)
   if (!up(original, p)) return reject(`BGP rejected on ${p.name}: the interface is not operational.`)
@@ -226,7 +314,7 @@ export function receiveBgpPacket(original: NetworkDevice, p: NetworkPort, pdu: P
     selectBgpRoutes(rejected)
     return { device: rejected, outbound, reason: `BGP AS mismatch from ${pdu.sourceIp}: expected AS ${neighbor.remoteAs}, received AS ${body.asNumber}.` }
   }
-  if (neighbor.remoteAs === original.config.bgpAs) return reject(`iBGP sessions are not supported in this reduced model.`)
+  const ibgpSession = neighbor.remoteAs === original.config.bgpAs
 
   const d = cloneRuntime(original)
   const rt = d.bgp!
@@ -277,7 +365,7 @@ export function receiveBgpPacket(original: NetworkDevice, p: NetworkPort, pdu: P
     const withdrawn = body.withdrawn ?? []
     if (withdrawn.some(w => !isValidIpv4(w.network) || !isValidIpv4(w.netmask) || !/^1*0*$/.test(ipToNumber(w.netmask).toString(2).padStart(32, '0')))) return reject(`Malformed BGP withdrawal rejected on ${p.name}.`)
     const entries = body.entries ?? []
-    if (entries.some(e => !isValidIpv4(e.network) || !isValidIpv4(e.netmask) || !/^1*0*$/.test(ipToNumber(e.netmask).toString(2).padStart(32, '0')) || !Array.isArray(e.asPath) || !e.asPath.length || e.asPath.length > MAX_AS_PATH || e.asPath.some(as => !Number.isInteger(as) || as < 1 || as > 65535) || !isValidIpv4(e.nextHop) || !isInSameSubnet(e.nextHop, p.ipAddress!, p.subnetMask!))) return reject(`Malformed BGP update rejected on ${p.name}.`)
+    if (entries.some(e => !isValidIpv4(e.network) || !isValidIpv4(e.netmask) || !/^1*0*$/.test(ipToNumber(e.netmask).toString(2).padStart(32, '0')) || !Array.isArray(e.asPath) || (!e.asPath.length && !ibgpSession) || e.asPath.length > MAX_AS_PATH || e.asPath.some(as => !Number.isInteger(as) || as < 1 || as > 65535) || !isValidIpv4(e.nextHop) || (!ibgpSession && !isInSameSubnet(e.nextHop, p.ipAddress!, p.subnetMask!)))) return reject(`Malformed BGP update rejected on ${p.name}.`)
     if (withdrawn.length) peer.learned = peer.learned.filter(path => !withdrawn.some(w => path.network === getNetworkAddress(w.network, w.netmask) && path.netmask === w.netmask))
     let loopSkipped = 0
     const accepted: BgpPath[] = entries.flatMap(entry => {

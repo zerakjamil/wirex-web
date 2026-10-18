@@ -50,16 +50,17 @@ function run(ticks = 400) {
   const { links } = useNetworkStore.getState()
   let { devices, inFlightPackets: packets } = useNetworkStore.getState()
   const protocols = new Set<string>()
+  const tcpFlags = new Set<string>()
   const reasons: string[] = []
   for (let i = 0; i < ticks; i++) {
     const step = stepSimulationTick(devices, links, packets)
     devices = step.updatedDevices; packets = step.newInFlightPackets
-    packets.forEach(p => protocols.add(p.pdu.protocol))
+    packets.forEach(p => { protocols.add(p.pdu.protocol); if (p.pdu.payload.bgpTcp) tcpFlags.add(p.pdu.payload.bgpTcp.flags) })
     step.packetDeliveries.forEach(delivery => { if (delivery.reason) reasons.push(delivery.reason) })
     assert.ok(packets.length <= 256)
   }
   useNetworkStore.setState({ devices, inFlightPackets: packets })
-  return { devices, links, protocols, reasons }
+  return { devices, links, protocols, reasons, tcpFlags }
 }
 
 test('eBGP peers establish, exchange updates and the CLI shows the learned routes', () => {
@@ -189,4 +190,112 @@ test('an eBGP chain relays routes with AS-path prepending and loop prevention', 
   assert.equal(relay.routingTable.find(r => String(r.type) === 'B' && r.network === '172.16.1.0')?.nextHop, '10.0.2.3')
   const refusals = first.bgp?.peers.find(candidate => candidate.address === '10.0.1.2')?.learned.filter(path => path.asPath.includes(65101)) ?? []
   assert.equal(refusals.length, 0)
+})
+
+test('the TCP handshake precedes every session and is visible in the PDU stream', () => {
+  const { r1 } = lab()
+  const { devices, tcpFlags, reasons } = run(120)
+  assert.ok(tcpFlags.has('syn') && tcpFlags.has('synack') && tcpFlags.has('ack'))
+  assert.ok(reasons.some(reason => /processed BGP TCP synack/.test(reason)))
+  assert.equal(devices.find(d => d.id === r1.id)?.bgp?.peers.find(candidate => candidate.address === '10.0.12.2')?.state, 'established')
+})
+
+test('iBGP peers in one AS exchange routes without AS-path prepending and install them at distance 200', () => {
+  const routers = [0, 1].map(i => {
+    const device = createDevice('router', i * 300, 0, '2811')
+    device.id = `bgp-ibgp-r${i + 1}`; device.name = device.id; device.config.hostname = device.id
+    return device
+  })
+  const host = createDevice('pc', 600, 200)
+  host.id = 'bgp-ibgp-pc'; host.name = host.id
+  useNetworkStore.getState().loadLab([...routers, host], [])
+  for (const router of routers) router.ports.slice(0, 2).forEach(port => { port.adminStatus = 'up' })
+  useNetworkStore.setState({ devices: [...routers, host] })
+  assert.equal(useNetworkStore.getState().connectPorts(routers[0].id, routers[0].ports[0].id, routers[1].id, routers[1].ports[0].id, 'crossover'), true)
+  assert.equal(useNetworkStore.getState().connectPorts(routers[0].id, routers[0].ports[1].id, host.id, host.ports[0].id, 'straight'), true)
+  const cli = (id: string, ...lines: string[]) => lines.map(line => useNetworkStore.getState().executeIosCommand(id, line))
+  cli(routers[0].id, 'enable', 'configure terminal', `interface ${routers[0].ports[0].shortName}`, 'ip address 10.0.12.1 255.255.255.0', 'no shutdown', 'exit',
+    `interface ${routers[0].ports[1].shortName}`, 'ip address 192.168.1.1 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65010', 'neighbor 10.0.12.2 remote-as 65010', 'network 192.168.1.0 mask 255.255.255.0', 'end')
+  cli(routers[1].id, 'enable', 'configure terminal', `interface ${routers[1].ports[0].shortName}`, 'ip address 10.0.12.2 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65010', 'neighbor 10.0.12.1 remote-as 65010', 'end')
+  const { devices } = run(400)
+  const second = devices.find(d => d.id === routers[1].id)!
+  const peer = second.bgp?.peers.find(candidate => candidate.address === '10.0.12.1')
+  assert.equal(peer?.state, 'established')
+  assert.equal(peer?.remoteAs, 65010)
+  const learned = peer?.learned.find(path => path.network === '192.168.1.0')
+  assert.deepEqual(learned?.asPath, [])
+  assert.equal(learned?.nextHop, '10.0.12.1')
+  const route = second.routingTable.find(r => String(r.type) === 'B' && r.network === '192.168.1.0')
+  assert.equal(route?.distance, 200)
+  assert.match(parseIosCommand(second, 'show ip route').output, /B\s+192\.168\.1\.0.*\[200\/0\].*10\.0\.12\.1/)
+  assert.match(parseIosCommand(second, 'show ip bgp summary').output, /10\.0\.12\.1\s+4\s+65010/)
+  assert.doesNotMatch(parseIosCommand(second, 'show ip bgp summary').output, /not supported/)
+})
+
+test('iBGP-learned routes are not relayed to other iBGP peers but reach eBGP peers with prepending', () => {
+  const routers = [0, 1, 2, 3].map(i => {
+    const device = createDevice('router', i * 300, 0, '2811')
+    device.id = `bgp-reflect-r${i + 1}`; device.name = device.id; device.config.hostname = device.id
+    return device
+  })
+  const host = createDevice('pc', 600, 200)
+  host.id = 'bgp-reflect-pc'; host.name = host.id
+  useNetworkStore.getState().loadLab([...routers, host], [])
+  for (const router of routers) router.ports.slice(0, 2).forEach(port => { port.adminStatus = 'up' })
+  useNetworkStore.setState({ devices: [...routers, host] })
+  assert.equal(useNetworkStore.getState().connectPorts(routers[0].id, routers[0].ports[0].id, routers[1].id, routers[1].ports[0].id, 'crossover'), true)
+  assert.equal(useNetworkStore.getState().connectPorts(routers[0].id, routers[0].ports[1].id, host.id, host.ports[0].id, 'straight'), true)
+  assert.equal(useNetworkStore.getState().connectPorts(routers[1].id, routers[1].ports[1].id, routers[2].id, routers[2].ports[0].id, 'crossover'), true)
+  assert.equal(useNetworkStore.getState().connectPorts(routers[2].id, routers[2].ports[1].id, routers[3].id, routers[3].ports[0].id, 'crossover'), true)
+  const cli = (id: string, ...lines: string[]) => lines.map(line => useNetworkStore.getState().executeIosCommand(id, line))
+  cli(routers[0].id, 'enable', 'configure terminal', `interface ${routers[0].ports[0].shortName}`, 'ip address 10.0.12.1 255.255.255.0', 'no shutdown', 'exit',
+    `interface ${routers[0].ports[1].shortName}`, 'ip address 192.168.1.1 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65001', 'neighbor 10.0.12.2 remote-as 65002', 'network 192.168.1.0 mask 255.255.255.0', 'end')
+  cli(routers[1].id, 'enable', 'configure terminal', `interface ${routers[1].ports[0].shortName}`, 'ip address 10.0.12.2 255.255.255.0', 'no shutdown', 'exit',
+    `interface ${routers[1].ports[1].shortName}`, 'ip address 10.0.23.2 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65002', 'neighbor 10.0.12.1 remote-as 65001', 'neighbor 10.0.23.3 remote-as 65002', 'end')
+  cli(routers[2].id, 'enable', 'configure terminal', `interface ${routers[2].ports[0].shortName}`, 'ip address 10.0.23.3 255.255.255.0', 'no shutdown', 'exit',
+    `interface ${routers[2].ports[1].shortName}`, 'ip address 10.0.34.3 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65002', 'neighbor 10.0.23.2 remote-as 65002', 'neighbor 10.0.34.4 remote-as 65003', 'end')
+  cli(routers[3].id, 'enable', 'configure terminal', `interface ${routers[3].ports[0].shortName}`, 'ip address 10.0.34.4 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65003', 'neighbor 10.0.34.3 remote-as 65002', 'end')
+  const { devices } = run(600)
+  const second = devices.find(d => d.id === routers[1].id)!
+  const third = devices.find(d => d.id === routers[2].id)!
+  const fourth = devices.find(d => d.id === routers[3].id)!
+  const viaIbgp = third.bgp?.peers.find(peer => peer.address === '10.0.23.2')?.learned.find(path => path.network === '192.168.1.0')
+  assert.deepEqual(viaIbgp?.asPath, [65001])
+  assert.equal(viaIbgp?.nextHop, '10.0.12.1')
+  assert.equal(third.routingTable.find(r => String(r.type) === 'B' && r.network === '192.168.1.0')?.distance, 200)
+  assert.match(parseIosCommand(third, 'show ip route').output, /B\s+192\.168\.1\.0.*\[200\/0\].*10\.0\.12\.1/)
+  assert.equal(second.bgp?.peers.find(peer => peer.address === '10.0.23.3')?.learned.some(path => path.network === '192.168.1.0'), false)
+  const viaEbgp = fourth.bgp?.peers.find(peer => peer.address === '10.0.34.3')?.learned.find(path => path.network === '192.168.1.0')
+  assert.deepEqual(viaEbgp?.asPath, [65002, 65001])
+  assert.equal(fourth.routingTable.find(r => String(r.type) === 'B' && r.network === '192.168.1.0')?.distance, 20)
+})
+
+test('a device that runs BGP without a neighbor statement refuses the connection with a TCP RST', () => {
+  const routers = [0, 1].map(i => {
+    const device = createDevice('router', i * 300, 0, '2811')
+    device.id = `bgp-refuse-r${i + 1}`; device.name = device.id; device.config.hostname = device.id
+    return device
+  })
+  useNetworkStore.getState().loadLab(routers, [])
+  for (const router of routers) router.ports.slice(0, 2).forEach(port => { port.adminStatus = 'up' })
+  useNetworkStore.setState({ devices: routers })
+  assert.equal(useNetworkStore.getState().connectPorts(routers[0].id, routers[0].ports[0].id, routers[1].id, routers[1].ports[0].id, 'crossover'), true)
+  const cli = (id: string, ...lines: string[]) => lines.map(line => useNetworkStore.getState().executeIosCommand(id, line))
+  cli(routers[0].id, 'enable', 'configure terminal', `interface ${routers[0].ports[0].shortName}`, 'ip address 10.0.12.1 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65001', 'neighbor 10.0.12.2 remote-as 65002', 'end')
+  cli(routers[1].id, 'enable', 'configure terminal', `interface ${routers[1].ports[0].shortName}`, 'ip address 10.0.12.2 255.255.255.0', 'no shutdown', 'exit',
+    'router bgp 65002', 'end')
+  const { devices, tcpFlags, reasons } = run(400)
+  const first = devices.find(d => d.id === routers[0].id)!
+  assert.ok(tcpFlags.has('syn') && tcpFlags.has('rst'))
+  assert.equal(tcpFlags.has('synack'), false)
+  assert.ok(reasons.some(reason => /processed BGP TCP rst/.test(reason)))
+  assert.notEqual(first.bgp?.peers.find(peer => peer.address === '10.0.12.2')?.state, 'established')
+  assert.match(parseIosCommand(first, 'show ip bgp summary').output, /Last rejected message: TCP connection to 10\.0\.12\.2 was refused/)
 })

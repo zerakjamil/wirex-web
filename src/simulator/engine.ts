@@ -12,7 +12,7 @@ import { prepareRipTick, receiveRipPacket, hasRip, ripEnabled } from './rip'
 import type { RipOutbound } from './rip'
 import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './eigrp'
 import type { EigrpOutbound } from './eigrp'
-import { prepareBgpTick, receiveBgpPacket, hasBgp } from './bgp'
+import { prepareBgpTick, receiveBgpPacket, hasBgp, bgpRuns } from './bgp'
 import type { BgpOutbound } from './bgp'
 import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
 import { applyIotControl, iotKindOf, iotServerRuntimeOf, iotStateOf, iotStateSummary, isIotServer, isIotThing, markIotRegistered, prepareIotTick, recordIotClient, touchIotClient, IOT_BROADCAST_ADDRESS, IOT_CLIENT_PORT, IOT_SERVER_PORT, type IotIntent } from './iot'
@@ -193,7 +193,7 @@ export function outgoingRoute(device: NetworkDevice, targetIp: string, excludeGr
         ?? device.ports.find(p => isUp(device, p) && p.connectedLinkId && p.ipAddress && p.subnetMask && isValidIpv4(r.nextHop) && isInSameSubnet(r.nextHop, p.ipAddress, p.subnetMask)),
       nextHop: r.type === 'C' || r.nextHop === '0.0.0.0' || r.nextHop === 'connected' ? targetIp : r.nextHop,
       mask: ipToNumber(r.netmask),
-      distance: r.type === 'C' ? 0 : r.type === 'S' ? 1 : r.type === 'O' ? 110 : 120,
+      distance: r.type === 'C' ? 0 : r.type === 'S' ? 1 : r.type === 'O' ? 110 : r.type === 'B' ? (r.distance ?? 20) : 120,
       metric: r.metric,
     }))
   for (const port of device.ports) {
@@ -1721,7 +1721,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     const ospfRecipient = pdu.protocol === 'OSPF' && hasOspf(receiver) && ospfArea(receiver, logicalPort) !== undefined
     const ripRecipient = pdu.protocol === 'RIP' && hasRip(receiver) && ripEnabled(receiver, logicalPort)
     const eigrpRecipient = pdu.protocol === 'EIGRP' && hasEigrp(receiver) && eigrpEnabled(receiver, logicalPort)
-    const bgpRecipient = pdu.protocol === 'BGP' && hasBgp(receiver) && receiver.ports.some(port => port.ipAddress === pdu.destIp)
+    const bgpRecipient = pdu.protocol === 'BGP' && (hasBgp(receiver) || (!!pdu.payload.bgpTcp && bgpRuns(receiver))) && receiver.ports.some(port => port.ipAddress === pdu.destIp)
     if (isBridge(receiver) && !localIp && !gatewayFrame) {
       const known = receiver.type === 'hub' ? undefined : byId.get(receiver.id)!.macTable.find(m => m.macAddress === pdu.destMac && m.vlan === vlan)
       const outPorts = known && pdu.destMac !== BROADCAST
@@ -1817,7 +1817,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       byId.set(receiver.id, received.device); mutable.add(receiver.id)
       received.outbound.forEach(sendBgp)
       if (received.reason) { drop(packet, received.reason); continue }
-      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} processed BGP ${pdu.payload.bgp?.type}.` })
+      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} processed BGP ${pdu.payload.bgp?.type ?? `TCP ${pdu.payload.bgpTcp?.flags} on port 179`}.` })
       continue
     }
     if (pdu.protocol === 'OSPF' || pdu.protocol === 'RIP' || pdu.protocol === 'EIGRP') {

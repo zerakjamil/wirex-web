@@ -24,15 +24,17 @@ Classification legend:
 | Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones · Cluster Associations dialog | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo; Options → Cluster Associations... delivers PT's Logical to Physical / Physical to Logical mapping with Create New Container and Move Devices, persisted with the workspace and pruned when its container disappears | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster + association actions, `ClusterAssociationsModal.tsx`; `e2e/physical.spec.ts` |
 | Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups, applications ICMP/HTTP/TFTP/UDP/DNS/NTP, a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` and a frozen-on-stop counter; dispatches reuse the real application flows, colored + DSCP-labeled packets ride the canvas and PDU details, runs are runtime-only and one run per device; outgoing port is a read-only route preview | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (8), `src/store/trafficGenerator.test.ts` (7), `e2e/traffic-generator.spec.ts` (2); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 542/542, Playwright
+Every item above is exercised by the automated suites: unit 546/546, Playwright
 E2E 48 of 49 flows against the production build on the latest 2026-10-18 run —
-every functional flow passes, including BGP flow F13 and the four physical
-specs; the realtime scale case passes every functional assertion (8/8 pings,
-queue peak 2,132, drained clean, no warnings, engine tick p95 11.8–13.9 ms) and
-its pacing bound only flags under host conditions — the longest browser task
-measured 501–519 ms against the unchanged 500 ms bound while the previous
-commit measured 520–528 ms under identical load in a same-host worktree A/B, so
-the overrun is a machine-boundary artifact and the bound was not weakened —
+every functional flow passes, including BGP flow F13 (now exercising eBGP and
+iBGP neighbors from the CLI) and the four physical specs; the realtime scale
+case passes every functional assertion (8/8 pings, queue peak 2,132, drained
+clean, no warnings, engine tick p95 11.8–13.9 ms) and its pacing bound only
+flags under host conditions — the longest browser task measured 534 ms against
+the unchanged 500 ms bound (501–534 ms across recent runs, including under load
+average 3), consistent with the same-host worktree A/B where the previous
+commit measured 520–528 ms under identical load, so the overrun is a
+machine-boundary artifact and the bound was not weakened —
 `tsc` clean, ESLint clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)

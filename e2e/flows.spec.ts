@@ -365,7 +365,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/Switch is in rapid-pvst mode/)
   })
 
-  test('F13: BGP process, neighbor and network from the router CLI appear in show ip bgp and show running-config', async ({ page }) => {
+  test('F13: BGP process, eBGP and iBGP neighbors and network from the router CLI appear in show ip bgp and show running-config', async ({ page }) => {
     await page.goto('/')
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
@@ -387,8 +387,16 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
       'router bgp 65001',
       'bgp router-id 10.0.0.1',
       'neighbor 10.0.0.2 remote-as 65002',
+      'neighbor 10.0.0.3 remote-as 65001',
       'network 10.0.0.0 mask 255.255.0.0',
       'end',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    // The neighbor table reads runtime peers created by the 60 ms simulation loop; let it observe both neighbor statements first.
+    await page.waitForTimeout(250)
+    for (const command of [
       'show ip bgp summary',
       'show ip bgp',
       'show ip protocols',
@@ -400,10 +408,12 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/BGP router identifier 10\.0\.0\.1, local AS number 65001/)
     await expect(modal).toContainText(/Neighbor\s+V\s+AS/)
     await expect(modal).toContainText(/10\.0\.0\.2\s+4\s+65002/)
+    await expect(modal).toContainText(/10\.0\.0\.3\s+4\s+65001/)
     await expect(modal).toContainText(/\*> 10\.0\.0\.0\/16\s+0\.0\.0\.0\s+0\s+32768 i/)
     await expect(modal).toContainText(/Routing Protocol is "bgp 65001"/)
     await expect(modal).toContainText(/router bgp 65001/)
     await expect(modal).toContainText(/neighbor 10\.0\.0\.2 remote-as 65002/)
+    await expect(modal).toContainText(/neighbor 10\.0\.0\.3 remote-as 65001/)
     await expect(modal).toContainText(/network 10\.0\.0\.0 mask 255\.255\.0\.0/)
   })
 })

@@ -111,6 +111,8 @@ export interface RouteEntry {
   metric: number
   type: 'C' | 'S' | 'O' | 'R' | 'D' | 'B'
   area?: number
+  /** Administrative distance; only BGP differentiates (eBGP 20, iBGP 200). */
+  distance?: number
 }
 
 export interface ArpEntry {
@@ -663,7 +665,7 @@ export interface BgpPacket {
   complete?: boolean
   notification?: string
 }
-export type BgpPeerState = 'idle' | 'opensent' | 'openconfirm' | 'established'
+export type BgpPeerState = 'idle' | 'connecting' | 'opensent' | 'openconfirm' | 'established'
 export interface BgpPath extends BgpEntry { updatedAt: number }
 export interface BgpPeer {
   address: string
@@ -826,6 +828,8 @@ export interface PacketPdu {
     rip?: RipPacket
     eigrp?: EigrpPacket
     bgp?: BgpPacket
+    /** TCP control frames on port 179 before a BGP session is established. */
+    bgpTcp?: { flags: 'syn' | 'synack' | 'ack' | 'rst' }
     stpVlan?: number
     stpRootBridgeId?: string
     stpRootDeviceId?: string

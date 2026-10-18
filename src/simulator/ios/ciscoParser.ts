@@ -670,7 +670,6 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
         if (parts.length !== 4 || parts[2]?.toLowerCase() !== 'remote-as' || !/^\d+$/.test(parts[3] ?? '')) return { output: '% Usage: neighbor <A.B.C.D> remote-as <1-65535>.' }
         const remoteAs = Number(parts[3])
         if (remoteAs < 1 || remoteAs > 65535) return { output: '% Invalid remote AS. Use <1-65535>.' }
-        if (remoteAs === device.config.bgpAs) return { output: '% iBGP (remote-as equal to the local AS) is not supported in this reduced model. Configure an eBGP neighbor.' }
         if (device.config.bgpNeighbors?.some(n => n.ip === address && n.remoteAs === remoteAs)) return { output: '' }
         return { output: '', newDeviceConfig: { bgpNeighbors: [...(device.config.bgpNeighbors ?? []).filter(n => n.ip !== address), { ip: address, remoteAs }] } }
       }
@@ -1868,11 +1867,9 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       let out = `BGP router identifier ${routerId}, local AS number ${as}\nBGP table version is 1, main routing table version 1\n\nNeighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd\n`
       const peers = [...(device.bgp?.peers ?? [])].sort((a, b) => ipToNumber(a.address) - ipToNumber(b.address))
       for (const peer of peers) {
-        const state = peer.state === 'established' ? String(peer.learned.length) : peer.state === 'opensent' ? 'OpenSent' : peer.state === 'openconfirm' ? 'OpenConfirm' : 'Idle'
+        const state = peer.state === 'established' ? String(peer.learned.length) : peer.state === 'opensent' ? 'OpenSent' : peer.state === 'openconfirm' ? 'OpenConfirm' : peer.state === 'connecting' ? 'Connect' : 'Idle'
         out += `${peer.address.padEnd(16)}${'4'.padEnd(5)}${String(peer.remoteAs).padEnd(6)}${String(peer.messagesReceived).padEnd(8)}${String(peer.messagesSent).padEnd(9)}${'1'.padEnd(9)}${'0'.padEnd(5)}${'0'.padEnd(5)}${stamp(Math.max(0, Math.floor(((device.bgp?.clock ?? 0) - peer.since) / 1000))).padEnd(9)}${state}\n`
       }
-      const iBgp = (device.config.bgpNeighbors ?? []).filter(n => n.remoteAs === as)
-      for (const neighbor of iBgp) out += `% Neighbor ${neighbor.ip} is configured with the local AS ${as}; iBGP sessions are not supported in this reduced model.\n`
       if (device.bgp?.lastError) out += `\n% Last rejected message: ${device.bgp.lastError}`
       return { output: out.trimEnd() }
     }
@@ -1982,7 +1979,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       } else if (r.type === 'D') {
         out += `D    ${r.network}/${r.netmask} [90/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       } else if (r.type === 'B') {
-        out += `B    ${r.network}/${r.netmask} [20/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
+        out += `B    ${r.network}/${r.netmask} [${r.distance ?? 20}/${r.metric}] via ${r.nextHop}, ${r.interfaceName}\n`
       }
     }
     return { output: out.trimEnd() }
