@@ -6,12 +6,17 @@ import { NetworkDevice, NetworkLink } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
 import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab, getWlcLab, getIotLab } from '@/simulator/starterLabs'
 import { useI18n } from '@/i18n/useI18n'
+import { useActivityStore } from '@/store/activityStore'
 import { getOspfPracticeLab } from '@/simulator/ospfLab'
 import { getRipPracticeLab } from '@/simulator/ripLab'
 
 export function SampleLabsModal() {
   const { t } = useI18n()
-  const { activeModal, setActiveModal, loadLab } = useNetworkStore()
+  const { activeModal, setActiveModal, loadLab: applyLab } = useNetworkStore()
+  const loadLab = (...args: Parameters<typeof applyLab>) => {
+    useActivityStore.getState().exit()
+    applyLab(...args)
+  }
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {

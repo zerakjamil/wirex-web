@@ -3,6 +3,7 @@ import { useNetworkStore } from './networkStore'
 import { useWorkspaceStore } from './workspaceStore'
 import type { NetworkDevice, DeviceWindow } from '@/types/network'
 import { useTrainingStore, saveTrainingToStorage, restoreTrainingFromStorage } from './trainingStore'
+import { useActivityStore, saveActivityToStorage, restoreActivityFromStorage } from './activityStore'
 import { parseWorkspace } from '@/simulator/workspaceSchema'
 import { stripRoutingRuntime } from '@/simulator/routingRuntime'
 
@@ -13,14 +14,19 @@ export const useWorkspacePersistence = create<{ ready: boolean }>(() => ({ ready
 export function saveWorkspaceToStorage(storage: WorkspaceStorage): boolean {
   try {
     const training = useTrainingStore.getState()
+    const activity = useActivityStore.getState()
     const snapshot = training.active && training.backup
       ? training.backup
-      : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
+      : activity.session
+        ? activity.session.backup
+        : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
     const { devices, links, annotations, deviceWindows, fileName } = snapshot
-    // Physical layout is saved with the live workspace; while a training backup is active the
-    // saved devices differ from the live ones, so the layout is omitted to avoid dangling references.
+    // Physical layout is saved with the live workspace; while a training backup or activity
+    // backup is active the saved devices differ from the live ones, so the layout is omitted
+    // to avoid dangling references.
     const live = useNetworkStore.getState()
-    const physical = !training.active || !training.backup
+    const sandboxed = (training.active && training.backup) || activity.session
+    const physical = !sandboxed
       ? { containers: live.physicalContainers, assignment: live.physicalAssignment, clusters: live.clusters }
       : undefined
     storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical }))
@@ -50,13 +56,17 @@ export async function saveWorkspaceToSqlite(): Promise<boolean> {
   if (typeof window === 'undefined') return false
   try {
     const training = useTrainingStore.getState()
+    const activity = useActivityStore.getState()
     const snapshot = training.active && training.backup
       ? training.backup
-      : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
+      : activity.session
+        ? activity.session.backup
+        : { ...useNetworkStore.getState(), fileName: useWorkspaceStore.getState().fileName }
     const { devices, links, annotations, deviceWindows, fileName } = snapshot
     if (!Array.isArray(devices) || devices.length === 0) return false
     const live = useNetworkStore.getState()
-    const physical = !training.active || !training.backup
+    const sandboxed = (training.active && training.backup) || activity.session
+    const physical = !sandboxed
       ? { containers: live.physicalContainers, assignment: live.physicalAssignment, clusters: live.clusters }
       : undefined
     const res = await fetch('/api/sqlite', {
@@ -223,6 +233,7 @@ export function initializeWorkspacePersistence(): () => void {
   }
   if (storage) {
     restoreTrainingFromStorage(storage)
+    if (!useTrainingStore.getState().active) restoreActivityFromStorage(storage)
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -237,6 +248,7 @@ export function initializeWorkspacePersistence(): () => void {
         useWorkspaceStore.getState().setStatus('Browser storage is full or unavailable. Use File > Save to keep a copy.')
       }
       saveTrainingToStorage(storage)
+      saveActivityToStorage(storage)
     }
   }
   const schedule = () => {
@@ -265,6 +277,7 @@ export function initializeWorkspacePersistence(): () => void {
     if (state.fileName !== previous.fileName) schedule()
   })
   const unsubscribeTraining = useTrainingStore.subscribe(schedule)
+  const unsubscribeActivity = useActivityStore.subscribe(schedule)
   window.addEventListener('pagehide', flush)
   const visibility = () => {
     if (document.visibilityState === 'hidden') flush()
@@ -275,6 +288,7 @@ export function initializeWorkspacePersistence(): () => void {
     unsubscribe()
     unsubscribeName()
     unsubscribeTraining()
+    unsubscribeActivity()
     window.removeEventListener('pagehide', flush)
     document.removeEventListener('visibilitychange', visibility)
   }

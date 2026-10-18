@@ -31,6 +31,7 @@ import { DeviceInspector } from './DeviceInspector'
 import { ConnectionHoverCard } from './ConnectionHoverCard'
 import {getStpTopology} from '@/simulator/spanningTree'
 import {useTrainingStore} from '@/store/trainingStore'
+import {useActivityStore} from '@/store/activityStore'
 import { useI18n } from '@/i18n/useI18n'
 
 const nodeTypes = {
@@ -195,7 +196,7 @@ function InnerTopologyCanvas() {
       }
       if (event.key.toLowerCase() === 's') { event.preventDefault(); saveWorkspace() }
       if (event.key.toLowerCase() === 'o') { event.preventDefault(); document.getElementById('pt-open-file')?.click() }
-      if (event.key.toLowerCase() === 'n') { event.preventDefault(); newWorkspace() }
+      if (event.key.toLowerCase() === 'n') { event.preventDefault(); useActivityStore.getState().exit(); newWorkspace() }
       if (event.key.toLowerCase() === 'c') { event.preventDefault(); workspace.copyDevice() }
       if (event.key.toLowerCase() === 'v') { event.preventDefault(); workspace.pasteDevice() }
       if (event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) workspace.redo(); else workspace.undo() }

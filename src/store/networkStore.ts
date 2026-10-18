@@ -80,7 +80,7 @@ import { hasBgp } from '@/simulator/bgp'
 import { hasMacAgingActivity, stripMacAgingRuntime } from '@/simulator/macLearning'
 
 export interface ActiveModalState {
-  type: 'device' | 'pdu' | 'port-select' | 'labs'
+  type: 'device' | 'pdu' | 'port-select' | 'labs' | 'activity-wizard'
   deviceId?: string
   pdu?: PacketPdu
   sourceDeviceId?: string

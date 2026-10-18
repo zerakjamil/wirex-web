@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useNetworkStore } from './networkStore'
 import { useWorkspaceStore } from './workspaceStore'
+import { useActivityStore } from './activityStore'
 import { createTrainingLab,lessonIds,type LessonId,type LearningMode } from '@/simulator/trainingLabs'
 import type { NetworkDevice,NetworkLink,NetworkAnnotation,DeviceWindow } from '@/types/network'
 import { getStpTopology,getOperationalChannels } from '@/simulator/spanningTree'
@@ -41,6 +42,7 @@ export const useTrainingStore=create<TrainingStore>((set,get)=>({
   active:false,catalogOpen:false,lesson:'vlans',mode:'guided',deviceId:'campus-sw-a',hintLevel:0,progress:{},backup:null,testId:null,testFingerprint:null,checked:false,
   openCatalog:()=>set({catalogOpen:true}),
   start:(lesson,mode)=>{
+    useActivityStore.getState().exit()
     const net=useNetworkStore.getState()
     const backup=get().backup || structuredClone({devices:net.devices,links:net.links,annotations:net.annotations,deviceWindows:net.deviceWindows,fileName:useWorkspaceStore.getState().fileName})
     const old=get().progress[lesson] || {hintsUsed:0,completed:false,attempts:0}

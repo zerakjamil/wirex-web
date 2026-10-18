@@ -4,18 +4,19 @@ import { useWorkspaceStore, newWorkspace, saveWorkspace } from '@/store/workspac
 import { CiscoIcon, type IconName } from './CiscoIcon'
 import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
+import {useActivityStore} from '@/store/activityStore'
 export function CiscoMainToolbar() {
   const {t}=useI18n()
   const ws = useWorkspaceStore()
-  const net = useNetworkStore(useShallow(state => ({ selectedDeviceId: state.selectedDeviceId })))
+  const net = useNetworkStore(useShallow(state => ({ selectedDeviceId: state.selectedDeviceId, setActiveModal: state.setActiveModal })))
   const controls: {icon: IconName; title: string; action: () => void; disabled?: boolean}[] = [
-    {icon:'new', title:'New (Ctrl+N)', action:newWorkspace},
+    {icon:'new', title:'New (Ctrl+N)', action:() => {useActivityStore.getState().exit();newWorkspace()}},
     {icon:'open', title:'Open (Ctrl+O)', action:() => document.getElementById('pt-open-file')?.click()},
     {icon:'save', title:'Save (Ctrl+S)', action:saveWorkspace},
     {icon:'print', title:'Print', action:() => window.print()},
     {icon:'info', title:'Network information', action:() => ws.setDialog('about')},
     {icon:'user', title:'Multiuser', action:() => ws.setDialog('extensions')},
-    {icon:'activity', title:'Activity Wizard', action:() => ws.setDialog('activity')},
+    {icon:'activity', title:'Activity Wizard', action:() => net.setActiveModal({type:'activity-wizard'})},
     {icon:'copy', title:'Copy selected device', action:ws.copyDevice, disabled:!net.selectedDeviceId},
     {icon:'paste', title:'Paste device', action:ws.pasteDevice, disabled:!ws.clipboard},
     {icon:'undo', title:'Undo (Ctrl+Z)', action:ws.undo, disabled:!ws.past.length},

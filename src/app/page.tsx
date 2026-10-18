@@ -18,6 +18,8 @@ import { DeviceNavigator } from '@/components/cisco/DeviceNavigator'
 import { PortSelectModal } from '@/components/modals/PortSelectModal'
 import { PduDetailsModal } from '@/components/modals/PduDetailsModal'
 import { SampleLabsModal } from '@/components/modals/SampleLabsModal'
+import { ActivityWizardModal } from '@/components/modals/ActivityWizardModal'
+import { ActivityWorkspace } from '@/components/cisco/ActivityWorkspace'
 import { NetworkDoctorModal } from '@/components/modals/NetworkDoctorModal'
 import { ShareLabModal } from '@/components/modals/ShareLabModal'
 import { ExamRevisionModal } from '@/components/modals/ExamRevisionModal'
@@ -81,6 +83,8 @@ export default function Home() {
       {activeModal?.type === 'port-select' && <PortSelectModal />}
       {activeModal?.type === 'pdu' && <PduDetailsModal />}
       {activeModal?.type === 'labs' && <SampleLabsModal />}
+      {activeModal?.type === 'activity-wizard' && <ActivityWizardModal />}
+      <ActivityWorkspace />
       <NetworkDoctorModal />
       <ShareLabModal />
       <ExamRevisionModal isOpen={wsDialog === 'revision'} onClose={() => setWsDialog(null)} />

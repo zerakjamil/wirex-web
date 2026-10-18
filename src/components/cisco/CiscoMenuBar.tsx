@@ -6,6 +6,7 @@ import { generateShareableUrl, exportLabToPktFile } from '@/store/workspacePersi
 import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
 import {useTrainingStore} from '@/store/trainingStore'
+import {useActivityStore} from '@/store/activityStore'
 import { parseWorkspace } from '@/simulator/workspaceSchema'
 export function CiscoMenuBar() {
   const {t}=useI18n()
@@ -23,8 +24,9 @@ export function CiscoMenuBar() {
   }, [])
   const menus: Record<string, {label:string; action:()=>void; disabled?:boolean}[]> = {
     File:[
-      {label:'New',action:newWorkspace},
+      {label:'New',action:() => {useActivityStore.getState().exit();newWorkspace()}},
       {label:'Open...',action:() => document.getElementById('pt-open-file')?.click()},
+      {label:'Open Activity...',action:() => document.getElementById('pt-open-activity')?.click()},
       {label:'Save (JSON)',action:saveWorkspace},
       {label:'Export as PKT (Universal)...',action:() => exportLabToPktFile()},
       {label:'Save Checkpoint...',action:() => ws.setDialog('revision')},
@@ -37,6 +39,7 @@ export function CiscoMenuBar() {
     Tools:[
       {label:'Select',action:() => ws.setTool('select')},
       {label:'Exam Revision & Rollbacks...',action:() => ws.setDialog('revision')},
+      {label:'Activity Wizard...',action:() => net.setActiveModal({type:'activity-wizard'})},
       {label:'Network Doctor (Audit)...',action:() => ws.setDialog('doctor')},
       {label:'Place Note',action:() => ws.setTool('note')},
       {label:'Drawing Palette',action:() => ws.setTool('rect')},
@@ -66,11 +69,21 @@ export function CiscoMenuBar() {
         data.version = 1
       } else data=JSON.parse(await file.text())
       const validated = parseWorkspace(data)
+      if(useActivityStore.getState().session)useActivityStore.getState().exit()
       if(useTrainingStore.getState().active)useTrainingStore.getState().exit()
       ws.checkpoint();net.loadLab(validated.devices,validated.links,validated.annotations,validated.physical);ws.command('fit-topology')
       useWorkspaceStore.setState({fileName:file.name})
       ws.setStatus(`Opened ${file.name}: ${data.devices.length} devices, ${data.links.length} links.${data.warnings?.length ? ' '+data.warnings.join(' ') : ''}`)
     } catch(error) {ws.setStatus(error instanceof Error ? error.message : 'Could not open the network file.')}
+    input.value=''
+  }}/><input id="pt-open-activity" type="file" accept=".json,application/json" hidden onChange={async e => {
+    const input=e.currentTarget; const file=input.files?.[0]; if(!file)return
+    try {
+      if(file.size > 16*1024*1024) throw new Error('Maximum activity file size is 16 MB.')
+      if(useTrainingStore.getState().active)useTrainingStore.getState().exit()
+      const ok=useActivityStore.getState().loadFromFile(await file.text())
+      if(ok) ws.setStatus(`Activity loaded: ${useActivityStore.getState().session?.activity.name ?? file.name}.`)
+    } catch(error) {ws.setStatus(error instanceof Error ? error.message : 'Could not open the activity file.')}
     input.value=''
   }}/></nav>
 }
