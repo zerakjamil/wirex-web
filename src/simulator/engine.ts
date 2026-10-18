@@ -615,6 +615,125 @@ export function createUdpEchoPackets(source: NetworkDevice, devices: NetworkDevi
   return ipFrames(source, route, pdu, devices, links, 0)
 }
 
+// Raw injectors for the traffic generator. They craft bare UDP datagrams and TCP segments from a
+// workspace host: an optional pinned outgoing port and L2/L3 source overrides let a lab show how a
+// packet is built before it is routed, and the receiver answers the TCP SYN with the modeled
+// handshake or a reset.
+export interface TrafficGeneratorFrameOptions {
+  sourcePort?: number
+  payloadSize?: number
+  data?: string
+  portId?: string
+  sourceIp?: string
+  sourceMac?: string
+  packetColor?: string
+  dscp?: number
+}
+
+function trafficGeneratorHash(seed: string) {
+  return Array.from(seed).reduce((value, char) => (value * 33 + char.charCodeAt(0)) >>> 0, 5381)
+}
+
+function trafficGeneratorRoute(source: NetworkDevice, targetIp: string, portId: string | undefined) {
+  if (!portId) return outgoingRoute(source, targetIp)
+  const port = source.ports.find(candidate => candidate.id === portId)
+  if (!port || !isUp(source, port)) return undefined
+  const reachable = port.isGreTunnel
+    || Boolean(port.connectedLinkId)
+    || Boolean(port.parentPortId && source.ports.some(candidate => candidate.id === port.parentPortId && isUp(source, candidate) && candidate.connectedLinkId))
+    || Boolean(port.virtualVlan !== undefined && source.ports.some(candidate => candidate.virtualVlan === undefined && isUp(source, candidate) && candidate.connectedLinkId && carriesVlan(candidate, port.virtualVlan!)))
+  if (!reachable) return undefined
+  return { port, nextHop: targetIp }
+}
+
+function trafficGeneratorAclDenied(source: NetworkDevice, egress: NetworkPort, targetIp: string, protocol: 'UDP' | 'TCP', destinationPort: number) {
+  if (!egress.outboundAcl) return false
+  const acl = source.config.accessLists?.find(item => item.id === egress.outboundAcl)
+  return acl ? evaluateAcl(acl, { sourceIp: egress.ipAddress ?? '0.0.0.0', destIp: targetIp, protocol, port: destinationPort }).action === 'deny' : false
+}
+
+function colorTrafficGeneratorFrames(frames: InFlightPacket[], color: string | undefined): InFlightPacket[] {
+  if (!color) return frames
+  return frames.map(frame => ({
+    ...frame,
+    pdu: {
+      ...frame.pdu,
+      generatorColor: color,
+      ...(frame.pdu.pendingPacket ? { pendingPacket: { ...frame.pdu.pendingPacket, generatorColor: color } } : {}),
+    },
+  }))
+}
+
+export function createRawUdpPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions = {}): InFlightPacket[] {
+  if (!isValidIpv4(targetIp) || !Number.isInteger(destinationPort) || destinationPort < 1 || destinationPort > 65535) return []
+  const base = options.data ?? ''
+  const baseBytes = new TextEncoder().encode(base).byteLength
+  const requestedBytes = options.payloadSize ?? 0
+  if (baseBytes > 1472 || requestedBytes > 1472) return []
+  const payloadText = requestedBytes > baseBytes ? base + '.'.repeat(requestedBytes - baseBytes) : base
+  const byteLength = new TextEncoder().encode(payloadText).byteLength
+  if (byteLength > 1472) return []
+  const route = trafficGeneratorRoute(source, targetIp, options.portId)
+  if (!route || source.power === false || !isUp(source, route.port)) return []
+  const sourceIp = options.sourceIp ?? route.port.ipAddress
+  if (!sourceIp || !isValidIpv4(sourceIp)) return []
+  if (trafficGeneratorAclDenied(source, route.port, targetIp, 'UDP', destinationPort)) return []
+  const sourceMac = options.sourceMac ?? route.port.macAddress
+  const sourcePort = options.sourcePort && options.sourcePort >= 1 && options.sourcePort <= 65535
+    ? options.sourcePort
+    : 49152 + (trafficGeneratorHash(`${source.id}:${targetIp}:${destinationPort}`) % 16384)
+  const pdu: PacketPdu = {
+    id: packetId('raw-udp'), protocol: 'UDP', summary: `Raw UDP datagram to ${targetIp}:${destinationPort}`,
+    sourceMac, destMac: '00:00:00:00:00:00', etherType: '0x0800', sourceIp, destIp: targetIp, ttl: 64,
+    ...(options.packetColor ? { generatorColor: options.packetColor } : {}),
+    payload: {
+      udpMessageType: 'request', udpService: 'raw', udpData: payloadText, udpSourcePort: sourcePort, udpDestinationPort: destinationPort,
+      ...(options.dscp !== undefined ? { dscp: options.dscp } : {}),
+    },
+    explanation: {
+      layer1: `Outbound interface: ${route.port.name}.`,
+      layer2: `Ethernet II: ${sourceMac} to the next hop.`,
+      layer3: `IPv4: ${sourceIp} to ${targetIp}, TTL 64.`,
+      layer4AndAbove: `UDP: source port ${sourcePort} to destination port ${destinationPort}. Injected payload ${byteLength} bytes with no application handshake.`,
+      deviceDecision: `${source.name} injects a raw UDP datagram to ${targetIp}:${destinationPort} through ${route.port.name}.`,
+    },
+  }
+  return colorTrafficGeneratorFrames(ipFrames(source, route, pdu, devices, links, 0), options.packetColor)
+}
+
+export function createRawTcpPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions = {}): InFlightPacket[] {
+  if (!isValidIpv4(targetIp) || !Number.isInteger(destinationPort) || destinationPort < 1 || destinationPort > 65535) return []
+  const route = trafficGeneratorRoute(source, targetIp, options.portId)
+  if (!route || source.power === false || !isUp(source, route.port)) return []
+  const sourceIp = options.sourceIp ?? route.port.ipAddress
+  if (!sourceIp || !isValidIpv4(sourceIp)) return []
+  if (trafficGeneratorAclDenied(source, route.port, targetIp, 'TCP', destinationPort)) return []
+  const sourceMac = options.sourceMac ?? route.port.macAddress
+  const hash = trafficGeneratorHash(`${source.id}:${targetIp}:${destinationPort}`)
+  const sourcePort = options.sourcePort && options.sourcePort >= 1 && options.sourcePort <= 65535
+    ? options.sourcePort
+    : 49152 + (hash % 16384)
+  const sequence = hash === 0 ? 1 : hash
+  const pdu: PacketPdu = {
+    id: packetId('raw-tcp'), protocol: 'TCP', summary: `Raw TCP SYN to ${targetIp}:${destinationPort}`,
+    sourceMac, destMac: '00:00:00:00:00:00', etherType: '0x0800', sourceIp, destIp: targetIp, ttl: 64,
+    ...(options.packetColor ? { generatorColor: options.packetColor } : {}),
+    payload: {
+      tcpApplication: 'RAW', tcpFlags: 'SYN', tcpSequenceNumber: sequence, tcpSourcePort: sourcePort, tcpDestinationPort: destinationPort,
+      tcpClientDeviceId: source.id, tcpClientIp: sourceIp, tcpServerIp: targetIp, tcpDataLength: 0,
+      ...(options.dscp !== undefined ? { dscp: options.dscp } : {}),
+    },
+    explanation: {
+      layer1: `Outbound interface: ${route.port.name}.`,
+      layer2: `Ethernet II: ${sourceMac} to the next hop.`,
+      layer3: `IPv4: ${sourceIp} to ${targetIp}, TTL 64.`,
+      layer4AndAbove: `TCP: source port ${sourcePort} to destination port ${destinationPort}, flags SYN, sequence number ${sequence}.`,
+      deviceDecision: `${source.name} injects a raw TCP SYN to ${targetIp}:${destinationPort} through ${route.port.name}.`,
+    },
+  }
+  return colorTrafficGeneratorFrames(ipFrames(source, route, pdu, devices, links, 0), options.packetColor)
+}
+
 export function createIotControlPackets(server: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], commandId: string, clientDeviceId: string, patch: IotThingState): InFlightPacket[] {
   if (!commandId || server.power === false) return []
   const client = devices.find(device => device.id === clientDeviceId)
@@ -2167,6 +2286,34 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           continue
         }
         if (pdu.protocol === 'TCP') acknowledgeTcpTransmission(pdu)
+        if (pdu.protocol === 'TCP' && pdu.payload.tcpApplication === 'RAW' && pdu.payload.tcpFlags) {
+          const tcp = pdu.payload
+          const servicePort = tcp.tcpDestinationPort ?? 0
+          const clientPort = tcp.tcpSourcePort ?? 49152
+          const localAddress = localIp?.ipAddress ?? pdu.destIp
+          const sendTcp = (segment: PacketPdu) => sendIp(byId.get(receiver.id)!, segment, 0, packet)
+          if (tcp.tcpFlags === 'SYN') {
+            const listener = servicePort === 80 && receiver.type === 'server' && receiver.config.httpServiceEnabled === true
+            const response = createTcpSegment(pdu, {
+              flags: listener ? 'SYN-ACK' : 'RST-ACK', sourceDeviceId: receiver.id, serverDeviceId: receiver.id,
+              sourcePort: servicePort, destinationPort: clientPort,
+              sequence: 1, acknowledgment: ((tcp.tcpSequenceNumber ?? 0) + 1) >>> 0,
+              summary: listener ? `TCP SYN-ACK from ${localAddress}:${servicePort}` : `TCP RST-ACK: no listener on ${localAddress}:${servicePort}`,
+              detail: listener ? `${receiver.name} accepts the injected TCP connection on port ${servicePort}.` : `No TCP application listens on ${localAddress}:${servicePort}.`,
+              errorReason: listener ? undefined : `No TCP application listens on ${localAddress}:${servicePort}.`,
+            })
+            if (!sendTcp(response)) continue
+          } else if (tcp.tcpFlags === 'SYN-ACK' && receiver.id === tcp.tcpClientDeviceId) {
+            const acknowledgement = createTcpSegment(pdu, {
+              flags: 'ACK', sourceDeviceId: receiver.id, serverDeviceId: tcp.tcpServerDeviceId,
+              sourcePort: clientPort, destinationPort: servicePort,
+              sequence: tcp.tcpAcknowledgmentNumber ?? 1, acknowledgment: ((tcp.tcpSequenceNumber ?? 0) + 1) >>> 0,
+              summary: `TCP ACK to ${tcp.tcpServerIp ?? pdu.sourceIp}:${servicePort}`,
+              detail: `${receiver.name} completes the handshake for the injected TCP connection.`,
+            })
+            if (!sendTcp(acknowledgement)) continue
+          }
+        }
         if (pdu.protocol === 'TCP' && pdu.payload.tcpApplication === 'HTTP' && pdu.payload.httpRequestId) {
           const tcp = pdu.payload
           const requestId = tcp.httpRequestId

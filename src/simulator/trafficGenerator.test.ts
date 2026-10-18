@@ -5,6 +5,8 @@ import {
   defaultTrafficGeneratorSettings,
   parseTrafficGeneratorInterval,
   stampTrafficGeneratorPackets,
+  trafficGeneratorFrameOptions,
+  trafficGeneratorPaddedData,
   trafficGeneratorIntervalTicks,
   validateTrafficGeneratorSettings,
   TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS,
@@ -86,6 +88,71 @@ test('settings validation enforces each application target shape', () => {
   assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { dscp: 64 })), 'dscp-invalid')
   assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { dscp: -1 })), 'dscp-invalid')
   assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { dscp: 3.5 })), 'dscp-invalid')
+})
+
+test('source overrides and the raw injector settings validate before dispatch', () => {
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('raw-udp', { port: 5001 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('raw-tcp', { port: 80 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('raw-udp', { target: 'not an address' })), 'target-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('raw-tcp', { port: 0 })), 'port-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('raw-tcp', { port: 70000 })), 'port-invalid')
+
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourcePort: 0 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourcePort: 4000 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourcePort: 65535 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourcePort: 70000 })), 'source-port-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourcePort: 2.5 })), 'source-port-invalid')
+
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { payloadSize: 0 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { payloadSize: 1472 })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { payloadSize: 1473 })), 'payload-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { payloadSize: -1 })), 'payload-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { payloadSize: 1.5 })), 'payload-invalid')
+
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceMac: '' })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceMac: '02:00:00:00:ab:cd' })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceMac: '02:00:00:00:ab' })), 'source-mac-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceMac: '020000aabbcc' })), 'source-mac-invalid')
+
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceIp: '' })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceIp: '10.9.9.9' })), null)
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceIp: '10.9.9' })), 'source-ip-invalid')
+  assert.equal(validateTrafficGeneratorSettings(settingsFor('icmp', { sourceIp: '2001:db8::2' })), 'source-ip-invalid')
+})
+
+test('payload padding grows to the requested byte size only', () => {
+  assert.equal(trafficGeneratorPaddedData('abc', 0), 'abc')
+  assert.equal(trafficGeneratorPaddedData('abc', 3), 'abc')
+  assert.equal(trafficGeneratorPaddedData('abc', 2), 'abc')
+  assert.equal(trafficGeneratorPaddedData('abc', 32), `abc${'.'.repeat(29)}`)
+  assert.equal(trafficGeneratorPaddedData('', 4), '....')
+})
+
+test('frame options lift the manual port and source overrides only when enabled', () => {
+  const automatic = trafficGeneratorFrameOptions(defaultTrafficGeneratorSettings())
+  assert.equal(automatic.portId, undefined)
+  assert.equal(automatic.sourceIp, undefined)
+  assert.equal(automatic.sourceMac, undefined)
+  assert.equal(automatic.packetColor, undefined)
+
+  const manual = trafficGeneratorFrameOptions({
+    ...defaultTrafficGeneratorSettings(),
+    autoSelectPort: false,
+    outgoingPortId: ' port-1 ',
+    sourceIp: ' 10.9.9.9 ',
+    sourceMac: ' 02:00:00:00:ab:cd ',
+    sourcePort: 4000,
+    payloadSize: 64,
+    packetColor: '#dc2626',
+    dscp: 46,
+  })
+  assert.equal(manual.portId, 'port-1')
+  assert.equal(manual.sourceIp, '10.9.9.9')
+  assert.equal(manual.sourceMac, '02:00:00:00:ab:cd')
+  assert.equal(manual.sourcePort, 4000)
+  assert.equal(manual.payloadSize, 64)
+  assert.equal(manual.packetColor, '#dc2626')
+  assert.equal(manual.dscp, 46)
 })
 
 test('stamping marks only the frames correlated to the dispatch request id', () => {

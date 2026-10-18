@@ -22,19 +22,19 @@ Classification legend:
 | Event list data model | Per-hop rows: Time · Last Device · At Device · Type | The Events tab renders one row per delivery with those columns and protocol chips; the buffer is capped at 300 events and is part of the Back snapshot, so it rewinds consistently | `engine.ts` `collectEvents` seventh parameter, `networkStore.simulationEvents`; e2e `backstep.spec.ts` |
 | Physical workspace | Intercity → city → corporate office → building → wiring closet → rack/shelf containers; breadcrumb; drag devices between racks | The Physical view navigates `[Intercity] › [Home City] › [Corporate Office] › [Main Wiring Closet]` across city/building/closet levels; racks, tables, inventory shelves, cable pegboards and generic containers render as panels; PT's create toolbar and Shift+C/B/J/F shortcuts create containers with the nearest-accepting-ancestor rule; shelf storage requires a powered-off, uncabled device and blocks power/cabling while stored; the Cluster Associations dialog maps logical clusters onto containers with associated-cluster chips on tiles and panels; create/rename/delete with Undo; the layout persists in `.wf.json`, the autosave, SQLite and share links | `src/simulator/physical.ts`, `PhysicalWorkspace.tsx`, `ClusterAssociationsModal.tsx`; `src/store/physicalWorkspace.test.ts`; `e2e/physical.spec.ts`; `docs/PHYSICAL_WORKSPACE_IMPLEMENTATION.md` |
 | Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones · Cluster Associations dialog | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo; Options → Cluster Associations... delivers PT's Logical to Physical / Physical to Logical mapping with Create New Container and Move Devices, persisted with the workspace and pruned when its container disappears | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster + association actions, `ClusterAssociationsModal.tsx`; `e2e/physical.spec.ts` |
-| Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups, applications ICMP/HTTP/TFTP/UDP/DNS/NTP, a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` and a frozen-on-stop counter; dispatches reuse the real application flows, colored + DSCP-labeled packets ride the canvas and PDU details, runs are runtime-only and one run per device; outgoing port is a read-only route preview | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (8), `src/store/trafficGenerator.test.ts` (7), `e2e/traffic-generator.spec.ts` (2); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
+| Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups; applications ICMP/HTTP/TFTP/UDP/DNS/NTP plus `UDP (raw)` / `TCP (raw)` injectors; PT's `Auto Select Port` with a manual Outgoing Port selector; source MAC / IPv4 overrides; per-application source port (0 = automatic), payload size (0–1472 B) and data editors; a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` with a frozen-on-stop counter; dispatches ride the real application flows while the raw injectors send a bare datagram or a real SYN handshake (SYN-ACK against the modeled HTTP listener, RST-ACK elsewhere); periodic runs persist through both autosave paths and resume on restore, one run per device; colored + DSCP-labeled packets ride the canvas and PDU details | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (11), `src/store/trafficGenerator.test.ts` (13), `e2e/traffic-generator.spec.ts` (3); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 546/546, Playwright
-E2E 48 of 49 flows against the production build on the latest 2026-10-18 run —
-every functional flow passes, including BGP flow F13 (now exercising eBGP and
-iBGP neighbors from the CLI) and the four physical specs; the realtime scale
-case passes every functional assertion (8/8 pings, queue peak 2,132, drained
-clean, no warnings, engine tick p95 11.8–13.9 ms) and its pacing bound only
-flags under host conditions — the longest browser task measured 534 ms against
-the unchanged 500 ms bound (501–534 ms across recent runs, including under load
-average 3), consistent with the same-host worktree A/B where the previous
-commit measured 520–528 ms under identical load, so the overrun is a
-machine-boundary artifact and the bound was not weakened —
+Every item above is exercised by the automated suites: unit 555/555, Playwright
+E2E 49 of 50 flows against the production build on the latest 2026-10-18 run —
+every functional flow passes, including the Traffic Generator raw-injector and
+run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
+the four physical specs; the realtime scale case passes every functional
+assertion (8/8 pings, queue peak 2,132, drained clean, no warnings, engine tick
+p95 11.8–13.9 ms) and its pacing bound only flags under host conditions — the
+longest browser task measured 502–520 ms against the unchanged 500 ms bound
+(502–534 ms across recent runs, including under host load), consistent with the
+same-host A/B where the previous commit measured 534 ms under host load, so the
+overrun is a machine-boundary artifact and the bound was not weakened —
 `tsc` clean, ESLint clean, `next build` green.
 
 ## Deliberately deferred (post-launch, recorded)
@@ -52,7 +52,7 @@ machine-boundary artifact and the bound was not weakened —
 | Additional locales (~30) | Full Qt locale catalog | English, Arabic, Kurdish Sorani (RTL complete, unit-tested) | Adding locales is incremental; no functional gap |
 | PKZ/PKC source formats | Proprietary project archives | JSON workspace + PKT read/write codec + PKT export/import APIs | wireX interops with `.pkt`; its own format is open and inspectable |
 | Template library breadth | 91 shipped templates | Curated sample labs across topics | Breadth is content work; learning paths already ship |
-| Desktop app breadth | VPN, Firewall editor, Bluetooth, IoT maker… (Traffic Generator landed) | Browser, email, terminal, IP/DHCP clients plus the Traffic Generator reduced model (no raw UDP/TCP injection, no Auto Select Port) | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
+| Desktop app breadth | VPN, Firewall editor, Bluetooth, IoT maker… (Traffic Generator landed) | Browser, email, terminal, IP/DHCP clients plus the Traffic Generator with raw UDP/TCP injection, pinned outgoing port, source MAC/IP overrides and persisted periodic runs | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
 | Extensions menu contents | MQTT/Marvel/etc. integrations + Activity Wizard entry | Extensions entry with availability note; Activity Wizard on toolbar | Kept honest: no fake integrations |
 | Boards / module expansion breadth | Very large HW catalog | Core module/slot system shipped (Physical tab) | Catalog breadth is data-entry work post-launch |
 

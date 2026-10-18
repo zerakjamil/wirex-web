@@ -2,12 +2,32 @@ import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { parseWorkspace } from '../src/simulator/workspaceSchema'
 
+interface BrowserPdu {
+  id?: string
+  protocol?: string
+  sourceIp?: string
+  sourceMac?: string
+  generatorColor?: string
+  payload: {
+    dscp?: number
+    udpService?: string
+    udpSourcePort?: number
+    udpDestinationPort?: number
+    udpData?: string
+    tcpApplication?: string
+    tcpFlags?: string
+  }
+  pendingPacket?: BrowserPdu
+}
 interface BrowserNetworkState {
   devices: Array<{ id: string }>
-  inFlightPackets: Array<{ pdu: { generatorColor?: string; payload: { dscp?: number }; pendingPacket?: { payload: { dscp?: number } } } }>
-  trafficGenerators: Array<{ id: string; deviceId: string; sentCount: number }>
+  inFlightPackets: Array<{ pdu: BrowserPdu }>
+  trafficGenerators: Array<{ id: string; deviceId: string; sentCount: number; settings: { application: string; sourcePort: number; payloadSize: number; sourceIp: string; sourceMac: string } }>
 }
-interface BrowserNetworkStore { getState: () => BrowserNetworkState }
+interface BrowserNetworkStore {
+  getState: () => BrowserNetworkState
+  setState: (state: { simulationMode?: 'realtime' | 'simulation'; simulationPlaying?: boolean }) => void
+}
 interface BrowserWindow { __wireforgeNetworkStore?: BrowserNetworkStore }
 
 function createTrafficLab() {
@@ -102,4 +122,55 @@ test('a periodic run labels canvas packets, counts sends, and freezes on stop', 
   expect(Number(await count.innerText())).toBe(frozen)
   const generators = await page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().trafficGenerators.length)
   expect(generators).toBe(0)
+})
+
+test('raw injectors honor pinned ports, source overrides, and periodic runs survive a reload', async ({ page, baseURL }) => {
+  test.setTimeout(180_000)
+  const app = await openTrafficGenerator(page, baseURL)
+  await page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.setState({ simulationMode: 'simulation', simulationPlaying: false }))
+
+  await app.locator('#tg-target-pc1').fill('192.168.30.2')
+  await app.locator('#tg-application-pc1').selectOption('raw-udp')
+  await app.locator('#tg-port-pc1').fill('5001')
+  await app.locator('#tg-source-port-pc1').fill('4000')
+  await app.locator('#tg-payload-pc1').fill('64')
+  await app.locator('[data-testid="pt-tg-auto-port"]').uncheck()
+  await expect(app.locator('[data-testid="pt-tg-outgoing-port"]')).toBeVisible()
+  await app.locator('[data-testid="pt-tg-source-mac"]').fill('02:00:00:00:aa:bb')
+  await app.locator('[data-testid="pt-tg-source-ip"]').fill('192.168.30.99')
+
+  const count = app.locator('[data-testid="pt-tg-count"]')
+  await app.getByRole('button', { name: 'Test', exact: true }).click()
+  await expect(count).toHaveText('1')
+
+  const rawPdu = await page.evaluate(() => {
+    const state = (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState()
+    for (const frame of state.inFlightPackets) {
+      const candidates = [frame.pdu, frame.pdu.pendingPacket].filter((pdu): pdu is NonNullable<typeof pdu> => Boolean(pdu))
+      const found = candidates.find(pdu => pdu.payload.udpService === 'raw')
+      if (found) return { sourceIp: found.sourceIp, sourceMac: found.sourceMac, sourcePort: found.payload.udpSourcePort, destinationPort: found.payload.udpDestinationPort, dataLength: found.payload.udpData?.length ?? 0 }
+    }
+    return null
+  })
+  expect(rawPdu).toMatchObject({ sourceIp: '192.168.30.99', sourceMac: '02:00:00:00:aa:bb', sourcePort: 4000, destinationPort: 5001, dataLength: 64 })
+
+  await page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.setState({ simulationMode: 'realtime', simulationPlaying: true }))
+  await app.getByRole('radio', { name: 'Periodic', exact: true }).check()
+  await app.locator('#tg-interval-pc1').fill('0.2')
+  const status = app.locator('[data-testid="pt-tg-status"]')
+  await app.getByRole('button', { name: 'Send', exact: true }).click()
+  await expect(status).toHaveAttribute('data-running', 'true')
+  await expect.poll(async () => Number(await count.innerText()), { timeout: 20_000 }).toBeGreaterThanOrEqual(2)
+  const before = await page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().trafficGenerators[0].sentCount)
+
+  await page.goto(`${baseURL}/`)
+  await page.waitForFunction(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore?.getState().devices.length === 3)
+  const restored = await page.evaluate(() => {
+    const runs = (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().trafficGenerators
+    return runs.map(run => ({ deviceId: run.deviceId, application: run.settings.application, sourcePort: run.settings.sourcePort, payloadSize: run.settings.payloadSize, sourceIp: run.settings.sourceIp, sourceMac: run.settings.sourceMac, sentCount: run.sentCount }))
+  })
+  expect(restored).toHaveLength(1)
+  expect(restored[0]).toMatchObject({ deviceId: 'pc1', application: 'raw-udp', sourcePort: 4000, payloadSize: 64, sourceIp: '192.168.30.99', sourceMac: '02:00:00:00:aa:bb' })
+  expect(restored[0].sentCount).toBeGreaterThanOrEqual(before)
+  await expect.poll(() => page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().trafficGenerators[0]?.sentCount ?? 0), { timeout: 20_000 }).toBeGreaterThan(restored[0].sentCount)
 })

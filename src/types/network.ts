@@ -904,7 +904,7 @@ export interface PacketPdu {
     udpRequestId?: string
     udpSourceDeviceId?: string
     udpData?: string
-    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot'
+    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'raw'
     udpSourcePort?: number
     udpDestinationPort?: number
     tftpMessageType?: 'rrq' | 'data' | 'ack'
@@ -923,7 +923,7 @@ export interface PacketPdu {
     snmpOperation?: 'get' | 'get-next'
     snmpOid?: string
     snmpValue?: string
-    tcpApplication?: 'HTTP' | 'SMTP' | 'POP3'
+    tcpApplication?: 'HTTP' | 'SMTP' | 'POP3' | 'RAW'
     tcpRequestId?: string
     tcpFlags?: 'SYN' | 'SYN-ACK' | 'ACK+PSH' | 'FIN-ACK' | 'RST-ACK' | 'ACK'
     tcpSequenceNumber?: number
@@ -1016,7 +1016,7 @@ export interface UdpTransactionResult {
   sourceDeviceId: string
   targetIp: string
   port: number
-  service?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot'
+  service?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'raw'
   status: 'successful' | 'failed'
   response?: string
   fileName?: string

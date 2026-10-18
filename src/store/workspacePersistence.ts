@@ -4,12 +4,37 @@ import { useWorkspaceStore } from './workspaceStore'
 import type { NetworkDevice, DeviceWindow } from '@/types/network'
 import { useTrainingStore, saveTrainingToStorage, restoreTrainingFromStorage } from './trainingStore'
 import { useActivityStore, saveActivityToStorage, restoreActivityFromStorage } from './activityStore'
-import { parseWorkspace } from '@/simulator/workspaceSchema'
+import { parseWorkspace, type SerializedTrafficGeneratorRun } from '@/simulator/workspaceSchema'
+import { trafficGeneratorIntervalTicks, type TrafficGeneratorRun } from '@/simulator/trafficGenerator'
 import { stripRoutingRuntime } from '@/simulator/routingRuntime'
 
 export const STORAGE_KEY = 'wireforge-workspace-v1'
 type WorkspaceStorage = { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void }
 export const useWorkspacePersistence = create<{ ready: boolean }>(() => ({ ready: true }))
+
+function serializeTrafficGeneratorRuns(runs: TrafficGeneratorRun[], devices: NetworkDevice[]): SerializedTrafficGeneratorRun[] {
+  const savedDeviceIds = new Set(devices.map(device => device.id))
+  return runs.filter(run => savedDeviceIds.has(run.deviceId)).map(run => ({ deviceId: run.deviceId, settings: run.settings, intervalSeconds: run.intervalSeconds, sentCount: run.sentCount }))
+}
+
+// Restored runs resume at the current simulation tick (loadLab resets the clock) and keep their
+// sent counts, so a periodic generator picks up where the reloaded workspace left it.
+function applyRestoredTrafficGenerators(runs: SerializedTrafficGeneratorRun[]): void {
+  if (!runs.length) return
+  const tick = useNetworkStore.getState().simulationTick
+  useNetworkStore.setState({
+    trafficGenerators: runs.map(run => ({
+      id: crypto.randomUUID(),
+      deviceId: run.deviceId,
+      settings: run.settings,
+      intervalSeconds: run.intervalSeconds,
+      sentCount: run.sentCount,
+      startedTick: tick,
+      nextDueTick: tick + trafficGeneratorIntervalTicks(run.intervalSeconds),
+      lastRequestId: null,
+    })),
+  })
+}
 
 export function saveWorkspaceToStorage(storage: WorkspaceStorage): boolean {
   try {
@@ -29,7 +54,7 @@ export function saveWorkspaceToStorage(storage: WorkspaceStorage): boolean {
     const physical = !sandboxed
       ? { containers: live.physicalContainers, assignment: live.physicalAssignment, clusters: live.clusters }
       : undefined
-    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical }))
+    storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical, trafficGenerators: serializeTrafficGeneratorRuns(live.trafficGenerators, devices) }))
     return true
   } catch {
     return false
@@ -44,6 +69,7 @@ export function restoreWorkspaceFromStorage(storage: WorkspaceStorage, restoreWi
     const frames = saved.deviceWindows
     useNetworkStore.getState().loadLab(saved.devices, saved.links, saved.annotations, saved.physical)
     useNetworkStore.setState({ deviceWindows: restoreWindows ? frames : [] })
+    applyRestoredTrafficGenerators(saved.trafficGenerators)
     useWorkspaceStore.setState({ fileName: saved.fileName || '', status: `Restored ${saved.fileName || 'workspace'} from local storage.` })
     useWorkspaceStore.getState().command('fit-topology')
     return true
@@ -75,7 +101,7 @@ export async function saveWorkspaceToSqlite(): Promise<boolean> {
       body: JSON.stringify({
         action: 'save-autosave',
         fileName: fileName || 'Active Workspace',
-        snapshot: { version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical },
+        snapshot: { version: 1, devices: stripRoutingRuntime(devices), links, annotations, deviceWindows, fileName, physical, trafficGenerators: serializeTrafficGeneratorRuns(live.trafficGenerators, devices) },
       }),
     })
     return res.ok
@@ -100,6 +126,7 @@ export async function restoreWorkspaceFromSqlite(restoreWindows = true): Promise
             frame.width >= 100 && frame.height >= 100
           )
           useNetworkStore.setState({ deviceWindows: restoreWindows ? frames : [] })
+          applyRestoredTrafficGenerators(saved.trafficGenerators)
           const restoredName = saved.fileName || data.checkpoint.title || ''
           useWorkspaceStore.setState({
             fileName: restoredName,
@@ -125,6 +152,7 @@ export async function restoreWorkspaceFromSqlite(restoreWindows = true): Promise
             frame.width >= 100 && frame.height >= 100
           )
           useNetworkStore.setState({ deviceWindows: restoreWindows ? frames : [] })
+          applyRestoredTrafficGenerators(saved.trafficGenerators)
           const restoredName = saved.fileName || latest.title || ''
           useWorkspaceStore.setState({
             fileName: restoredName,
@@ -255,7 +283,14 @@ export function initializeWorkspacePersistence(): () => void {
     dirty = true
     if (!timer) timer = setTimeout(flush, 400)
   }
+  // Generator runs change an array identity on every simulation tick (sent counts and due ticks),
+  // so autosave watches a template projection instead: start, stop, or settings changes flush,
+  // while per-tick progress rides along inside the next scheduled write.
+  let generatorTemplate = JSON.stringify(useNetworkStore.getState().trafficGenerators.map(run => [run.deviceId, run.settings, run.intervalSeconds]))
   const unsubscribe = useNetworkStore.subscribe((state, previous) => {
+    const nextGeneratorTemplate = JSON.stringify(state.trafficGenerators.map(run => [run.deviceId, run.settings, run.intervalSeconds]))
+    const generatorsChanged = nextGeneratorTemplate !== generatorTemplate
+    generatorTemplate = nextGeneratorTemplate
     const deviceChanged = state.devices !== previous.devices && (state.devices.length !== previous.devices.length || state.devices.some((d, index) => {
       const old = previous.devices[index]
       const configured = d.routingTable.filter(r => r.type !== 'O' && r.type !== 'R'), oldRoutes = old?.routingTable.filter(r => r.type !== 'O' && r.type !== 'R')
@@ -263,6 +298,7 @@ export function initializeWorkspacePersistence(): () => void {
     }))
     if (
       deviceChanged ||
+      generatorsChanged ||
       state.links !== previous.links ||
       state.annotations !== previous.annotations ||
       state.deviceWindows !== previous.deviceWindows ||
@@ -278,18 +314,24 @@ export function initializeWorkspacePersistence(): () => void {
   })
   const unsubscribeTraining = useTrainingStore.subscribe(schedule)
   const unsubscribeActivity = useActivityStore.subscribe(schedule)
-  window.addEventListener('pagehide', flush)
+  // A final write on unload also captures generator progress that the template watcher skipped,
+  // so a reload restores the latest sent counts of active runs.
+  const flushFinal = () => {
+    if (useNetworkStore.getState().trafficGenerators.length > 0) dirty = true
+    flush()
+  }
+  window.addEventListener('pagehide', flushFinal)
   const visibility = () => {
-    if (document.visibilityState === 'hidden') flush()
+    if (document.visibilityState === 'hidden') flushFinal()
   }
   document.addEventListener('visibilitychange', visibility)
   return () => {
-    flush()
+    flushFinal()
     unsubscribe()
     unsubscribeName()
     unsubscribeTraining()
     unsubscribeActivity()
-    window.removeEventListener('pagehide', flush)
+    window.removeEventListener('pagehide', flushFinal)
     document.removeEventListener('visibilitychange', visibility)
   }
 }

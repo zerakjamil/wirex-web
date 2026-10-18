@@ -2,7 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createDevice } from '@/simulator/deviceFactory'
 import { useNetworkStore } from './networkStore'
+import { restoreWorkspaceFromStorage, saveWorkspaceToStorage, STORAGE_KEY } from './workspacePersistence'
 import { defaultTrafficGeneratorSettings, type TrafficGeneratorSettings } from '@/simulator/trafficGenerator'
+
+class MapStorage {
+  values = new Map<string, string>()
+  getItem(key: string) { return this.values.get(key) ?? null }
+  setItem(key: string, value: string) { this.values.set(key, value) }
+}
 
 function fixture() {
   const a = createDevice('pc', 0, 0), b = createDevice('pc', 100, 0)
@@ -139,4 +146,162 @@ test('an idle network still advances the clock while a run is active', () => {
   const idleTick = useNetworkStore.getState().simulationTick
   useNetworkStore.getState().tickSimulation()
   assert.equal(useNetworkStore.getState().simulationTick, idleTick + 1)
+})
+
+function rawSettings(patch: Partial<TrafficGeneratorSettings> = {}): TrafficGeneratorSettings {
+  return { ...defaultTrafficGeneratorSettings(), application: 'raw-udp', target: '10.0.0.2', port: 5001, ...patch }
+}
+
+function findRawPdu(protocol: 'UDP' | 'TCP') {
+  for (const packet of useNetworkStore.getState().inFlightPackets) {
+    const candidates = [packet.pdu, packet.pdu.pendingPacket].filter((pdu): pdu is NonNullable<typeof pdu> => Boolean(pdu))
+    const found = candidates.find(pdu => pdu.protocol === protocol && (pdu.payload.udpService === 'raw' || pdu.payload.tcpApplication === 'RAW'))
+    if (found) return found
+  }
+  return undefined
+}
+
+function recordRawTcpFlags(maxTicks: number): string[] {
+  const seen: string[] = []
+  const ids = new Set<string>()
+  const collect = () => {
+    for (const packet of useNetworkStore.getState().inFlightPackets) {
+      const candidates = [packet.pdu, packet.pdu.pendingPacket].filter((pdu): pdu is NonNullable<typeof pdu> => Boolean(pdu))
+      for (const pdu of candidates) {
+        if (pdu.protocol === 'TCP' && pdu.payload.tcpApplication === 'RAW' && pdu.payload.tcpFlags && !ids.has(pdu.id)) {
+          ids.add(pdu.id)
+          seen.push(pdu.payload.tcpFlags)
+        }
+      }
+    }
+  }
+  collect()
+  for (let index = 0; index < maxTicks && seen.length < 3; index++) {
+    useNetworkStore.getState().tickSimulation()
+    collect()
+  }
+  return seen
+}
+
+test('a raw UDP datagram is injected with the configured ports and padded payload', () => {
+  const { a } = fixture()
+  const result = useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, rawSettings({ sourcePort: 4000, payloadSize: 24, data: 'hello' }))
+  assert.equal(result.ok, true)
+  const pdu = findRawPdu('UDP')
+  assert.ok(pdu, 'expected a raw UDP datagram on the wire')
+  assert.equal(pdu?.payload.udpMessageType, 'request')
+  assert.equal(pdu?.payload.udpService, 'raw')
+  assert.equal(pdu?.payload.udpSourcePort, 4000)
+  assert.equal(pdu?.payload.udpDestinationPort, 5001)
+  assert.equal(pdu?.payload.udpData, `hello${'.'.repeat(19)}`)
+  assert.equal(pdu?.payload.udpRequestId, undefined)
+  assert.match(pdu?.summary ?? '', /Raw UDP datagram to 10\.0\.0\.2:5001/)
+
+  const deliveries = useNetworkStore.getState()
+  assert.equal(deliveries.udpTransactions.length, 0)
+})
+
+test('a raw TCP SYN completes the modeled handshake and a closed port answers with a reset', () => {
+  const a = createDevice('pc', 0, 0)
+  const server = createDevice('server', 100, 0)
+  a.id = 'raw-source'
+  server.id = 'raw-server'
+  Object.assign(a.ports[0], { ipAddress: '10.0.0.1', subnetMask: '255.255.255.0', status: 'up' })
+  Object.assign(server.ports[0], { ipAddress: '10.0.0.2', subnetMask: '255.255.255.0', status: 'up' })
+  server.config.httpServiceEnabled = true
+  useNetworkStore.getState().loadLab([a, server], [])
+  useNetworkStore.getState().connectPorts(a.id, a.ports[0].id, server.id, server.ports[0].id, 'straight')
+  useNetworkStore.setState({ simulationMode: 'realtime', simulationPlaying: true, trafficGenerators: [] })
+
+  assert.equal(useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, rawSettings({ application: 'raw-tcp', port: 80 })).ok, true)
+  assert.deepEqual(recordRawTcpFlags(30), ['SYN', 'SYN-ACK', 'ACK'])
+
+  for (let index = 0; index < 60 && useNetworkStore.getState().inFlightPackets.length; index++) useNetworkStore.getState().tickSimulation()
+  assert.equal(useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, rawSettings({ application: 'raw-tcp', port: 9999 })).ok, true)
+  assert.deepEqual(recordRawTcpFlags(30), ['SYN', 'RST-ACK'])
+})
+
+test('raw injectors honor a pinned outgoing port and L2/L3 source overrides', () => {
+  const { a } = fixture()
+  const pinned = rawSettings({
+    autoSelectPort: false,
+    outgoingPortId: a.ports[0].id,
+    sourceMac: '02:00:00:00:ab:cd',
+    sourceIp: '10.9.9.9',
+    packetColor: '#dc2626',
+    dscp: 46,
+  })
+  const result = useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, pinned)
+  assert.equal(result.ok, true)
+  const pdu = findRawPdu('UDP')
+  assert.equal(pdu?.sourceMac, '02:00:00:00:ab:cd')
+  assert.equal(pdu?.sourceIp, '10.9.9.9')
+  assert.equal(pdu?.generatorColor, '#dc2626')
+  assert.equal(pdu?.payload.dscp, 46)
+
+  assert.deepEqual(
+    useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, { ...pinned, outgoingPortId: 'missing-port' }),
+    { ok: false, error: 'port-unknown' },
+  )
+  assert.deepEqual(
+    useNetworkStore.getState().startTrafficGenerator(a.id, { ...pinned, outgoingPortId: 'missing-port' }, 1),
+    { ok: false, error: 'port-unknown' },
+  )
+})
+
+test('periodic runs survive a workspace save and restore', () => {
+  const { a } = fixture()
+  const started = useNetworkStore.getState().startTrafficGenerator(a.id, rawSettings({ sourcePort: 4000, payloadSize: 16 }), 2)
+  assert.equal(started.ok, true)
+  for (let index = 0; index < 3; index++) useNetworkStore.getState().tickSimulation()
+  const savedCount = useNetworkStore.getState().trafficGenerators[0]?.sentCount ?? 0
+  assert.ok(savedCount >= 1)
+
+  const storage = new MapStorage()
+  assert.equal(saveWorkspaceToStorage(storage), true)
+  useNetworkStore.getState().resetTopology()
+  assert.equal(useNetworkStore.getState().trafficGenerators.length, 0)
+
+  assert.equal(restoreWorkspaceFromStorage(storage), true)
+  const runs = useNetworkStore.getState().trafficGenerators
+  assert.equal(runs.length, 1)
+  assert.equal(runs[0].deviceId, a.id)
+  assert.equal(runs[0].settings.application, 'raw-udp')
+  assert.equal(runs[0].settings.sourcePort, 4000)
+  assert.equal(runs[0].settings.payloadSize, 16)
+  assert.equal(runs[0].sentCount, savedCount)
+  assert.ok(runs[0].nextDueTick > useNetworkStore.getState().simulationTick)
+})
+
+test('restored runs drop entries whose source device no longer exists', () => {
+  const { a } = fixture()
+  assert.equal(useNetworkStore.getState().startTrafficGenerator(a.id, rawSettings(), 1).ok, true)
+  const storage = new MapStorage()
+  assert.equal(saveWorkspaceToStorage(storage), true)
+  const snapshot = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}')
+  assert.equal(snapshot.trafficGenerators.length, 1)
+  snapshot.devices = snapshot.devices.filter((device: { id: string }) => device.id !== a.id)
+  snapshot.links = snapshot.links.filter((link: { fromDeviceId: string; toDeviceId: string }) => link.fromDeviceId !== a.id && link.toDeviceId !== a.id)
+  storage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
+
+  assert.equal(restoreWorkspaceFromStorage(storage), true)
+  assert.equal(useNetworkStore.getState().trafficGenerators.length, 0)
+})
+
+test('the payload-size editor pads the UDP Echo request as well', () => {
+  const { a } = fixture()
+  const result = useNetworkStore.getState().sendTrafficGeneratorOnce(a.id, {
+    ...defaultTrafficGeneratorSettings(), application: 'udp', target: '10.0.0.2', port: 7, payloadSize: 32, data: 'abc',
+  })
+  assert.equal(result.ok, true)
+  let data: string | undefined
+  for (const packet of useNetworkStore.getState().inFlightPackets) {
+    const candidates = [packet.pdu, packet.pdu.pendingPacket].filter((pdu): pdu is NonNullable<typeof pdu> => Boolean(pdu))
+    const found = candidates.find(pdu => pdu.protocol === 'UDP' && pdu.payload.udpDestinationPort === 7)
+    if (found) {
+      data = found.payload.udpData
+      break
+    }
+  }
+  assert.equal(data, `abc${'.'.repeat(29)}`)
 })

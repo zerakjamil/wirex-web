@@ -28,6 +28,8 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
   const [intervalInput, setIntervalInput] = useState('1')
   const [dscpInput, setDscpInput] = useState('')
   const [portInput, setPortInput] = useState('7')
+  const [sourcePortInput, setSourcePortInput] = useState('0')
+  const [payloadInput, setPayloadInput] = useState('0')
   const [manualSent, setManualSent] = useState(0)
   const [error, setError] = useState('')
 
@@ -55,11 +57,17 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
       case 'file-invalid': return t('Enter a valid TFTP file name.')
       case 'port-invalid': return t('Enter a destination port between 1 and 65535.')
       case 'dscp-invalid': return t('Enter the DSCP value as a number from 0 to 63.')
+      case 'source-port-invalid': return t('Enter a source port between 1 and 65535, or 0 for automatic.')
+      case 'payload-invalid': return t('Enter the payload size in bytes from 0 to 1472.')
+      case 'source-mac-invalid': return t('Enter the source MAC as 00:60:2f:aa:bb:cc.')
+      case 'source-ip-invalid': return t('Enter a valid IPv4 source address.')
+      case 'port-unknown': return t('The selected outgoing port is no longer available on this device.')
       case 'target-invalid': return settings.application === 'icmp' ? t('Enter a valid IPv4 or IPv6 destination address.') : t('Enter a valid IPv4 destination address.')
     }
   }
 
   const sourcePort = device?.ports.find(port => port.ipAddress)
+  const isRawApplication = settings.application === 'raw-udp' || settings.application === 'raw-tcp'
   const route = useMemo(() => (device && settings.target.trim() ? outgoingRoute(device, settings.target.trim()) : undefined), [device, settings.target])
   const sentCount = (run?.sentCount ?? 0) + manualSent
 
@@ -129,15 +137,47 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-source-device-${deviceId}`}>{t('Source Device')}
             <input id={`tg-source-device-${deviceId}`} value={device.name} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-600" />
           </label>
+          <div className="flex items-center gap-2">
+            <input
+              id={`tg-auto-port-${deviceId}`}
+              type="checkbox"
+              data-testid="pt-tg-auto-port"
+              checked={settings.autoSelectPort}
+              onChange={event => update(event.target.checked
+                ? { autoSelectPort: true }
+                : { autoSelectPort: false, outgoingPortId: settings.outgoingPortId || device.ports[0]?.id || '' })}
+              className="h-4 w-4"
+            />
+            <label htmlFor={`tg-auto-port-${deviceId}`} className="text-xs font-semibold text-slate-700">{t('Auto Select Port')}</label>
+          </div>
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-outgoing-port-${deviceId}`}>{t('Outgoing Port')}
-            <input id={`tg-outgoing-port-${deviceId}`} value={route ? route.port.name : t('No route')} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-600" />
+            {settings.autoSelectPort
+              ? <input id={`tg-outgoing-port-${deviceId}`} value={route ? route.port.name : t('No route')} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-600" />
+              : <select
+                  id={`tg-outgoing-port-${deviceId}`}
+                  data-testid="pt-tg-outgoing-port"
+                  value={settings.outgoingPortId}
+                  onChange={event => update({ outgoingPortId: event.target.value })}
+                  className="mt-1 min-h-[38px] w-full rounded border border-slate-300 bg-white px-3 font-mono text-xs"
+                >
+                  {device.ports.map(port => <option key={port.id} value={port.id}>{port.name}{port.ipAddress ? ` — ${port.ipAddress}` : ''}</option>)}
+                </select>}
           </label>
+          <p className="text-xs text-slate-500">{t('Manual port and source overrides apply to the raw UDP/TCP injectors; other applications follow the routing table.')}</p>
         </section>
 
         <section className="space-y-3" aria-labelledby={`tg-l2-${deviceId}`}>
           <h4 id={`tg-l2-${deviceId}`} className="text-xs font-bold uppercase tracking-wide text-slate-700">{t('L2 Config')}</h4>
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-source-mac-${deviceId}`}>{t('Source MAC')}
-            <input id={`tg-source-mac-${deviceId}`} value={sourcePort?.macAddress ?? '—'} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-600" />
+            <input
+              id={`tg-source-mac-${deviceId}`}
+              data-testid="pt-tg-source-mac"
+              value={settings.sourceMac}
+              onChange={event => update({ sourceMac: event.target.value })}
+              placeholder={sourcePort?.macAddress ?? '—'}
+              disabled={!isRawApplication}
+              className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs disabled:bg-slate-50 disabled:text-slate-400"
+            />
           </label>
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-destination-mac-${deviceId}`}>{t('Destination MAC')}
             <input id={`tg-destination-mac-${deviceId}`} value={t('Resolved by ARP')} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600" />
@@ -147,7 +187,15 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
         <section className="space-y-3" aria-labelledby={`tg-l3-${deviceId}`}>
           <h4 id={`tg-l3-${deviceId}`} className="text-xs font-bold uppercase tracking-wide text-slate-700">{t('L3 Config')}</h4>
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-source-ip-${deviceId}`}>{t('Source IP')}
-            <input id={`tg-source-ip-${deviceId}`} value={sourcePort?.ipAddress ?? '—'} readOnly className="mt-1 min-h-[38px] w-full rounded border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-600" />
+            <input
+              id={`tg-source-ip-${deviceId}`}
+              data-testid="pt-tg-source-ip"
+              value={settings.sourceIp}
+              onChange={event => update({ sourceIp: event.target.value })}
+              placeholder={sourcePort?.ipAddress ?? '—'}
+              disabled={!isRawApplication}
+              className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs disabled:bg-slate-50 disabled:text-slate-400"
+            />
           </label>
           <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-target-${deviceId}`}>{targetLabel}
             <input
@@ -172,6 +220,7 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
               {TRAFFIC_GENERATOR_APPLICATIONS.map(application => <option key={application.id} value={application.id}>{applicationLabel(application.id)}</option>)}
             </select>
           </label>
+          {isRawApplication && <p className="text-xs text-slate-500">{t('Raw UDP sends a bare datagram; raw TCP opens a SYN handshake and shows the SYN-ACK or reset it gets back.')}</p>}
           {settings.application === 'http' && (
             <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-path-${deviceId}`}>{t('Request Path')}
               <input id={`tg-path-${deviceId}`} value={settings.path} onChange={event => update({ path: event.target.value })} placeholder="/" className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs" />
@@ -182,13 +231,39 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
               <input id={`tg-file-${deviceId}`} value={settings.fileName} onChange={event => update({ fileName: event.target.value })} className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs" />
             </label>
           )}
-          {settings.application === 'udp' && (<>
+          {(settings.application === 'udp' || isRawApplication) && (<>
             <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-port-${deviceId}`}>{t('Destination Port')}
               <input id={`tg-port-${deviceId}`} value={portInput} inputMode="numeric" onChange={event => { setPortInput(event.target.value); update({ port: Number(event.target.value.trim()) }) }} className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs" />
             </label>
-            <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-data-${deviceId}`}>{t('Data')}
-              <input id={`tg-data-${deviceId}`} value={settings.data} onChange={event => update({ data: event.target.value })} className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs" />
-            </label>
+            {isRawApplication && (
+              <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-source-port-${deviceId}`}>{t('Source Port')}
+                <input
+                  id={`tg-source-port-${deviceId}`}
+                  data-testid="pt-tg-source-port"
+                  value={sourcePortInput}
+                  inputMode="numeric"
+                  onChange={event => { setSourcePortInput(event.target.value); const trimmed = event.target.value.trim(); update({ sourcePort: trimmed === '' ? 0 : Number(trimmed) }) }}
+                  className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs"
+                />
+              </label>
+            )}
+            {(settings.application === 'udp' || settings.application === 'raw-udp') && (
+              <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-data-${deviceId}`}>{t('Data')}
+                <input id={`tg-data-${deviceId}`} value={settings.data} onChange={event => update({ data: event.target.value })} className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs" />
+              </label>
+            )}
+            {(settings.application === 'raw-udp' || settings.application === 'udp') && (
+              <label className="block text-xs font-semibold text-slate-700" htmlFor={`tg-payload-${deviceId}`}>{t('Payload Size (bytes)')}
+                <input
+                  id={`tg-payload-${deviceId}`}
+                  data-testid="pt-tg-payload"
+                  value={payloadInput}
+                  inputMode="numeric"
+                  onChange={event => { setPayloadInput(event.target.value); const trimmed = event.target.value.trim(); update({ payloadSize: trimmed === '' ? 0 : Number(trimmed) }) }}
+                  className="mt-1 min-h-[38px] w-full rounded border border-slate-300 px-3 font-mono text-xs"
+                />
+              </label>
+            )}
           </>)}
           <fieldset>
             <legend className="text-xs font-semibold text-slate-700">{t('Packet Color')}</legend>

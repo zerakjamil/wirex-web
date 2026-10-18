@@ -4,6 +4,7 @@ import { allowedChildKinds, canHoldDevices } from './physical'
 import { isInSameSubnet, isValidIpv4 } from './protocols/ip'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from './tftp'
 import { isValidSnmpCommunity } from './snmp'
+import { TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, validateTrafficGeneratorSettings, type TrafficGeneratorApplication, type TrafficGeneratorSettings } from './trafficGenerator'
 
 type RecordValue = Record<string, unknown>
 function object(value: unknown): RecordValue {
@@ -28,7 +29,51 @@ function validateEmailMessage(value: unknown) {
   if (!Number.isSafeInteger(message.sentAtTick) || Number(message.sentAtTick) < 0) throw new Error('Invalid email message timestamp.')
 }
 
-export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[]; deviceWindows: DeviceWindow[]; fileName: string; physical?: PhysicalWorkspaceState } {
+export interface SerializedTrafficGeneratorRun {
+  deviceId: string
+  settings: TrafficGeneratorSettings
+  intervalSeconds: number
+  sentCount: number
+}
+
+const TRAFFIC_GENERATOR_APPLICATION_IDS: TrafficGeneratorApplication[] = ['icmp', 'http', 'tftp', 'udp', 'raw-udp', 'raw-tcp', 'dns', 'ntp']
+
+// Restored generator runs are validated field by field; a run that no longer matches the model is
+// dropped instead of failing the whole restore, so an older save never blocks a workspace load.
+function validatedTrafficGeneratorSettings(value: unknown): TrafficGeneratorSettings | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const raw = value as RecordValue
+  if (!TRAFFIC_GENERATOR_APPLICATION_IDS.includes(raw.application as TrafficGeneratorApplication)) return null
+  for (const key of ['target', 'path', 'fileName', 'data', 'packetColor', 'outgoingPortId', 'sourceMac', 'sourceIp']) {
+    if (typeof raw[key] !== 'string' || (raw[key] as string).length > 65536) return null
+  }
+  for (const key of ['port', 'sourcePort', 'payloadSize']) {
+    if (typeof raw[key] !== 'number' || !Number.isFinite(raw[key] as number)) return null
+  }
+  if (typeof raw.autoSelectPort !== 'boolean') return null
+  if (raw.dscp !== null && (typeof raw.dscp !== 'number' || !Number.isFinite(raw.dscp))) return null
+  const settings = raw as unknown as TrafficGeneratorSettings
+  return validateTrafficGeneratorSettings(settings) === null ? settings : null
+}
+
+function validateTrafficGeneratorRuns(value: unknown, deviceMap: Map<unknown, RecordValue>): SerializedTrafficGeneratorRun[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.length > 64) return []
+  const runs: SerializedTrafficGeneratorRun[] = []
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+    const row = entry as RecordValue
+    if (typeof row.deviceId !== 'string' || !deviceMap.has(row.deviceId)) continue
+    const settings = validatedTrafficGeneratorSettings(row.settings)
+    if (!settings) continue
+    if (typeof row.intervalSeconds !== 'number' || !Number.isFinite(row.intervalSeconds) || row.intervalSeconds < TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS || row.intervalSeconds > TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS) continue
+    const sentCount = Number.isSafeInteger(row.sentCount) && Number(row.sentCount) >= 0 ? Number(row.sentCount) : 0
+    runs.push({ deviceId: row.deviceId, settings, intervalSeconds: row.intervalSeconds, sentCount })
+  }
+  return runs
+}
+
+export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDevice[]; links: NetworkLink[]; annotations: NetworkAnnotation[]; deviceWindows: DeviceWindow[]; fileName: string; physical?: PhysicalWorkspaceState; trafficGenerators: SerializedTrafficGeneratorRun[] } {
   const data = object(input)
   if (data.version !== undefined && data.version !== 1 && data.version !== '1.0') throw new Error('Unsupported workspace version.')
   const devices = array(data.devices, 2000).map(object)
@@ -292,7 +337,8 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
   const deviceWindows = array(data.deviceWindows ?? [], 2000).map(object).filter(frame => deviceMap.has(frame.deviceId) && ['x', 'y', 'width', 'height', 'z'].every(key => typeof frame[key] === 'number' && Number.isFinite(frame[key])) && Number(frame.width) >= 100 && Number(frame.height) >= 100)
   if (data.fileName !== undefined) string(data.fileName)
   const physical = validatePhysical(data.physical, deviceMap)
-  return { version: 1, devices: devices as unknown as NetworkDevice[], links: links as unknown as NetworkLink[], annotations: annotations as unknown as NetworkAnnotation[], deviceWindows: deviceWindows as unknown as DeviceWindow[], fileName: (data.fileName as string) || '', physical }
+  const trafficGenerators = validateTrafficGeneratorRuns(data.trafficGenerators, deviceMap)
+  return { version: 1, devices: devices as unknown as NetworkDevice[], links: links as unknown as NetworkLink[], annotations: annotations as unknown as NetworkAnnotation[], deviceWindows: deviceWindows as unknown as DeviceWindow[], fileName: (data.fileName as string) || '', physical, trafficGenerators }
 }
 
 function validatePhysical(value: unknown, deviceMap: Map<unknown, RecordValue>): PhysicalWorkspaceState | undefined {

@@ -50,6 +50,9 @@ import {
   createEmailPackets,
   createDnsQueryPackets,
   createUdpEchoPackets,
+  createRawUdpPackets,
+  createRawTcpPackets,
+  type TrafficGeneratorFrameOptions,
   createNtpQueryPackets,
   createSnmpQueryPackets,
   createTftpReadPackets,
@@ -65,7 +68,7 @@ import { parseIosCommand } from '@/simulator/ios/ciscoParser'
 import { executeWlcCommand } from '@/simulator/ios/wlcCli'
 import { hasCapwapActivity } from '@/simulator/capwap'
 import { hasIotActivity, iotServerRuntimeOf, isIotServer, applyIotLocalState } from '@/simulator/iot'
-import { stampTrafficGeneratorPackets, trafficGeneratorIntervalTicks, validateTrafficGeneratorSettings, TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, type TrafficGeneratorError, type TrafficGeneratorRun, type TrafficGeneratorSettings } from '@/simulator/trafficGenerator'
+import { stampTrafficGeneratorPackets, trafficGeneratorFrameOptions, trafficGeneratorIntervalTicks, trafficGeneratorPaddedData, validateTrafficGeneratorSettings, TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, type TrafficGeneratorError, type TrafficGeneratorRun, type TrafficGeneratorSettings } from '@/simulator/trafficGenerator'
 import { getCcnaEnterpriseLab } from '@/simulator/starterLabs'
 import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
@@ -191,6 +194,8 @@ interface NetworkStore {
   deleteEmail: (sourceDeviceId: string, messageId: string) => string | null
   requestDns: (sourceDeviceId: string, domain: string) => string | null
   requestUdpEcho: (sourceDeviceId: string, targetIp: string, port: number, data: string) => string | null
+  requestRawUdp: (sourceDeviceId: string, targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions) => string | null
+  requestRawTcp: (sourceDeviceId: string, targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions) => string | null
   requestNtp: (sourceDeviceId: string, targetIp: string) => string | null
   requestSnmpQuery: (sourceDeviceId: string, targetIp: string, operation: SnmpOperation, oid: string, community: string) => string | null
   requestTftpRead: (sourceDeviceId: string, targetIp: string, fileName: string) => string | null
@@ -230,7 +235,9 @@ function dispatchTrafficGenerator(state: NetworkStore, deviceId: string, setting
     case 'icmp': return state.sendPing(deviceId, target)
     case 'http': return state.requestHttp(deviceId, target, settings.path.trim() || '/')
     case 'tftp': return state.requestTftpRead(deviceId, target, settings.fileName.trim())
-    case 'udp': return state.requestUdpEcho(deviceId, target, settings.port, settings.data)
+    case 'udp': return state.requestUdpEcho(deviceId, target, settings.port, trafficGeneratorPaddedData(settings.data, settings.payloadSize))
+    case 'raw-udp': return state.requestRawUdp(deviceId, target, settings.port, trafficGeneratorFrameOptions(settings))
+    case 'raw-tcp': return state.requestRawTcp(deviceId, target, settings.port, trafficGeneratorFrameOptions(settings))
     case 'dns': return state.requestDns(deviceId, target)
     case 'ntp': return state.requestNtp(deviceId, target)
   }
@@ -1523,7 +1530,11 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   startTrafficGenerator: (deviceId, settings, intervalSeconds) => {
     const error = validateTrafficGeneratorSettings(settings)
     if (error) return { ok: false as const, error }
-    if (!get().devices.some(device => device.id === deviceId)) return { ok: false as const, error: 'device-missing' as const }
+    const device = get().devices.find(candidate => candidate.id === deviceId)
+    if (!device) return { ok: false as const, error: 'device-missing' as const }
+    if (!settings.autoSelectPort && settings.outgoingPortId.trim() && !device.ports.some(port => port.id === settings.outgoingPortId.trim())) {
+      return { ok: false as const, error: 'port-unknown' as const }
+    }
     if (!Number.isFinite(intervalSeconds) || intervalSeconds < TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS || intervalSeconds > TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS) {
       return { ok: false as const, error: 'interval-range' as const }
     }
@@ -1552,7 +1563,11 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   sendTrafficGeneratorOnce: (deviceId, settings) => {
     const error = validateTrafficGeneratorSettings(settings)
     if (error) return { ok: false as const, error }
-    if (!get().devices.some(device => device.id === deviceId)) return { ok: false as const, error: 'device-missing' as const }
+    const device = get().devices.find(candidate => candidate.id === deviceId)
+    if (!device) return { ok: false as const, error: 'device-missing' as const }
+    if (!settings.autoSelectPort && settings.outgoingPortId.trim() && !device.ports.some(port => port.id === settings.outgoingPortId.trim())) {
+      return { ok: false as const, error: 'port-unknown' as const }
+    }
     const requestId = dispatchTrafficGenerator(get(), deviceId, settings)
     if (requestId) {
       const packets = get().inFlightPackets
@@ -1863,6 +1878,40 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       simulationWarning: null,
     }))
     return requestId
+  },
+
+  requestRawUdp: (sourceDeviceId, targetIp, destinationPort, options) => {
+    const { devices, links, inFlightPackets } = get()
+    const source = devices.find(device => device.id === sourceDeviceId)
+    if (!source) return null
+    const packets = createRawUdpPackets(source, devices, links, targetIp, destinationPort, options)
+    if (!packets.length) {
+      set({ simulationWarning: 'Cannot send the raw UDP datagram. Check the destination IPv4 address, port, outgoing port, source overrides, route, gateway, outbound ACL, payload size and link status.' })
+      return null
+    }
+    if (inFlightPackets.length + packets.length > MAX_IN_FLIGHT_PACKETS) {
+      set({ simulationWarning: 'Packet queue is full. Pause or reset the simulation before sending more traffic.' })
+      return null
+    }
+    set(state => ({ inFlightPackets: [...state.inFlightPackets, ...packets], simulationWarning: null }))
+    return crypto.randomUUID()
+  },
+
+  requestRawTcp: (sourceDeviceId, targetIp, destinationPort, options) => {
+    const { devices, links, inFlightPackets } = get()
+    const source = devices.find(device => device.id === sourceDeviceId)
+    if (!source) return null
+    const packets = createRawTcpPackets(source, devices, links, targetIp, destinationPort, options)
+    if (!packets.length) {
+      set({ simulationWarning: 'Cannot send the raw TCP SYN. Check the destination IPv4 address, port, outgoing port, source overrides, route, gateway, outbound ACL and link status.' })
+      return null
+    }
+    if (inFlightPackets.length + packets.length > MAX_IN_FLIGHT_PACKETS) {
+      set({ simulationWarning: 'Packet queue is full. Pause or reset the simulation before sending more traffic.' })
+      return null
+    }
+    set(state => ({ inFlightPackets: [...state.inFlightPackets, ...packets], simulationWarning: null }))
+    return crypto.randomUUID()
   },
 
   requestNtp: (sourceDeviceId, targetIp) => {
