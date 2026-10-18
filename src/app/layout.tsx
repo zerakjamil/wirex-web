@@ -4,7 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "wireX - Interactive Network Topology Lab",
   description: "Browser-native network simulation workbench with CLI, topology canvas, and packet inspection.",
-  manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",
@@ -35,17 +34,6 @@ export default function RootLayout({
       </head>
       <body className="h-full w-full overflow-hidden flex flex-col">
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (${process.env.NODE_ENV === 'production'} && 'serviceWorker' in navigator && window.location.protocol.startsWith('http') && !navigator.userAgent.includes('Electron')) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch(() => {});
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );

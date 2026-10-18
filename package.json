@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/generateOfflineManifest.mjs",
+    "build": "next build",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
     "test": "tsx --test src/simulator/*.test.ts src/store/*.test.ts src/i18n/*.test.ts",

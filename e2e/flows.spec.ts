@@ -108,10 +108,15 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(vault.getByRole('listitem').first()).toBeVisible()
   })
 
-  test('F06: Browser cannot invoke local Electron build or install actions', async ({ page }) => {
+  test('F06: the in-browser Electron build and install surface is not shipped', async ({ page }) => {
     const res = await page.request.get('/api/electron-build')
-    expect(res.status()).toBe(403)
-    expect((await res.json()).ok).toBe(false)
+    expect(res.status()).toBe(404)
+
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: /Install Offline App/i })).toHaveCount(0)
+    await page.locator('button[aria-haspopup="menu"]', { hasText: 'Help' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Practice Labs' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /Install Desktop App/ })).toHaveCount(0)
   })
 
   test('F06b: the network-store automation hook is unavailable on public hostnames', async ({ page, baseURL }) => {

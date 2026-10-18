@@ -23,7 +23,6 @@ import { ActivityWorkspace } from '@/components/cisco/ActivityWorkspace'
 import { NetworkDoctorModal } from '@/components/modals/NetworkDoctorModal'
 import { ShareLabModal } from '@/components/modals/ShareLabModal'
 import { ExamRevisionModal } from '@/components/modals/ExamRevisionModal'
-import { DesktopInstallModal } from '@/components/modals/DesktopInstallModal'
 import { useNetworkStore } from '@/store/networkStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { initializeWorkspacePersistence, useWorkspacePersistence } from '@/store/workspacePersistence'
@@ -88,7 +87,6 @@ export default function Home() {
       <NetworkDoctorModal />
       <ShareLabModal />
       <ExamRevisionModal isOpen={wsDialog === 'revision'} onClose={() => setWsDialog(null)} />
-      <DesktopInstallModal isOpen={wsDialog === 'install'} onClose={() => setWsDialog(null)} />
     </main>
   )
 }

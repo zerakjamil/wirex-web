@@ -37,7 +37,7 @@ interface WorkspaceStore {
   clipboard: NetworkDevice | null
   copyDevice: () => void
   pasteDevice: () => void
-  dialog: 'help' | 'about' | 'preferences' | 'activity' | 'extensions' | 'complex-pdu' | 'pdu-error' | 'delete-device' | 'note' | 'doctor' | 'share' | 'revision' | 'install' | null
+  dialog: 'help' | 'about' | 'preferences' | 'activity' | 'extensions' | 'complex-pdu' | 'pdu-error' | 'delete-device' | 'note' | 'doctor' | 'share' | 'revision' | null
   pduError: {deviceId:string;message:string} | null
   selectPduSource: (deviceId:string)=>void
   pendingDeletion:Deletion|null

@@ -45,7 +45,6 @@ next-env.d.ts
 /dist-electron/
 /.wireforge/
 /data/
-/public/offline-assets.json
 
 # test results & screenshots
 /test-results/
