@@ -14,7 +14,9 @@
     "electron:prep": "npm run build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "electron:dev": "electron .",
     "electron:pack": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
-    "electron:dist": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder"
+    "electron:dist": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
+    "electron:verify": "node scripts/verifyMacApp.mjs",
+    "electron:icon": "node scripts/buildAppIcon.mjs"
   },
   "build": {
     "appId": "com.wireforge.simulator",
@@ -26,9 +28,14 @@
     "mac": {
       "category": "public.app-category.education",
       "target": [
-        "dir"
+        "dmg",
+        "zip"
       ],
-      "identity": null
+      "identity": "-",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist"
     },
     "win": {
       "target": [
@@ -43,6 +50,7 @@
     "files": [
       "electron/**/*",
       ".next/standalone/**/*",
+      "!.next/standalone/dist-electron/**",
       "package.json"
     ]
   },
