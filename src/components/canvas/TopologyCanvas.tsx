@@ -183,10 +183,15 @@ function InnerTopologyCanvas() {
           workspace.createClusterFromSelection()
           return
         }
-        if (event.shiftKey && event.key.toLowerCase() === 'b') {
-          event.preventDefault()
-          workspace.createPhysicalContainer('building')
-          return
+        if (event.shiftKey) {
+          // PT's physical-container shortcuts; folding keys are ignored outside the physical view.
+          const shortcutKinds = { b: 'building', c: 'city', j: 'closet', f: 'generic' } as const
+          const kind = shortcutKinds[event.key.toLowerCase() as keyof typeof shortcutKinds]
+          if (kind) {
+            event.preventDefault()
+            workspace.createPhysicalContainerFromShortcut(kind)
+            return
+          }
         }
         if (event.key.toLowerCase() === 'p') {
           event.preventDefault()

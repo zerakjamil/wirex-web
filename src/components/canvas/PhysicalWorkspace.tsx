@@ -1,14 +1,14 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type DragEvent, type MouseEvent } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { CiscoIcon, type IconName } from '../cisco/CiscoIcon'
 import { Cisco3DIcon } from './Cisco3DIcons'
 import { useI18n } from '@/i18n/useI18n'
-import { containerById, containerLabelPath, containerSubtreeIds, containersByParent, deviceContainer, PHYSICAL_KIND_LABELS } from '@/simulator/physical'
+import { canHoldDevices, containerById, containerLabelPath, containerSubtreeIds, containersByParent, deviceContainer, PHYSICAL_KIND_LABELS } from '@/simulator/physical'
 import type { NetworkDevice, PhysicalContainer, PhysicalContainerKind } from '@/types/network'
 
-const KIND_ICONS: Record<PhysicalContainerKind, IconName> = { city: 'city', building: 'building', closet: 'physical', rack: 'rack', table: 'table' }
+const KIND_ICONS: Record<PhysicalContainerKind, IconName> = { city: 'city', building: 'building', closet: 'physical', rack: 'rack', table: 'table', shelf: 'rack', pegboard: 'connections', generic: 'folder' }
 const NAVIGABLE = new Set<PhysicalContainerKind>(['city', 'building', 'closet'])
 export const PHYSICAL_DEVICE_MIME = 'application/x-wirex-device'
 
@@ -17,6 +17,7 @@ export function PhysicalWorkspace() {
   const containers = useNetworkStore(state => state.physicalContainers)
   const assignment = useNetworkStore(state => state.physicalAssignment)
   const devices = useNetworkStore(state => state.devices)
+  const clusters = useNetworkStore(state => state.clusters)
   const moveDeviceToContainer = useNetworkStore(state => state.moveDeviceToContainer)
   const setActiveModal = useNetworkStore(state => state.setActiveModal)
   const setActiveTab = useNetworkStore(state => state.setActiveTab)
@@ -34,33 +35,46 @@ export function PhysicalWorkspace() {
     const ids = containerSubtreeIds(containers, containerId)
     return devices.filter(device => { const target = placement.get(device.id); return !!target && ids.has(target) }).length
   }
+  const clusterNamesFor = (containerId: string) => clusters.filter(cluster => cluster.physicalContainerId === containerId).map(cluster => cluster.name)
   const commitMove = (deviceId: string, container: PhysicalContainer) => {
     const device = devices.find(candidate => candidate.id === deviceId)
     if (!device) return
     useWorkspaceStore.getState().checkpoint()
-    moveDeviceToContainer(deviceId, container.id)
+    if (!moveDeviceToContainer(deviceId, container.id)) {
+      useWorkspaceStore.getState().setStatus(`${device.name}: power the device off and remove its cables before storing it on a shelf.`)
+      setMoveMenu(null)
+      return
+    }
     useWorkspaceStore.getState().setStatus(`${device.name} moved to ${containerLabelPath(containers, container.id) || container.name}.`)
     setMoveMenu(null)
   }
-  const dropProps = (container: PhysicalContainer) => ({
-    onDragOver: (event: React.DragEvent) => {
+  const deleteContainer = (container: PhysicalContainer) => {
+    const store = useWorkspaceStore.getState()
+    store.checkpoint()
+    const removedDevices = useNetworkStore.getState().deletePhysicalContainer(container.id)
+    store.setStatus(removedDevices
+      ? `${container.name} and ${removedDevices} stored device${removedDevices === 1 ? '' : 's'} were removed. Undo restores.`
+      : `${container.name} was removed. Undo restores.`)
+  }
+  const dropProps = (container: PhysicalContainer) => canHoldDevices(container.kind) ? {
+    onDragOver: (event: DragEvent) => {
       if (!event.dataTransfer.types.includes(PHYSICAL_DEVICE_MIME)) return
       event.preventDefault()
       event.dataTransfer.dropEffect = 'move'
     },
-    onDrop: (event: React.DragEvent) => {
+    onDrop: (event: DragEvent) => {
       const deviceId = event.dataTransfer.getData(PHYSICAL_DEVICE_MIME)
       if (!deviceId) return
       event.preventDefault()
       commitMove(deviceId, container)
     },
-  })
+  } : {}
   const openDevice = (deviceId: string) => { setActiveTab('physical'); setActiveModal({ type: 'device', deviceId }) }
-  const openMoveMenu = (deviceId: string, event: React.MouseEvent) => {
+  const openMoveMenu = (deviceId: string, event: MouseEvent) => {
     const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
     setMoveMenu({ deviceId, x: Math.min(bounds.left, window.innerWidth - 260), y: Math.min(bounds.bottom + 4, window.innerHeight - 200) })
   }
-  const deviceRow = (container: PhysicalContainer) => function DeviceRow(device: NetworkDevice, index: number) {
+  const deviceRow = (container: PhysicalContainer, device: NetworkDevice, index: number) => {
     return <div key={device.id} draggable data-device-id={device.id} data-container-id={container.id} className="pt-rack-device" role="button" tabIndex={0}
       onDragStart={event => { event.dataTransfer.setData(PHYSICAL_DEVICE_MIME, device.id); event.dataTransfer.effectAllowed = 'move' }}
       onClick={() => openDevice(device.id)}
@@ -80,12 +94,17 @@ export function PhysicalWorkspace() {
     const rows = devicesIn(container.id)
     if (container.kind === 'rack') return <div key={container.id} className="pt-physical-rack" data-container-id={container.id} data-kind={container.kind} {...dropProps(container)}>
       {panelHeader(container)}
-      <div className="pt-rack-units">{rows.map(deviceRow(container))}</div>
+      <div className="pt-rack-units">{rows.map((device, index) => deviceRow(container, device, index))}</div>
       {rows.length === 0 && <p className="pt-container-empty">{t('No devices in this container yet. Drag a device here, or use Move on another device.')}</p>}
+    </div>
+    if (container.kind === 'pegboard') return <div key={container.id} className="pt-physical-table pt-physical-pegboard" data-container-id={container.id} data-kind={container.kind}>
+      {panelHeader(container)}
+      <p className="pt-container-note">{t('Cable pegboards store the wiring closet cables.')}</p>
     </div>
     return <div key={container.id} className="pt-physical-table" data-container-id={container.id} data-kind={container.kind} {...dropProps(container)}>
       {panelHeader(container)}
-      <div className="pt-table-devices">{rows.map(deviceRow(container))}</div>
+      <div className="pt-table-devices">{rows.map((device, index) => deviceRow(container, device, index))}</div>
+      {container.kind === 'shelf' && rows.length > 0 && <p className="pt-container-note">{t('Devices stored on a shelf cannot be connected or powered on. Move the device to a rack or table first.')}</p>}
       {rows.length === 0 && <p className="pt-container-empty">{t('No devices in this container yet. Drag a device here, or use Move on another device.')}</p>}
     </div>
   }
@@ -95,12 +114,8 @@ export function PhysicalWorkspace() {
       onFocus={() => useWorkspaceStore.getState().checkpoint()}
       onChange={event => useNetworkStore.getState().renamePhysicalContainer(container.id, event.target.value)} />
     <span className="pt-container-kind">{t(PHYSICAL_KIND_LABELS[container.kind])}</span>
-    <button type="button" title={t('Delete Container')} aria-label={t('Delete Container')} onClick={() => {
-      const store = useWorkspaceStore.getState()
-      store.checkpoint()
-      useNetworkStore.getState().deletePhysicalContainer(container.id)
-      store.setStatus(`${container.name} was removed. Undo restores.`)
-    }}><CiscoIcon name="delete" size={16} /></button>
+    {clusterNamesFor(container.id).length > 0 && <span className="pt-container-clusters" data-cluster-associations={container.id}>{clusterNamesFor(container.id).join(', ')}</span>}
+    <button type="button" title={t('Delete Container')} aria-label={t('Delete Container')} onClick={() => deleteContainer(container)}><CiscoIcon name="delete" size={16} /></button>
   </div>
 
   if (current && (current.kind === 'rack' || current.kind === 'table')) return null
@@ -108,38 +123,46 @@ export function PhysicalWorkspace() {
   if (current && current.kind === 'closet') {
     const children = containersByParent(containers, current.id)
     const racks = children.filter(container => container.kind === 'rack')
+    const shelves = children.filter(container => container.kind === 'shelf')
     const tables = children.filter(container => container.kind === 'table')
+    const pegboards = children.filter(container => container.kind === 'pegboard')
     return <div className="pt-physical-workspace">
-      <p className="pt-physical-hint">{t('Drag devices between racks and tables, or use Move to send a device to another container.')}</p>
-      {/* Closets show every rack and table side by side so devices can be dragged between them. */}
+      <p className="pt-physical-hint">{t('Drag devices between racks, tables and shelves, or use Move to send a device to another container.')}</p>
+      {/* Closets show every cabinet side by side so devices can be dragged between them. */}
       <div className="pt-closet-row">
         {racks.map(containerPanel)}
+        {shelves.map(containerPanel)}
         {tables.map(containerPanel)}
+        {pegboards.map(containerPanel)}
       </div>
-      {children.length === 0 && <p className="pt-container-empty">{t('No racks or tables here yet. Create one with the buttons above.')}</p>}
+      {children.length === 0 && <p className="pt-container-empty">{t('No racks, tables, shelves or pegboards here yet. Create one with the buttons above.')}</p>}
       {moveMenu && moveMenuLayer()}
     </div>
   }
 
   const children = containersByParent(containers, current?.id ?? null)
+  const tileChildren = children.filter(container => NAVIGABLE.has(container.kind))
+  const panelChildren = children.filter(container => !NAVIGABLE.has(container.kind))
   return <div className="pt-physical-workspace">
     {current && <h2>{current.name}</h2>}
     <div className="pt-container-grid">
-      {children.map(container => <button key={container.id} type="button" className="pt-container-tile" data-container-id={container.id} data-kind={container.kind}
+      {tileChildren.map(container => <button key={container.id} type="button" className="pt-container-tile" data-container-id={container.id} data-kind={container.kind}
         onClick={() => enterPhysicalContainer(container.id)} title={t('Open this container')}>
         <CiscoIcon name={KIND_ICONS[container.kind]} size={34} />
         <span className="pt-container-name">{container.name}</span>
         <span className="pt-container-kind">{t(PHYSICAL_KIND_LABELS[container.kind])}</span>
         <span className="pt-container-count">{subtreeCount(container.id)} {t('devices')}</span>
+        {clusterNamesFor(container.id).length > 0 && <span className="pt-container-clusters">{clusterNamesFor(container.id).join(', ')}</span>}
       </button>)}
     </div>
+    {panelChildren.length > 0 && <div className="pt-container-panels">{panelChildren.map(containerPanel)}</div>}
     {children.length === 0 && <p className="pt-container-empty">{t('No containers here yet. Create one with the buttons above.')}</p>}
     {moveMenu && moveMenuLayer()}
   </div>
 
   function moveMenuLayer() {
     const menu = moveMenu!
-    const targets = containers.filter(container => container.kind === 'rack' || container.kind === 'table')
+    const targets = containers.filter(container => canHoldDevices(container.kind))
     const device = devices.find(candidate => candidate.id === menu.deviceId)
     return <>
       <div className="pt-move-backdrop" onClick={() => setMoveMenu(null)} />

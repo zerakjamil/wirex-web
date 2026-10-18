@@ -344,6 +344,8 @@ function validatePhysical(value: unknown, deviceMap: Map<unknown, RecordValue>):
       if (seen.has(String(member))) throw new Error('Cluster member listed twice.')
       seen.add(String(member))
     }
+    // Cluster Associations mapping is optional; unknown or malformed targets are dropped quietly.
+    if (cluster.physicalContainerId !== undefined && (typeof cluster.physicalContainerId !== 'string' || !containerMap.has(cluster.physicalContainerId))) delete cluster.physicalContainerId
   }
   return { containers: containers as unknown as PhysicalContainer[], assignment, clusters: clusters as unknown as NetworkCluster[] }
 }

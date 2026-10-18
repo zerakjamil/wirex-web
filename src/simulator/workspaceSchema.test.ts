@@ -195,10 +195,19 @@ test('physical containers, assignments and clusters round-trip through save and 
   const restored = parseWorkspace(saved)
   assert.deepEqual(restored.physical?.assignment, physical.assignment)
   assert.deepEqual(restored.physical?.clusters, physical.clusters)
-  assert.equal(restored.physical?.containers.length, 4)
-  assert.equal(restored.physical?.containers[3].name, 'Bench')
-  assert.equal(restored.physical?.containers[3].kind, 'table')
+  assert.equal(restored.physical?.containers.length, 5)
+  assert.equal(restored.physical?.containers[4].name, 'Bench')
+  assert.equal(restored.physical?.containers[4].kind, 'table')
   assert.equal(parseWorkspace({ version: 1, devices: [pc], links: [] }).physical, undefined, 'workspaces without physical state stay loadable')
+})
+test('cluster associations survive parsing and stale or malformed targets are dropped', () => {
+  const pc = createDevice('pc', 10, 20)
+  const containers = defaultPhysicalContainers()
+  const base = { version: 1, devices: [pc], links: [] }
+  const withAssociation = (physicalContainerId: unknown) => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'C', deviceIds: [pc.id], physicalContainerId }] } })
+  assert.equal(withAssociation('phys-closet-main').physical?.clusters[0]?.physicalContainerId, 'phys-closet-main')
+  assert.equal(withAssociation('ghost').physical?.clusters[0]?.physicalContainerId, undefined, 'unknown containers drop the association')
+  assert.equal(withAssociation(7).physical?.clusters[0]?.physicalContainerId, undefined, 'malformed targets drop the association')
 })
 test('workspace validation rejects malformed physical containers, assignments and clusters', () => {
   const pc = createDevice('pc', 10, 20)

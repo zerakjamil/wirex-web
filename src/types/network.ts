@@ -595,7 +595,7 @@ export interface NetworkAnnotation {
   borderColor?: string
 }
 
-export const PHYSICAL_CONTAINER_KINDS = ['city', 'building', 'closet', 'rack', 'table'] as const
+export const PHYSICAL_CONTAINER_KINDS = ['city', 'building', 'closet', 'rack', 'table', 'shelf', 'pegboard', 'generic'] as const
 export type PhysicalContainerKind = (typeof PHYSICAL_CONTAINER_KINDS)[number]
 export interface PhysicalContainer {
   id: string
@@ -607,6 +607,8 @@ export interface NetworkCluster {
   id: string
   name: string
   deviceIds: string[]
+  /** Optional Cluster Associations mapping: the physical container this logical cluster describes. */
+  physicalContainerId?: string
 }
 export interface PhysicalWorkspaceState {
   containers: PhysicalContainer[]

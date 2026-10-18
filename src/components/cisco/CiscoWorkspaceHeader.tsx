@@ -13,8 +13,12 @@ const CREATE_KEYS: Record<PhysicalContainerKind, string> = {
   closet: 'New Wiring Closet',
   rack: 'New Rack',
   table: 'New Table',
+  shelf: 'New Inventory Shelf',
+  pegboard: 'New Cable Pegboard',
+  generic: 'New Generic Container',
 }
-const KIND_ICONS: Record<PhysicalContainerKind, IconName> = { city: 'city', building: 'building', closet: 'physical', rack: 'rack', table: 'table' }
+const CREATE_SHORTCUTS: Partial<Record<PhysicalContainerKind, string>> = { city: 'Shift+C', building: 'Shift+B', closet: 'Shift+J', generic: 'Shift+F' }
+const KIND_ICONS: Record<PhysicalContainerKind, IconName> = { city: 'city', building: 'building', closet: 'physical', rack: 'rack', table: 'table', shelf: 'rack', pegboard: 'connections', generic: 'folder' }
 
 export function CiscoWorkspaceHeader() {
   const {t}=useI18n()
@@ -35,7 +39,7 @@ export function CiscoWorkspaceHeader() {
         <button type="button" className="pt-path-segment" onClick={() => ws.exitCluster()}>{t('[Root]')}</button>
         {activeCluster && <><span className="pt-path-sep" aria-hidden="true">›</span><span className="pt-path-segment pt-path-current">[{activeCluster.name}]</span></>}
       </> : <>
-        <button type="button" className="pt-path-segment" onClick={() => ws.setPhysicalPath([])}>{t('[Root]')}</button>
+        <button type="button" className="pt-path-segment" onClick={() => ws.setPhysicalPath([])}>{t('Intercity')}</button>
         {physicalPath.map((id,index) => {
           const container=containerById(containers,id)
           if(!container)return null
@@ -56,7 +60,7 @@ export function CiscoWorkspaceHeader() {
           <input className="pt-header-name-input" aria-label={t('Container name')} value={currentContainer.name} onFocus={() => ws.checkpoint()} onChange={event => useNetworkStore.getState().renamePhysicalContainer(currentContainer.id,event.target.value)} />
           <button title={t('Delete Container')} aria-label={t('Delete Container')} onClick={() => ws.deleteActivePhysicalContainer()}><CiscoIcon name="delete"/></button>
         </>}
-        {allowedChildKinds(currentContainer?.kind ?? null).map(kind => <button key={kind} title={`${t(CREATE_KEYS[kind])}${kind==='building'?' (Shift+B)':''}`} aria-label={t(CREATE_KEYS[kind])} onClick={() => ws.createPhysicalContainer(kind)}><CiscoIcon name={KIND_ICONS[kind]}/></button>)}
+        {allowedChildKinds(currentContainer?.kind ?? null).map(kind => <button key={kind} title={`${t(CREATE_KEYS[kind])}${CREATE_SHORTCUTS[kind] ? ` (${CREATE_SHORTCUTS[kind]})` : ''}`} aria-label={t(CREATE_KEYS[kind])} onClick={() => ws.createPhysicalContainer(kind)}><CiscoIcon name={KIND_ICONS[kind]}/></button>)}
       </>}
       <button title={t('Move workspace')} aria-label={t('Move workspace')} onClick={() => ws.setTool('pan')}><CiscoIcon name="move"/></button>
       <button title={t('Toggle workspace grid')} aria-label={t('Toggle workspace grid')} aria-pressed={ws.showGrid} onClick={ws.toggleGrid}><CiscoIcon name="background"/></button>

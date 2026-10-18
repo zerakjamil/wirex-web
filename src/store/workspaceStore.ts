@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { useNetworkStore } from './networkStore'
 import { isValidIpv4 } from '@/simulator/protocols/ip'
-import { allowedChildKinds, nextContainerName } from '@/simulator/physical'
+import { allowedChildKinds, ancestorPath, canHoldDevices, containerLabelPath, containersByParent, nextContainerName } from '@/simulator/physical'
 import { PACKET_PROTOCOLS } from '@/types/network'
 import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceType, PacketPdu, PhysicalWorkspaceState, PhysicalContainerKind } from '@/types/network'
 
@@ -37,7 +37,7 @@ interface WorkspaceStore {
   clipboard: NetworkDevice | null
   copyDevice: () => void
   pasteDevice: () => void
-  dialog: 'help' | 'about' | 'preferences' | 'activity' | 'extensions' | 'complex-pdu' | 'pdu-error' | 'delete-device' | 'note' | 'doctor' | 'share' | 'revision' | null
+  dialog: 'help' | 'about' | 'preferences' | 'activity' | 'extensions' | 'complex-pdu' | 'pdu-error' | 'delete-device' | 'note' | 'doctor' | 'share' | 'revision' | 'associations' | null
   pduError: {deviceId:string;message:string} | null
   selectPduSource: (deviceId:string)=>void
   pendingDeletion:Deletion|null
@@ -75,10 +75,13 @@ interface WorkspaceStore {
   enterCluster: (id: string) => void
   exitCluster: () => void
   createPhysicalContainer: (kind: PhysicalContainerKind) => void
+  createPhysicalContainerFromShortcut: (kind: PhysicalContainerKind) => void
   deleteActivePhysicalContainer: () => void
   createClusterFromSelection: () => void
   renameActiveCluster: (name: string) => void
   disbandActiveCluster: () => void
+  applyClusterAssociation: (clusterId: string, containerId: string, options: { createContainer: boolean; moveDevices: boolean }) => string | null
+  clearClusterAssociation: (clusterId: string, containerId: string) => string | null
   setView: (view: WorkspaceStore['view']) => void
   setTool: (tool: WorkspaceTool) => void
   command: (kind: CanvasAction) => void
@@ -234,8 +237,32 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     get().checkpoint()
     const name = nextContainerName(containers, kind)
     const id = net.addPhysicalContainer(kind, parent?.id ?? null)
-    if (kind === 'rack' || kind === 'table') set({ status: `Created ${name} in ${parent?.name ?? 'the campus'}.` })
-    else set({ physicalPath: [...path, id], status: `Created ${name}. Rename it or add the next container.` })
+    if (kind === 'city' || kind === 'building' || kind === 'closet') set({ physicalPath: [...path, id], status: `Created ${name}. Rename it or add the next container.` })
+    else set({ status: `Created ${name} in ${parent?.name ?? 'the campus'}.` })
+  },
+  createPhysicalContainerFromShortcut: (kind) => {
+    const { view, physicalPath } = get()
+    if (view !== 'physical') return
+    const net = useNetworkStore.getState()
+    const containers = net.physicalContainers
+    const path = physicalPath.filter(id => containers.some(container => container.id === id))
+    const current = path.length ? containers.find(container => container.id === path[path.length - 1]) ?? null : null
+    const allowedAt = (parentKind: PhysicalContainerKind | null) => allowedChildKinds(parentKind).includes(kind)
+    let parentId: string | null | undefined
+    if (current && allowedAt(current.kind)) parentId = current.id
+    if (parentId === undefined && current) {
+      // Shortcuts fall back to the nearest ancestor that accepts the container, like PT's move-to-parent rule.
+      const chain = ancestorPath(containers, current.id)
+      for (let index = chain.length - 1; index >= 0; index--) {
+        if (allowedAt(chain[index].kind)) { parentId = chain[index].id; break }
+      }
+    }
+    if (parentId === undefined) parentId = allowedAt(null) ? null : undefined
+    if (parentId === undefined) { set({ status: 'That container type cannot be created here.' }); return }
+    get().checkpoint()
+    const id = net.addPhysicalContainer(kind, parentId)
+    const created = useNetworkStore.getState().physicalContainers.find(container => container.id === id)
+    set({ status: `Created ${created?.name ?? 'container'}. Rename it or add the next container.` })
   },
   deleteActivePhysicalContainer: () => {
     const { view, physicalPath } = get()
@@ -245,8 +272,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const container = net.physicalContainers.find(candidate => candidate.id === id)
     if (!container) { set({ physicalPath: physicalPath.slice(0, -1) }); return }
     get().checkpoint()
-    net.deletePhysicalContainer(id)
-    set({ physicalPath: physicalPath.slice(0, -1), status: `${container.name} and its contents were removed. Undo restores.` })
+    const removedDevices = net.deletePhysicalContainer(id)
+    set({
+      physicalPath: physicalPath.slice(0, -1),
+      status: removedDevices
+        ? `${container.name} and ${removedDevices} stored device${removedDevices === 1 ? '' : 's'} were removed. Undo restores.`
+        : `${container.name} and its contents were removed. Undo restores.`,
+    })
   },
   createClusterFromSelection: () => {
     const net = useNetworkStore.getState()
@@ -266,6 +298,58 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     get().checkpoint()
     useNetworkStore.getState().removeClusterGroup(id)
     set({ activeClusterId: null, status: 'Cluster disbanded. Devices stay in place; Undo restores the cluster.' })
+  },
+  applyClusterAssociation: (clusterId, containerId, options) => {
+    const net = useNetworkStore.getState()
+    const cluster = net.clusters.find(candidate => candidate.id === clusterId)
+    const container = net.physicalContainers.find(candidate => candidate.id === containerId)
+    if (!cluster || !container) return 'Select a logical cluster and a physical container first.'
+    if (options.createContainer && !allowedChildKinds(container.kind).includes('generic')) return 'A generic container cannot be created inside this container.'
+    get().checkpoint()
+    let targetId = container.id
+    if (options.createContainer) targetId = useNetworkStore.getState().addPhysicalContainer('generic', container.id)
+    useNetworkStore.getState().setClusterPhysicalContainer(clusterId, targetId)
+    const containers = useNetworkStore.getState().physicalContainers
+    const target = containers.find(candidate => candidate.id === targetId)
+    const targetPath = containerLabelPath(containers, targetId) || target?.name || container.name
+    const parts = [`Associated ${cluster.name} with ${targetPath}.`]
+    if (options.moveDevices) {
+      const findHolder = (id: string): string | null => {
+        const node = containers.find(candidate => candidate.id === id)
+        if (node && canHoldDevices(node.kind)) return node.id
+        for (const child of containersByParent(containers, id)) {
+          const found = findHolder(child.id)
+          if (found) return found
+        }
+        return null
+      }
+      const holderId = findHolder(targetId)
+      if (holderId) {
+        let moved = 0
+        let blocked = 0
+        for (const deviceId of cluster.deviceIds) {
+          if (useNetworkStore.getState().moveDeviceToContainer(deviceId, holderId)) moved++
+          else blocked++
+        }
+        if (moved) parts.push(`Moved ${moved} device${moved === 1 ? '' : 's'} to ${containerLabelPath(containers, holderId) || targetPath}.`)
+        if (blocked) parts.push(`${blocked} device${blocked === 1 ? '' : 's'} could not move: shelf storage needs a powered-off device with no cables.`)
+      } else {
+        parts.push('No rack, table, shelf or generic container is available to hold the devices.')
+      }
+    }
+    set({ status: parts.join(' ') })
+    return null
+  },
+  clearClusterAssociation: (clusterId, containerId) => {
+    const net = useNetworkStore.getState()
+    const cluster = net.clusters.find(candidate => candidate.id === clusterId)
+    const container = net.physicalContainers.find(candidate => candidate.id === containerId)
+    if (!cluster || !container) return 'Select a logical cluster and a physical container first.'
+    if (cluster.physicalContainerId !== containerId) return `${cluster.name} is not associated with ${container.name}.`
+    get().checkpoint()
+    useNetworkStore.getState().setClusterPhysicalContainer(clusterId, null)
+    set({ status: `Removed the association between ${cluster.name} and ${container.name}. Undo restores.` })
+    return null
   },
   checkpoint: () => set({ past: [...get().past.slice(-49), snapshot()], future: [] }),
   copyDevice: () => {

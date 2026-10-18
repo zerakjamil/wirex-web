@@ -1,8 +1,12 @@
 import type { NetworkCluster, PhysicalContainer, PhysicalContainerKind } from '@/types/network'
 
-// Reduced physical workspace model: root (campus) → building → wiring closet →
-// racks and tables. Racks and tables hold devices; buildings and closets are
-// organizational. Logical clusters are flat named device groups.
+// Physical workspace model: the Intercity root (labeled in the path strip)
+// → city → building → wiring closet → racks, tables, inventory shelves and
+// cable pegboards, plus generic containers anywhere below the building level.
+// Racks, tables, shelves and generic containers hold devices; buildings,
+// cities and closets are organizational; pegboards hold only cabling.
+// Logical clusters are flat named device groups that can be mapped to a
+// physical container through the Cluster Associations dialog.
 
 export const DEFAULT_PHYSICAL_RACK_ID = 'phys-rack-1'
 export const PHYSICAL_KIND_LABELS: Record<PhysicalContainerKind, string> = {
@@ -11,26 +15,35 @@ export const PHYSICAL_KIND_LABELS: Record<PhysicalContainerKind, string> = {
   closet: 'Wiring Closet',
   rack: 'Rack',
   table: 'Table',
+  shelf: 'Inventory Shelf',
+  pegboard: 'Cable Pegboard',
+  generic: 'Generic Container',
 }
 
 export function defaultPhysicalContainers(): PhysicalContainer[] {
   return [
-    { id: 'phys-building-main', kind: 'building', name: 'Corporate Office', parentId: null },
+    { id: 'phys-city-main', kind: 'city', name: 'Home City', parentId: null },
+    { id: 'phys-building-main', kind: 'building', name: 'Corporate Office', parentId: 'phys-city-main' },
     { id: 'phys-closet-main', kind: 'closet', name: 'Main Wiring Closet', parentId: 'phys-building-main' },
     { id: DEFAULT_PHYSICAL_RACK_ID, kind: 'rack', name: 'Rack 1', parentId: 'phys-closet-main' },
   ]
 }
 
 export function allowedChildKinds(parent: PhysicalContainerKind | null): PhysicalContainerKind[] {
-  if (parent === null) return ['city', 'building']
-  if (parent === 'city') return ['building']
-  if (parent === 'building') return ['closet']
-  if (parent === 'closet') return ['rack', 'table']
+  if (parent === null) return ['city', 'building', 'generic']
+  if (parent === 'city') return ['building', 'generic']
+  if (parent === 'building') return ['closet', 'generic']
+  if (parent === 'closet') return ['rack', 'table', 'shelf', 'pegboard']
   return []
 }
 
 export function canHoldDevices(kind: PhysicalContainerKind) {
-  return kind === 'rack' || kind === 'table'
+  return kind === 'rack' || kind === 'table' || kind === 'shelf' || kind === 'generic'
+}
+
+/** True when the device's current placement is an inventory shelf (stored, not operable). */
+export function isStoredOnShelf(containers: PhysicalContainer[], assignment: Record<string, string>, deviceId: string) {
+  return deviceContainer(containers, assignment, deviceId)?.kind === 'shelf'
 }
 
 export function containerById(containers: PhysicalContainer[], id: string | null | undefined) {
@@ -124,6 +137,7 @@ export function sanitizePhysical(
 ): { containers: PhysicalContainer[]; assignment: Record<string, string>; clusters: NetworkCluster[] } {
   const devices = new Set(deviceIds)
   const containerIds = new Set(containers.filter(container => canHoldDevices(container.kind)).map(container => container.id))
+  const allContainerIds = new Set(containers.map(container => container.id))
   const nextAssignment: Record<string, string> = {}
   for (const [deviceId, containerId] of Object.entries(assignment)) {
     if (devices.has(deviceId) && containerIds.has(containerId)) nextAssignment[deviceId] = containerId
@@ -134,7 +148,11 @@ export function sanitizePhysical(
     const members = cluster.deviceIds.filter(deviceId => devices.has(deviceId))
     const id = clusterIds.has(cluster.id) ? `${cluster.id}-${clusterIds.size}` : cluster.id
     clusterIds.add(id)
-    if (members.length) nextClusters.push({ ...cluster, id, deviceIds: members })
+    if (members.length) {
+      const next: NetworkCluster = { ...cluster, id, deviceIds: members }
+      if (next.physicalContainerId && !allContainerIds.has(next.physicalContainerId)) delete next.physicalContainerId
+      nextClusters.push(next)
+    }
   }
   return { containers, assignment: nextAssignment, clusters: nextClusters }
 }

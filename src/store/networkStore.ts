@@ -30,8 +30,10 @@ import {
   addContainer,
   addCluster,
   canHoldDevices,
+  containerSubtreeIds,
   defaultPhysicalContainers,
   deleteContainerTree,
+  isStoredOnShelf,
   moveDeviceAssignment,
   nextContainerName,
   purgeDeviceFromClusters,
@@ -171,11 +173,12 @@ interface NetworkStore {
   clusters: NetworkCluster[]
   addPhysicalContainer: (kind: PhysicalContainerKind, parentId: string | null) => string
   renamePhysicalContainer: (id: string, name: string) => void
-  deletePhysicalContainer: (id: string) => void
-  moveDeviceToContainer: (deviceId: string, containerId: string) => void
+  deletePhysicalContainer: (id: string) => number
+  moveDeviceToContainer: (deviceId: string, containerId: string) => boolean
   createCluster: (name: string, deviceIds: string[]) => string
   renameClusterGroup: (id: string, name: string) => void
   removeClusterGroup: (id: string) => void
+  setClusterPhysicalContainer: (clusterId: string, containerId: string | null) => void
 
   updatePortConfig: (deviceId: string, portId: string, updates: Partial<NetworkPort>) => void
   updateDeviceConfig: (deviceId: string, updates: Partial<DeviceConfig>) => void
@@ -528,6 +531,41 @@ function applyTftpDownloads(devices: NetworkDevice[], results: ReturnType<typeof
   })
 }
 
+/**
+ * Removes the given devices with their cables and per-device lab state. Shared by single-device
+ * deletion and by inventory-shelf removal, which also deletes the devices stored on the shelf.
+ */
+function removeDeviceSlices<TGenerators extends { deviceId: string }>(
+  devices: NetworkDevice[],
+  links: NetworkLink[],
+  physicalAssignment: Record<string, string>,
+  clusters: NetworkCluster[],
+  trafficGenerators: TGenerators[],
+  ids: Iterable<string>,
+) {
+  const removed = new Set(ids)
+  const attachedLinks = links.filter((l) => removed.has(l.fromDeviceId) || removed.has(l.toDeviceId))
+  const remainingLinks = links.filter((l) => !removed.has(l.fromDeviceId) && !removed.has(l.toDeviceId))
+  let remainingDevices = devices.filter((d) => !removed.has(d.id))
+  if (attachedLinks.length) {
+    remainingDevices = remainingDevices.map((d) => ({
+      ...d,
+      ports: d.ports.map((p) => (attachedLinks.some((l) => l.id === p.connectedLinkId)
+        ? { ...p, status: 'down' as const, connectedLinkId: undefined, connectedDeviceId: undefined, connectedPortId: undefined }
+        : p)),
+    }))
+  }
+  let remainingClusters = clusters
+  for (const id of removed) remainingClusters = purgeDeviceFromClusters(remainingClusters, id)
+  return {
+    devices: remainingDevices,
+    links: remainingLinks,
+    physicalAssignment: Object.fromEntries(Object.entries(physicalAssignment).filter(([deviceId]) => !removed.has(deviceId))),
+    clusters: remainingClusters,
+    trafficGenerators: trafficGenerators.filter((run) => !removed.has(run.deviceId)),
+  }
+}
+
 export const useNetworkStore = create<NetworkStore>((set, get) => ({
   commandEvents:[],
   devices: initialLab.devices,
@@ -668,6 +706,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       const dev = state.devices.find((d) => d.id === id)
       if (!dev) return state
       const nextPower = dev.power === false ? true : false
+      // Inventory shelves are storage: stored devices stay powered off until moved to a rack or table.
+      if (nextPower && isStoredOnShelf(state.physicalContainers, state.physicalAssignment, id)) return state
 
       const updatedDevices = state.devices.map((d) => {
         if (d.id !== id) return d
@@ -799,48 +839,18 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   deleteDevice: (id) => {
     set((state) => {
-      // Free ports connected to this device
-      const attachedLinks = state.links.filter(
-        (l) => l.fromDeviceId === id || l.toDeviceId === id
-      )
-      const remainingLinks = state.links.filter(
-        (l) => l.fromDeviceId !== id && l.toDeviceId !== id
-      )
-
-      const updatedDevices = state.devices
-        .filter((d) => d.id !== id)
-        .map((d) => ({
-          ...d,
-          ports: d.ports.map((p) => {
-            if (attachedLinks.some((l) => l.id === p.connectedLinkId)) {
-              return {
-                ...p,
-                status: 'down' as const,
-                connectedLinkId: undefined,
-                connectedDeviceId: undefined,
-                connectedPortId: undefined,
-              }
-            }
-            return p
-          }),
-        }))
-
-      return {
-        devices: updatedDevices,
-        links: remainingLinks,
-        selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId,
-        physicalAssignment: id in state.physicalAssignment ? Object.fromEntries(Object.entries(state.physicalAssignment).filter(([deviceId]) => deviceId !== id)) : state.physicalAssignment,
-        clusters: purgeDeviceFromClusters(state.clusters, id),
-        trafficGenerators: state.trafficGenerators.filter(run => run.deviceId !== id),
-      }
+      const slices = removeDeviceSlices(state.devices, state.links, state.physicalAssignment, state.clusters, state.trafficGenerators, [id])
+      return { ...slices, selectedDeviceId: state.selectedDeviceId === id ? null : state.selectedDeviceId }
     })
   },
 
   connectPorts: (fromDeviceId, fromPortId, toDeviceId, toPortId, cableType) => {
-    const { devices, links, simulationTick } = get()
+    const { devices, links, simulationTick, physicalContainers, physicalAssignment } = get()
     const fromDev = devices.find((d) => d.id === fromDeviceId)
     const toDev = devices.find((d) => d.id === toDeviceId)
     if (!fromDev || !toDev || fromDeviceId === toDeviceId) return false
+    // Inventory shelves are storage: stored devices cannot be cabled until moved to a rack or table.
+    if (isStoredOnShelf(physicalContainers, physicalAssignment, fromDeviceId) || isStoredOnShelf(physicalContainers, physicalAssignment, toDeviceId)) return false
 
     const fromPort = fromDev.ports.find((p) => p.id === fromPortId)
     const toPort = toDev.ports.find((p) => p.id === toPortId)
@@ -1030,22 +1040,46 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   },
 
   deletePhysicalContainer: (id) => {
+    let removedDevices = 0
     set((state) => {
       if (!state.physicalContainers.some(container => container.id === id)) return state
+      const removedIds = containerSubtreeIds(state.physicalContainers, id)
+      // Removing an inventory shelf also deletes the devices stored on it (Undo restores them).
+      const shelfIds = new Set(state.physicalContainers.filter(container => removedIds.has(container.id) && container.kind === 'shelf').map(container => container.id))
+      const storedIds = Object.entries(state.physicalAssignment).filter(([deviceId, containerId]) => shelfIds.has(containerId) && state.devices.some(device => device.id === deviceId)).map(([deviceId]) => deviceId)
+      removedDevices = storedIds.length
       const remaining = deleteContainerTree(state.physicalContainers, id)
-      const sanitized = sanitizePhysical(remaining, state.physicalAssignment, state.clusters, state.devices.map(device => device.id))
-      return { physicalContainers: sanitized.containers, physicalAssignment: sanitized.assignment, clusters: sanitized.clusters }
+      const slices = storedIds.length
+        ? removeDeviceSlices(state.devices, state.links, state.physicalAssignment, state.clusters, state.trafficGenerators, storedIds)
+        : { devices: state.devices, links: state.links, physicalAssignment: state.physicalAssignment, clusters: state.clusters, trafficGenerators: state.trafficGenerators }
+      const sanitized = sanitizePhysical(remaining, slices.physicalAssignment, slices.clusters, slices.devices.map(device => device.id))
+      return {
+        devices: slices.devices,
+        links: slices.links,
+        trafficGenerators: slices.trafficGenerators,
+        selectedDeviceId: state.selectedDeviceId && storedIds.includes(state.selectedDeviceId) ? null : state.selectedDeviceId,
+        physicalContainers: sanitized.containers,
+        physicalAssignment: sanitized.assignment,
+        clusters: sanitized.clusters,
+      }
     })
+    return removedDevices
   },
 
   moveDeviceToContainer: (deviceId, containerId) => {
+    let moved = false
     set((state) => {
-      if (!state.devices.some(device => device.id === deviceId)) return state
+      const device = state.devices.find(candidate => candidate.id === deviceId)
+      if (!device) return state
       const target = state.physicalContainers.find(container => container.id === containerId)
       if (!target || !canHoldDevices(target.kind)) return state
-      if (state.physicalAssignment[deviceId] === containerId) return state
+      if (state.physicalAssignment[deviceId] === containerId) { moved = true; return state }
+      // Storing on an inventory shelf needs the device powered off with no cables attached.
+      if (target.kind === 'shelf' && (device.power !== false || state.links.some(link => link.fromDeviceId === deviceId || link.toDeviceId === deviceId))) return state
+      moved = true
       return { physicalAssignment: moveDeviceAssignment(state.physicalAssignment, deviceId, containerId) }
     })
+    return moved
   },
 
   createCluster: (name, deviceIds) => {
@@ -1064,6 +1098,24 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   removeClusterGroup: (id) => {
     set((state) => ({ clusters: removeCluster(state.clusters, id) }))
+  },
+
+  setClusterPhysicalContainer: (clusterId, containerId) => {
+    set((state) => {
+      if (!state.clusters.some(cluster => cluster.id === clusterId)) return state
+      if (containerId !== null && !state.physicalContainers.some(container => container.id === containerId)) return state
+      return {
+        clusters: state.clusters.map(cluster => {
+          if (cluster.id !== clusterId) return cluster
+          if (containerId === null) {
+            const next = { ...cluster }
+            delete next.physicalContainerId
+            return next
+          }
+          return { ...cluster, physicalContainerId: containerId }
+        }),
+      }
+    })
   },
 
   updatePortConfig: (deviceId, portId, updates) => {

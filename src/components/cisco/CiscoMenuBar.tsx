@@ -34,7 +34,7 @@ export function CiscoMenuBar() {
       {label:'Print...',action:() => window.print()}
     ],
     Edit:[{label:'Undo',action:ws.undo,disabled:!ws.past.length},{label:'Redo',action:ws.redo,disabled:!ws.future.length},{label:'Copy',action:ws.copyDevice,disabled:!net.selectedDeviceId},{label:'Paste',action:ws.pasteDevice,disabled:!ws.clipboard},{label:'Delete selected device',action:() => {if(net.selectedDeviceId)ws.requestDeletion({deviceIds:[net.selectedDeviceId]})},disabled:!net.selectedDeviceId}],
-    Options:[{label:'Preferences...',action:() => ws.setDialog('preferences')}],
+    Options:[{label:'Preferences...',action:() => ws.setDialog('preferences')},{label:'Cluster Associations...',action:() => ws.setDialog('associations')}],
     View:[{label:'Zoom In',action:() => ws.command('zoom-in')},{label:'Zoom Out',action:() => ws.command('zoom-out')},{label:'Reset Zoom',action:() => ws.command('zoom-reset')},{label:'Fit workspace',action:() => ws.command('fit')},{label:'Port labels',action:net.togglePortLabels}],
     Tools:[
       {label:'Select',action:() => ws.setTool('select')},

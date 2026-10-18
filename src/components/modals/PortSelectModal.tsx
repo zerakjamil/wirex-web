@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { CableType } from '@/types/network'
 import { useI18n } from '@/i18n/useI18n'
+import { isStoredOnShelf } from '@/simulator/physical'
 
 export function PortSelectModal() {
   const { activeModal } = useNetworkStore()
@@ -13,7 +14,7 @@ export function PortSelectModal() {
 
 function PortSelectDialog() {
   const { t } = useI18n()
-  const { devices, activeModal, setActiveModal, connectPorts, activeTool } = useNetworkStore()
+  const { devices, activeModal, setActiveModal, connectPorts, activeTool, physicalContainers, physicalAssignment } = useNetworkStore()
 
   const sourceDev = devices.find((d) => d.id === activeModal?.sourceDeviceId)
   const targetDev = devices.find((d) => d.id === activeModal?.targetDeviceId)
@@ -38,6 +39,10 @@ function PortSelectDialog() {
 
   const handleConnect = () => {
     if (!selectedSourcePort || !selectedTargetPort) return
+    if (isStoredOnShelf(physicalContainers, physicalAssignment, sourceDev.id) || isStoredOnShelf(physicalContainers, physicalAssignment, targetDev.id)) {
+      alert('Devices stored on a shelf cannot be connected. Move the device to a rack or table first.')
+      return
+    }
     const success = connectPorts(sourceDev.id, selectedSourcePort, targetDev.id, selectedTargetPort, cableType)
     if (success) {
       setActiveModal(null)

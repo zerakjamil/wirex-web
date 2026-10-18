@@ -2,9 +2,12 @@ import { test, expect } from '@playwright/test'
 
 interface BrowserNetworkState {
   devices: Array<{ id: string; name: string }>
+  links: Array<{ id: string; fromDeviceId: string; toDeviceId: string }>
   physicalContainers: Array<{ id: string; name: string; kind: string; parentId: string | null }>
   physicalAssignment: Record<string, string>
-  clusters: Array<{ id: string; name: string; deviceIds: string[] }>
+  clusters: Array<{ id: string; name: string; deviceIds: string[]; physicalContainerId?: string }>
+  toggleDevicePower: (deviceId: string) => void
+  deleteLink: (linkId: string) => void
 }
 interface BrowserNetworkStore { getState: () => BrowserNetworkState }
 interface BrowserWorkspaceState {
@@ -72,6 +75,7 @@ async function openLab(page: import('@playwright/test').Page, baseURL: string | 
 
 async function enterCloset(page: import('@playwright/test').Page) {
   await page.getByRole('tab', { name: 'Physical' }).click()
+  await page.locator('.pt-container-tile[data-kind="city"]').click()
   await page.locator('.pt-container-tile[data-kind="building"]').click()
   await page.locator('.pt-container-tile[data-kind="closet"]').click()
   await expect(page.locator('.pt-physical-rack').first()).toBeVisible()
@@ -81,19 +85,26 @@ test('physical workspace navigates containers and moves devices between racks an
   await openLab(page, baseURL)
 
   await page.getByRole('tab', { name: 'Physical' }).click()
-  await expect(page.locator('.pt-workspace-path')).toContainText('[Root]')
+  await expect(page.locator('.pt-workspace-path')).toContainText('Intercity')
+  const city = page.locator('.pt-container-tile[data-kind="city"]')
+  await expect(city).toContainText('Home City')
+  await expect(city).toContainText('3 devices')
+  await expect(page.getByRole('button', { name: 'New City' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New Building' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New Table' })).toHaveCount(0)
+
+  await city.click()
+  await expect(page.locator('.pt-workspace-path')).toContainText('Home City')
   const building = page.locator('.pt-container-tile[data-kind="building"]')
   await expect(building).toContainText('Corporate Office')
   await expect(building).toContainText('3 devices')
-  await expect(page.getByRole('button', { name: 'New Building' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'New Table' })).toHaveCount(0)
 
   await building.click()
   await expect(page.locator('.pt-workspace-path')).toContainText('Corporate Office')
   await page.locator('.pt-container-tile[data-kind="closet"]').click()
   await expect(page.locator('.pt-physical-rack input.pt-container-name-input')).toHaveValue('Rack 1')
   await expect(page.locator('.pt-physical-rack .pt-rack-device')).toHaveCount(3)
-  await expect(page.locator('.pt-physical-hint')).toContainText('Drag devices between racks and tables')
+  await expect(page.locator('.pt-physical-hint')).toContainText('Drag devices between racks, tables and shelves')
 
   await page.getByRole('button', { name: 'New Table' }).click()
   await expect(page.locator('.pt-physical-table input.pt-container-name-input')).toHaveValue('Table 1')
@@ -116,15 +127,18 @@ test('physical workspace navigates containers and moves devices between racks an
     return store?.getState().physicalContainers.some(container => container.kind === 'table' && container.name === 'Bench')
   })
 
-  // Back steps one container level at a time, from the closet to the building to the root.
+  // Back steps one container level at a time, from the closet up to the Intercity root.
   const back = page.locator('.pt-workspace-header').getByRole('button', { name: 'Back', exact: true })
   await back.click()
   await expect(page.locator('.pt-container-tile[data-kind="closet"]')).toBeVisible()
   await back.click()
   await expect(page.locator('.pt-container-tile[data-kind="building"]')).toBeVisible()
+  await back.click()
+  await expect(page.locator('.pt-container-tile[data-kind="city"]')).toBeVisible()
   await expect(back).toBeDisabled()
 
   // Deleting the table drops its devices back onto the default rack, and Undo restores it.
+  await page.locator('.pt-container-tile[data-kind="city"]').click()
   await page.locator('.pt-container-tile[data-kind="building"]').click()
   await page.locator('.pt-container-tile[data-kind="closet"]').click()
   await page.locator('.pt-physical-table').getByRole('button', { name: 'Delete Container' }).click()
@@ -188,4 +202,56 @@ test('physical layout survives a browser reload through the autosave', async ({ 
   await enterCloset(page)
   await expect(page.locator('.pt-physical-rack')).toHaveCount(2)
   await expect(page.locator('.pt-physical-rack').nth(1).locator('input.pt-container-name-input')).toHaveValue('Bench Rack')
+})
+
+test('shelves store devices safely, associations map clusters and shortcuts create containers', async ({ page, baseURL }) => {
+  await openLab(page, baseURL)
+  await enterCloset(page)
+
+  // A shelf and a cable pegboard join the rack in the wiring closet.
+  await page.getByRole('button', { name: 'New Inventory Shelf' }).click()
+  await expect(page.locator('.pt-physical-table[data-kind="shelf"] input.pt-container-name-input')).toHaveValue('Inventory Shelf 1')
+  await page.getByRole('button', { name: 'New Cable Pegboard' }).click()
+  await expect(page.locator('.pt-physical-table[data-kind="pegboard"]')).toContainText('Cable pegboards store the wiring closet cables.')
+
+  // Powered, cabled devices cannot be stored: SW1 stays in the rack.
+  await page.locator('.pt-physical-rack .pt-rack-device[data-device-id="sw1"]').getByRole('button', { name: 'Move Device' }).click()
+  await page.locator('.pt-device-move-menu button[data-target-id]').filter({ hasText: 'Inventory Shelf 1' }).click()
+  await expect(page.locator('.pt-physical-rack .pt-rack-device[data-device-id="sw1"]')).toBeVisible()
+
+  // Power PC1 off and unplug it, then the shelf accepts it.
+  await page.evaluate(() => {
+    const state = (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState()
+    state.toggleDevicePower('pc1')
+    for (const link of state.links.filter(candidate => candidate.fromDeviceId === 'pc1' || candidate.toDeviceId === 'pc1')) state.deleteLink(link.id)
+  })
+  await page.locator('.pt-physical-rack .pt-rack-device[data-device-id="pc1"]').getByRole('button', { name: 'Move Device' }).click()
+  await page.locator('.pt-device-move-menu button[data-target-id]').filter({ hasText: 'Inventory Shelf 1' }).click()
+  await expect(page.locator('.pt-physical-table[data-kind="shelf"] .pt-rack-device[data-device-id="pc1"]')).toBeVisible()
+  await expect(page.locator('.pt-physical-table[data-kind="shelf"] .pt-container-note')).toContainText('cannot be connected or powered on')
+  await expect(page.locator('.pt-physical-rack .pt-rack-device')).toHaveCount(2)
+
+  // Cluster associations map a logical cluster onto the wiring closet.
+  await page.getByRole('tab', { name: 'Logical' }).click()
+  await page.evaluate(() => (window as unknown as BrowserWindow).__wireforgeWorkspaceStore!.getState().setCanvasSelection(['pc2', 'sw1']))
+  await page.getByRole('button', { name: 'Create New Cluster' }).click()
+  await page.locator('button[aria-haspopup="menu"]', { hasText: 'Options' }).click()
+  await page.getByRole('menuitem', { name: 'Cluster Associations...' }).click()
+  const dialog = page.locator('dialog.pt-assoc-dialog')
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button').filter({ hasText: 'Cluster 1' }).click()
+  await dialog.getByRole('button').filter({ hasText: 'Main Wiring Closet' }).click()
+  await dialog.getByRole('button', { name: 'Logical to Physical →' }).click()
+  await page.waitForFunction(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().clusters[0]?.physicalContainerId === 'phys-closet-main')
+  await dialog.locator('footer').getByRole('button', { name: 'Close' }).click()
+  await expect(page.locator('.pt-cluster-label')).toHaveAttribute('title', /Main Wiring Closet/)
+
+  // The physical side shows the association on the wiring closet tile.
+  await page.getByRole('tab', { name: 'Physical' }).click()
+  await page.locator('.pt-workspace-header').getByRole('button', { name: 'Back', exact: true }).click()
+  await expect(page.locator('.pt-container-tile[data-kind="closet"]')).toContainText('Cluster 1')
+
+  // PT container shortcuts: Shift+C creates a city at the Intercity root from any level.
+  await page.keyboard.press('Shift+C')
+  await page.waitForFunction(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore!.getState().physicalContainers.filter(container => container.kind === 'city').length === 2)
 })
