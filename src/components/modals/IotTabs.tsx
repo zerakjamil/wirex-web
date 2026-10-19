@@ -36,6 +36,12 @@ function sensorReading(kind: IotThingKind, state: IotThingState, translate: (key
       return `${Math.round(state.level ?? 0)}% ${translate('Light level')}`
     case 'thermostat':
       return `${(state.temperature ?? 22).toFixed(1)} °C`
+    case 'humiture':
+      return `${(state.temperature ?? 22).toFixed(1)} °C · ${Math.round(state.humidity ?? 0)}% ${translate('Humidity')}`
+    case 'motion-sensor':
+      return state.motion ? translate('Motion detected') : translate('No motion')
+    case 'sound-sensor':
+      return `${Math.round(state.sound ?? 0)} dB`
     default:
       return ''
   }
@@ -60,6 +66,8 @@ function IotThingSession({ device }: { device: NetworkDevice }) {
   const opened = state.open === true
   const level = Math.max(0, Math.min(100, state.level ?? 0))
   const temperature = state.temperature ?? 22
+  const humidity = Math.max(0, Math.min(100, state.humidity ?? 0))
+  const sound = Math.max(0, Math.min(100, state.sound ?? 0))
   const ageSeconds = runtime?.lastReportTick !== undefined ? Math.max(0, (simulationTick - runtime.lastReportTick) * 0.06) : undefined
   const saveServerAddress = () => {
     const value = serverAddressDraft.trim() || 'auto'
@@ -139,6 +147,60 @@ function IotThingSession({ device }: { device: NetworkDevice }) {
             {actionButton({ smoke: true }, t('Simulate smoke'), 'smoke-on', state.smoke === true)}
             {actionButton({ smoke: false }, t('Clear smoke'), 'smoke-off', state.smoke !== true)}
             <span className="text-xs text-slate-500">{sensorReading(kind, state, t)}</span>
+          </div>
+        )}
+        {spec.control === 'humiture' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-24 text-xs font-semibold text-slate-600">{t('Temperature')}</span>
+              <input
+                type="range"
+                min={0}
+                max={50}
+                value={Math.round(temperature)}
+                data-iot-action="humiture-temperature"
+                onChange={event => setIotState(device.id, { temperature: Number(event.target.value) })}
+                className="h-2 w-full max-w-sm cursor-pointer accent-sky-600"
+                aria-label={t('Temperature')}
+              />
+              <span className="min-w-[4rem] text-xs font-bold text-slate-700">{temperature.toFixed(1)} °C</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-24 text-xs font-semibold text-slate-600">{t('Humidity')}</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(humidity)}
+                data-iot-action="humiture-humidity"
+                onChange={event => setIotState(device.id, { humidity: Number(event.target.value) })}
+                className="h-2 w-full max-w-sm cursor-pointer accent-sky-600"
+                aria-label={t('Humidity')}
+              />
+              <span className="min-w-[4rem] text-xs font-bold text-slate-700">{Math.round(humidity)}%</span>
+            </div>
+          </div>
+        )}
+        {spec.control === 'motion' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {actionButton({ motion: true }, t('Simulate motion'), 'motion-on', state.motion === true)}
+            {actionButton({ motion: false }, t('Clear motion'), 'motion-off', state.motion !== true)}
+            <span className="text-xs text-slate-500">{sensorReading(kind, state, t)}</span>
+          </div>
+        )}
+        {spec.control === 'sound' && (
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(sound)}
+              data-iot-action="sound-level"
+              onChange={event => setIotState(device.id, { sound: Number(event.target.value) })}
+              className="h-2 w-full max-w-sm cursor-pointer accent-sky-600"
+              aria-label={t('Sound level')}
+            />
+            <span className="min-w-[4rem] text-xs font-bold text-slate-700">{Math.round(sound)}{spec.unit}</span>
           </div>
         )}
         {spec.control === 'button' && (
@@ -233,7 +295,7 @@ export function IotServiceSection({ device }: { device: NetworkDevice }) {
   const controlButtons = (client: IotServerClient) => {
     const clientDevice = devices.find(item => item.id === client.deviceId)
     const clientState = clientDevice ? iotStateOf(clientDevice) : {}
-    const spec = iotThingSpecByKind(client.kind)
+    const spec = client.model ? iotThingSpec(client.model) : iotThingSpecByKind(client.kind)
     if (spec.control === 'toggle') return (
       <>
         <button type="button" data-iot-action="on" onClick={() => issue(client, { power: true })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Turn on')}</button>
@@ -308,7 +370,7 @@ export function IotServiceSection({ device }: { device: NetworkDevice }) {
               const clientDevice = devices.find(item => item.id === client.deviceId)
               const online = iotClientOnline(client, simulationTick)
               const age = Math.max(0, (simulationTick - client.lastSeenTick) * 0.06)
-              const spec = iotThingSpecByKind(client.kind)
+              const spec = client.model ? iotThingSpec(client.model) : iotThingSpecByKind(client.kind)
               return (
                 <li key={client.deviceId} data-iot-client={client.deviceId} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">

@@ -473,13 +473,23 @@ export type IotThingKind =
   | 'water-detector'
   | 'light-sensor'
   | 'push-button'
+  | 'appliance'
+  | 'speaker'
+  | 'humidifier'
+  | 'humiture'
+  | 'motion-sensor'
+  | 'sound-sensor'
+  | 'camera'
 
 export interface IotThingState {
   power?: boolean
   open?: boolean
   level?: number
   temperature?: number
+  humidity?: number
   smoke?: boolean
+  motion?: boolean
+  sound?: number
   pressedAtTick?: number
 }
 
@@ -500,6 +510,7 @@ export interface IotServerClient {
   deviceId: string
   address: string
   kind: IotThingKind
+  model?: string
   registeredAtTick: number
   lastSeenTick: number
 }

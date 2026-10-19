@@ -2008,7 +2008,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           continue
         }
         const kind = iotKindOf(iotClientDevice)
-        editIotReceiver(current => recordIotClient(current, { deviceId: iotClientDevice.id, address: pdu.sourceIp, kind }, simulationTick))
+        editIotReceiver(current => recordIotClient(current, { deviceId: iotClientDevice.id, address: pdu.sourceIp, kind, model: iotClientDevice.model }, simulationTick))
         const summary = pdu.payload.iotStateSummary ?? iotStateSummary(kind, iotStateOf(iotClientDevice))
         packetDeliveries.push({
           packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id,

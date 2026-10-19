@@ -872,6 +872,9 @@ function Iot3DIcon({ model, iotState }: { model?: string; iotState?: IotThingSta
   const open = state.open === true
   const level = Math.max(0, Math.min(100, state.level ?? 0))
   const temperature = state.temperature ?? 22
+  const humidity = Math.max(0, Math.min(100, state.humidity ?? 0))
+  const motion = state.motion === true
+  const sound = Math.max(0, Math.min(100, state.sound ?? 0))
   const smoke = state.smoke === true
   const recentlyPressed = state.pressedAtTick !== undefined
   const plate = '#94a3b8'
@@ -1015,6 +1018,98 @@ function Iot3DIcon({ model, iotState }: { model?: string; iotState?: IotThingSta
           })}
           <rect x="66" y="24" width="12" height="36" rx="3" fill="#e2e8f0" stroke={outline} strokeWidth="1" />
           <rect x="68" y={56 - (32 * level) / 100} width="8" height={(32 * level) / 100} rx="2" fill="#fbbf24" />
+        </g>
+      )}
+      {kind === 'appliance' && (
+        <g>
+          <rect x="28" y="10" width="44" height="62" rx="5" fill={powered ? '#f8fafc' : '#e2e8f0'} stroke={outline} strokeWidth="1.5" />
+          <rect x="31" y="13" width="38" height="24" rx="3" fill="#cbd5e1" stroke={outline} strokeWidth="1" />
+          <line x1="31" y1="41" x2="69" y2="41" stroke={outline} strokeWidth="1.2" />
+          <rect x="62" y="20" width="3" height="12" rx="1.5" fill={plateDark} />
+          <circle cx="39" cy="57" r="8" fill="#0f172a" stroke={plate} strokeWidth="1.2" />
+          <circle cx="39" cy="57" r="3" fill={powered ? '#38bdf8' : '#475569'} />
+          <circle cx="61" cy="57" r="2.4" fill={powered ? '#22c55e' : '#94a3b8'} />
+          <rect x="32" y="67" width="36" height="3" rx="1.5" fill="#94a3b8" />
+        </g>
+      )}
+      {kind === 'speaker' && (
+        <g>
+          <rect x="30" y="10" width="40" height="62" rx="6" fill="#1e293b" stroke={outline} strokeWidth="1.5" />
+          <rect x="34" y="14" width="32" height="38" rx="3" fill="#0f172a" stroke={plateDark} strokeWidth="0.8" />
+          {Array.from({ length: 7 }, (_, index) => (
+            <line key={index} x1={37} y1={18 + index * 5} x2={63} y2={18 + index * 5} stroke={powered ? '#475569' : '#334155'} strokeWidth="1.6" />
+          ))}
+          <circle cx="50" cy="57" r="8" fill="#0f172a" stroke={plate} strokeWidth="1.2" />
+          <circle cx="50" cy="57" r="3" fill={powered ? '#38bdf8' : '#334155'} />
+          <circle cx="63" cy="67" r="2" fill={powered ? '#22c55e' : '#64748b'} />
+          {powered && (
+            <g stroke="#7dd3fc" strokeWidth="2.2" fill="none" strokeLinecap="round">
+              <path d="M76 28 Q82 36 76 44" /><path d="M82 22 Q91 36 82 50" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'humidifier' && (
+        <g>
+          <path d="M30 26 Q30 18 38 18 H62 Q70 18 70 26 V66 Q70 72 64 72 H36 Q30 72 30 66 Z" fill="#e2e8f0" stroke={outline} strokeWidth="1.5" />
+          <rect x="34" y={66 - (38 * level) / 100} width="32" height={(38 * level) / 100} rx="3" fill="#38bdf8" opacity="0.8" />
+          <rect x="42" y="10" width="16" height="9" rx="3" fill={plate} stroke={outline} strokeWidth="1" />
+          {level > 0 && (
+            <g stroke="#bae6fd" strokeWidth="2" fill="none" strokeLinecap="round">
+              <path d="M42 6 Q40 1 44 -3" /><path d="M50 4 Q50 -2 52 -5" /><path d="M58 6 Q60 1 56 -3" />
+            </g>
+          )}
+          <circle cx="50" cy="40" r="6" fill="none" stroke={plateDark} strokeWidth="2" />
+          <line x1="50" y1="36" x2="50" y2="41" stroke={plateDark} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      )}
+      {kind === 'humiture' && (
+        <g>
+          <rect x="24" y="12" width="52" height="60" rx="6" fill="#f8fafc" stroke={outline} strokeWidth="1.5" />
+          <rect x="29" y="17" width="42" height="28" rx="3" fill="#0f172a" />
+          <text x="50" y="30" textAnchor="middle" fontSize="10" fontWeight="700" fill="#38bdf8">{temperature.toFixed(1)}°C</text>
+          <text x="50" y="41" textAnchor="middle" fontSize="9" fontWeight="600" fill="#7dd3fc">{Math.round(humidity)}% RH</text>
+          {[34, 40, 46, 52, 58, 64].map(x => <line key={x} x1={x} y1="52" x2={x} y2="64" stroke={plate} strokeWidth="2" strokeLinecap="round" />)}
+          <circle cx="63" cy="67" r="2" fill={humidity > 70 ? '#38bdf8' : '#22c55e'} />
+        </g>
+      )}
+      {kind === 'motion-sensor' && (
+        <g>
+          <path d="M32 68 H68 L62 52 H38 Z" fill="#e2e8f0" stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="36" r="22" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          <path d="M32 40 A18 18 0 0 1 68 40 Z" fill="#cbd5e1" stroke={outline} strokeWidth="1" />
+          {Array.from({ length: 4 }, (_, index) => (
+            <line key={index} x1={40 + index * 7} y1="43" x2={40 + index * 7} y2="49" stroke="#94a3b8" strokeWidth="1.4" />
+          ))}
+          <circle cx="50" cy="52" r="2.6" fill={motion ? '#ef4444' : '#22c55e'} />
+          {motion && (
+            <g stroke="#f87171" strokeWidth="2" fill="none" strokeLinecap="round">
+              <path d="M76 24 Q88 36 76 48" /><path d="M82 18 Q99 36 82 54" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'sound-sensor' && (
+        <g>
+          <rect x="28" y="12" width="44" height="60" rx="6" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          <rect x="35" y="18" width="30" height="20" rx="3" fill="#0f172a" />
+          <text x="50" y="32" textAnchor="middle" fontSize="10" fontWeight="700" fill="#7dd3fc">{Math.round(sound)} dB</text>
+          {Array.from({ length: 8 }, (_, index) => {
+            const height = 4 + (sound / 100) * (index % 2 === 0 ? 14 : 9)
+            return <rect key={index} x={34 + index * 4.4} y={62 - height} width="3" height={height} rx="1.2" fill={sound > 55 ? '#f59e0b' : '#38bdf8'} />
+          })}
+          <path d="M50 42 V52 M50 46 Q44 46 44 52" stroke={plateDark} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          <circle cx="50" cy="67" r="2" fill="#22c55e" />
+        </g>
+      )}
+      {kind === 'camera' && (
+        <g>
+          <rect x="30" y="34" width="40" height="26" rx="10" fill="#1e293b" stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="47" r="11" fill="#0f172a" stroke={plate} strokeWidth="1.5" />
+          <circle cx="50" cy="47" r="6" fill={powered ? '#0ea5e9' : '#334155'} stroke={outline} strokeWidth="1" />
+          <circle cx="47" cy="44" r="2" fill={powered ? '#bae6fd' : '#475569'} />
+          <rect x="44" y="58" width="12" height="8" rx="3" fill={plateDark} />
+          <circle cx="64" cy="40" r="2" fill={powered ? '#22c55e' : '#64748b'} />
         </g>
       )}
       {kind === 'push-button' && (

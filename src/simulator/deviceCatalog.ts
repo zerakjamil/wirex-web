@@ -3,12 +3,12 @@ import { IOT_THINGS } from './iot'
 
 export type DeviceCategory='routers'|'switches'|'hubs'|'wireless'|'security'|'wan'|'end'|'iot'|'connections'|'components'|'custom'|'multiuser'
 export const deviceCatalog:Partial<Record<DeviceCategory,{type:DeviceType;models:string[]}[]>>={
-  routers:[{type:'router',models:['4331','4321','1941','2901','2911','819IOX','819HGW','829','1240','PT-Router','PT-Empty','1841','2620XM','2621XM','2811']}],
-  switches:[{type:'switch',models:['2960-24TT','2950-24','2950T-24','3560-24PS','3650-24PS','PT-Switch','PT-Empty']}],
-  hubs:[{type:'hub',models:['PT-Hub','Coaxial Splitter']}],
-  wireless:[{type:'wireless',models:['WRT300N','AccessPoint-PT','AccessPoint-PT-A','AccessPoint-PT-N','LAP-PT','Cell-Tower']},{type:'wlc',models:['WLC-PT']}],
-  security:[{type:'security',models:['ASA 5505','ASA 5506-X']}],
-  wan:[{type:'cloud',models:['Cloud-PT','Cloud-Empty']},{type:'modem',models:['DSL-Modem','Cable-Modem']}],
-  end:[{type:'pc',models:['PC-PT']},{type:'laptop',models:['Laptop-PT']},{type:'server',models:['Server-PT']},{type:'printer',models:['Printer-PT']},{type:'phone',models:['IP-Phone-PT','Home-VoIP']},{type:'tv',models:['TV-PT']},{type:'tablet',models:['Tablet-PT']},{type:'smartphone',models:['Smartphone-PT']}],
+  routers:[{type:'router',models:['1841','1941','2620XM','2621XM','2901','2911','819HG-4G-IOX','819HGW','829','CGR1240','IR1101','IR8340','ISR4321','ISR4331','PT8200','Router-PT','Router-PT-Empty','2811 IOS15']}],
+  switches:[{type:'switch',models:['2960 IOS15','2950-24','2950T-24','3560-24PS','3650-24PS','Switch-PT','Switch-PT-Empty','IE-2000','IE-3400','IE-9320','Bridge-PT']}],
+  hubs:[{type:'hub',models:['Hub-PT','Repeater-PT','CoAxialSplitter-PT']}],
+  wireless:[{type:'wireless',models:['AccessPoint-PT','AccessPoint-PT-A','AccessPoint-PT-AC','AccessPoint-PT-N','3702i','LAP-PT','Linksys-WRT300N','HomeRouter-PT-AC','Cell-Tower']},{type:'wlc',models:['WLC-PT','WLC-2504','WLC-3504']}],
+  security:[{type:'security',models:['5505','5506-X']}],
+  wan:[{type:'cloud',models:['Cloud-PT','Cloud-PT-Empty']},{type:'modem',models:['DSL-Modem-PT','Cable-Modem-PT']}],
+  end:[{type:'pc',models:['PC-PT']},{type:'laptop',models:['Laptop-PT']},{type:'server',models:['Server-PT']},{type:'printer',models:['Printer-PT']},{type:'phone',models:['7960','Home-VoIP-PT']},{type:'tv',models:['TV-PT']},{type:'tablet',models:['TabletPC-PT']},{type:'smartphone',models:['SMARTPHONE-PT']}],
   iot:[{type:'iot',models:IOT_THINGS.map(spec=>spec.model)}],
 }

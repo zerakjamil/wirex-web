@@ -60,6 +60,40 @@ Local edits (the thing's own `IoT` tab) change `config.iotState` directly and
 are carried to the server by the next report — no packets are generated. Remote
 edits (the server's Services list) always travel as packets.
 
+## Packet Tracer Smart Home shelf (2026-10-20)
+
+Packet Tracer 9.0.1's Smart Home palette lists 21 models. wireX now carries all
+21, using 28 shelf entries in total (the original twelve `*-PT` models remain so
+existing labs keep loading).
+
+| PT shelf model | Simulated class | State and controls |
+| --- | --- | --- |
+| AC | thermostat | temperature setpoint 16–30 °C |
+| Furnace | thermostat | temperature setpoint 10–30 °C |
+| Ceiling Fan | fan | power on/off |
+| Light | lamp | power on/off |
+| Appliance | appliance | power on/off |
+| Bluetooth Speaker, Home Speaker, Portable Music Player | speaker | power on/off |
+| Garage Door | door | open/close |
+| Lawn Sprinkler | sprinkler | power on/off |
+| Humidifier | humidifier | output level 0–100 % |
+| Water Level Monitor | water-detector | water level 0–100 % |
+| Humiture Monitor | humiture | temperature 0–50 °C and humidity 0–100 % |
+| Motion Detector | motion-sensor | motion detected/clear |
+| Sound Frequency Detector | sound-sensor | sound level 0–100 dB |
+| Webcam | camera | stream on/off |
+
+New classes (`appliance`, `speaker`, `humidifier`, `humiture`,
+`motion-sensor`, `sound-sensor`, `camera`) have their own default state,
+sanitizers, state summaries, canvas art and IoT-tab controls. Registration
+records the model string as well as the class, so the server's client list shows
+"Ceiling Fan" or "Humiture Monitor" instead of a generic class label.
+
+Sensors (humiture, motion, sound, water level) report state and have no remote
+control; actuators accept the same local and server-issued controls as the
+original things. Smart-city, industrial-OT, power-grid and MCU/breadboard
+shelves are still outside this implementation.
+
 ## Documented simplifications (no parity claim)
 
 - The application layer is structured simulator metadata over IP/UDP ports

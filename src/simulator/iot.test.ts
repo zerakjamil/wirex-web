@@ -15,6 +15,7 @@ import {
   iotStateOf,
   iotStateSummary,
   iotThingSpec,
+  IOT_THINGS,
   prepareIotTick,
   sanitizeIotPatch,
   IOT_CLIENT_EXPIRE_TICKS,
@@ -23,7 +24,7 @@ import {
   IOT_DEFAULT_USERNAME,
 } from './iot'
 import { useNetworkStore } from '../store/networkStore'
-import type { InFlightPacket, NetworkDevice, NetworkLink, NetworkPort } from '../types/network'
+import type { InFlightPacket, IotThingKind, NetworkDevice, NetworkLink, NetworkPort } from '../types/network'
 
 function connect(a: NetworkDevice, aPortIndex: number, b: NetworkDevice, bPortIndex: number): NetworkLink {
   const aPort = a.ports[aPortIndex]
@@ -104,15 +105,61 @@ test('IoT factory defaults, catalog entries and spec lookup', () => {
   assert.equal(iotThingSpec('Fan-PT').kind, 'fan')
   assert.deepEqual(iotStateOf(unsupported), { power: false })
   const models = deviceCatalog.iot?.flatMap(entry => entry.models) ?? []
-  assert.equal(models.length, 12)
+  assert.equal(models.length, IOT_THINGS.length)
+  assert.equal(models.length, 28)
   assert.ok(models.includes('Smoke-Detector-PT'))
   assert.ok(models.includes('Push-Button-PT'))
+  assert.ok(models.includes('Humiture Monitor'))
+  assert.ok(models.includes('Webcam'))
   const lab = getIotLab()
   assert.equal(lab.devices.filter(device => device.type === 'iot').length, 6)
   const server = lab.devices.find(device => device.name === 'IoTServer')
   assert.equal(server?.config.iotServiceEnabled, true)
   assert.equal(lab.devices.find(device => device.name === 'R1')?.config.dhcpPool?.startIp, '192.168.10.100')
   assert.ok(lab.links.length === 8)
+})
+
+test('PT smart-home shelf models map to real device classes and sensor state', () => {
+  const expectations: Array<[string, IotThingKind]> = [
+    ['AC', 'thermostat'],
+    ['Appliance', 'appliance'],
+    ['Bluetooth Speaker', 'speaker'],
+    ['Ceiling Fan', 'fan'],
+    ['Furnace', 'thermostat'],
+    ['Garage Door', 'door'],
+    ['Home Speaker', 'speaker'],
+    ['Humidifier', 'humidifier'],
+    ['Humiture Monitor', 'humiture'],
+    ['Lawn Sprinkler', 'sprinkler'],
+    ['Light', 'lamp'],
+    ['Motion Detector', 'motion-sensor'],
+    ['Portable Music Player', 'speaker'],
+    ['Sound Frequency Detector', 'sound-sensor'],
+    ['Water Level Monitor', 'water-detector'],
+    ['Webcam', 'camera'],
+  ]
+  for (const [model, kind] of expectations) {
+    const spec = iotThingSpec(model)
+    assert.equal(spec.model, model)
+    assert.equal(spec.kind, kind)
+    const device = createDevice('iot', 0, 0, model)
+    assert.equal(device.model, model)
+    assert.equal(device.config.iotKind, kind)
+    assert.deepEqual(device.config.iotState, defaultIotState(kind))
+  }
+
+  assert.deepEqual(sanitizeIotPatch('humiture', { temperature: 31.44, humidity: 55.6 }), { temperature: 31.4, humidity: 56 })
+  assert.deepEqual(sanitizeIotPatch('humiture', { humidity: 120 }), { humidity: 100 })
+  assert.deepEqual(sanitizeIotPatch('motion-sensor', { motion: true }), { motion: true })
+  assert.deepEqual(sanitizeIotPatch('sound-sensor', { sound: 140 }), { sound: 100 })
+  assert.deepEqual(sanitizeIotPatch('speaker', { power: true }), { power: true })
+  assert.deepEqual(sanitizeIotPatch('camera', { power: false }), { power: false })
+  assert.deepEqual(sanitizeIotPatch('humidifier', { level: 42.4 }), { level: 42 })
+
+  assert.equal(iotStateSummary('humiture', { temperature: 22.5, humidity: 45 }), '22.5 C / 45% RH')
+  assert.equal(iotStateSummary('motion-sensor', { motion: true }), 'motion detected')
+  assert.equal(iotStateSummary('sound-sensor', { sound: 61 }), '61 dB')
+  assert.equal(iotStateSummary('camera', { power: true }), 'on')
 })
 
 test('smart things discover the IoT server, register, and report state periodically', () => {

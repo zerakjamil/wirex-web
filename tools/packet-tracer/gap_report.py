@@ -24,6 +24,13 @@ CATALOG = ROOT / "src" / "simulator" / "deviceCatalog.ts"
 IOT = ROOT / "src" / "simulator" / "iot.ts"
 OUTPUT = ROOT / "replica" / "pt-9.0.1" / "GAP_REPORT.md"
 
+# Packet Tracer palette labels are display names; a few describe the same
+# hardware wireX supports under Packet Tracer's internal device name.
+PT_ALIASES: dict[str, tuple[str, str]] = {
+    "2811 with IOS 12": ("2811 IOS15", "IOS 12 is a software image; wireX models one IOS surface per platform"),
+    "2960 with IOS 12": ("2960 IOS15", "IOS 12 is a software image; wireX models one IOS surface per platform"),
+}
+
 
 def keys_for(name: str) -> set[str]:
     """Normalized lookup keys so PT and wireX spellings of a model can meet."""
@@ -90,6 +97,7 @@ def main() -> int:
     categories = inventory.get("palette", {}).get("categories", [])
     total = sum(len(sub["models"]) for category in categories for sub in category["subcategories"])
     present = 0
+    used_aliases: set[str] = set()
     missing: list[tuple[str, str, str]] = []
     lines.append("## Device palette")
     lines.append("")
@@ -103,10 +111,13 @@ def main() -> int:
             found = []
             gone = []
             for name in names:
-                keys = keys_for(name)
+                lookup, _reason = PT_ALIASES.get(name, (name, ""))
+                keys = keys_for(lookup)
                 hit = next((wirex[key] for key in keys if key in wirex), None)
                 if hit is not None:
                     found.append(name)
+                    if name in PT_ALIASES:
+                        used_aliases.add(name)
                 else:
                     gone.append(name)
                     missing.append((category["name"], sub["name"], name))
@@ -120,6 +131,15 @@ def main() -> int:
     coverage = (present / total * 100) if total else 0.0
     lines.append(f"**Catalog coverage: {present}/{total} models recognized ({coverage:.1f}%).**")
     lines.append("")
+    if used_aliases:
+        lines.append("### Palette labels mapped to an existing model")
+        lines.append("")
+        lines.append("| PT palette label | wireX model | Reason |")
+        lines.append("| --- | --- | --- |")
+        for label in sorted(used_aliases):
+            model, reason = PT_ALIASES[label]
+            lines.append(f"| {label} | {model} | {reason} |")
+        lines.append("")
     if missing:
         lines.append("### Missing models, grouped by category")
         lines.append("")

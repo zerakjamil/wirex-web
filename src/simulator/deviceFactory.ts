@@ -36,7 +36,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       model = customModel || '2911'
       name = `Router${index}`
 
-      if (model === '4331' || model === '4321') {
+      if (model === '4331' || model === '4321' || model === 'ISR4331' || model === 'ISR4321') {
         ports = [
           createPort('GigabitEthernet0/0/0', 'Gi0/0/0', 'gigabitethernet', 'down'),
           createPort('GigabitEthernet0/0/1', 'Gi0/0/1', 'gigabitethernet', 'down'),
@@ -59,13 +59,44 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('Serial0/0/0', 'Se0/0/0', 'serial', 'down'),
           createPort('Serial0/0/1', 'Se0/0/1', 'serial', 'down'),
         ]
-      } else if (model === '819HGW' || model === '829') {
+      } else if (model === '819HGW' || model === '819HG-4G-IOX' || model === '829') {
         ports = [
           createPort('FastEthernet0', 'Fa0', 'fastethernet', 'down'),
           createPort('FastEthernet1', 'Fa1', 'fastethernet', 'down'),
           createPort('FastEthernet2', 'Fa2', 'fastethernet', 'down'),
           createPort('FastEthernet3', 'Fa3', 'fastethernet', 'down'),
           createPort('Cellular0', 'Cell0', 'wireless', 'down'),
+        ]
+      } else if (model === 'CGR1240') {
+        ports = [
+          createPort('FastEthernet0/0', 'Fa0/0', 'fastethernet', 'down'),
+          createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'down'),
+          createPort('Serial0/0', 'Se0/0', 'serial', 'down'),
+          createPort('Serial0/1', 'Se0/1', 'serial', 'down'),
+          createPort('Cellular0', 'Cell0', 'wireless', 'down'),
+        ]
+      } else if (model === 'IR1101') {
+        ports = [
+          createPort('GigabitEthernet0/0', 'Gi0/0', 'gigabitethernet', 'down'),
+          createPort('GigabitEthernet0/1', 'Gi0/1', 'gigabitethernet', 'down'),
+          createPort('Serial0/0', 'Se0/0', 'serial', 'down'),
+          createPort('Cellular0', 'Cell0', 'wireless', 'down'),
+        ]
+      } else if (model === 'IR8340') {
+        ports = [
+          createPort('GigabitEthernet0/0', 'Gi0/0', 'gigabitethernet', 'down'),
+          createPort('GigabitEthernet0/1', 'Gi0/1', 'gigabitethernet', 'down'),
+          createPort('GigabitEthernet0/2', 'Gi0/2', 'gigabitethernet', 'down'),
+          createPort('GigabitEthernet0/3', 'Gi0/3', 'gigabitethernet', 'down'),
+          createPort('Serial0/0', 'Se0/0', 'serial', 'down'),
+          createPort('Serial0/1', 'Se0/1', 'serial', 'down'),
+        ]
+      } else if (model === 'PT8200') {
+        ports = [
+          createPort('GigabitEthernet0/0/0', 'Gi0/0/0', 'gigabitethernet', 'down'),
+          createPort('GigabitEthernet0/0/1', 'Gi0/0/1', 'gigabitethernet', 'down'),
+          createPort('Serial0/1/0', 'Se0/1/0', 'serial', 'down'),
+          createPort('Serial0/1/1', 'Se0/1/1', 'serial', 'down'),
         ]
       } else if (model === '2620XM') {
         ports = [
@@ -101,7 +132,34 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         for (let i = 1; i <= 24; i++) {
           ports.push(createPort(`FastEthernet0/${i}`, `Fa0/${i}`, 'fastethernet', 'up'))
         }
-      } else if (model === 'PT-Switch') {
+      } else if (model === 'IE-2000') {
+        ports = []
+        for (let i = 1; i <= 8; i++) {
+          ports.push(createPort(`FastEthernet0/${i}`, `Fa0/${i}`, 'fastethernet', 'up'))
+        }
+        ports.push(createPort('GigabitEthernet0/1', 'Gi0/1', 'gigabitethernet', 'up'))
+        ports.push(createPort('GigabitEthernet0/2', 'Gi0/2', 'gigabitethernet', 'up'))
+      } else if (model === 'IE-3400') {
+        ports = []
+        for (let i = 1; i <= 8; i++) {
+          ports.push(createPort(`GigabitEthernet0/${i}`, `Gi0/${i}`, 'gigabitethernet', 'up'))
+        }
+        ports.push(createPort('GigabitEthernet0/9', 'Gi0/9', 'gigabitethernet', 'up'))
+        ports.push(createPort('GigabitEthernet0/10', 'Gi0/10', 'gigabitethernet', 'up'))
+      } else if (model === 'IE-9320') {
+        ports = []
+        for (let i = 1; i <= 24; i++) {
+          ports.push(createPort(`GigabitEthernet0/${i}`, `Gi0/${i}`, 'gigabitethernet', 'up'))
+        }
+        for (let i = 25; i <= 28; i++) {
+          ports.push(createPort(`GigabitEthernet0/${i}`, `Gi0/${i}`, 'gigabitethernet', 'up'))
+        }
+      } else if (model === 'Bridge-PT') {
+        ports = [
+          createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'up'),
+          createPort('FastEthernet0/2', 'Fa0/2', 'fastethernet', 'up'),
+        ]
+      } else if (model === 'PT-Switch' || model === 'Switch-PT') {
         ports = [
           createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'up'),
           createPort('FastEthernet0/2', 'Fa0/2', 'fastethernet', 'up'),
@@ -123,11 +181,16 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     case 'hub': {
       model = customModel || 'PT-Hub'
       name = `Hub${index}`
-      if (model === 'Coaxial Splitter') {
+      if (model === 'Coaxial Splitter' || model === 'CoAxialSplitter-PT') {
         ports = [
           createPort('Port 0', 'Port0', 'coaxial', 'up'),
           createPort('Port 1', 'Port1', 'coaxial', 'up'),
           createPort('Port 2', 'Port2', 'coaxial', 'up'),
+        ]
+      } else if (model === 'Repeater-PT') {
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('FastEthernet1', 'Fa1', 'fastethernet', 'up'),
         ]
       } else {
         ports = [
@@ -136,8 +199,8 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('FastEthernet2', 'Fa2', 'fastethernet', 'up'),
           createPort('FastEthernet3', 'Fa3', 'fastethernet', 'up'),
           createPort('FastEthernet4', 'Fa4', 'fastethernet', 'up'),
-        createPort('FastEthernet5', 'Fa5', 'fastethernet', 'up'),
-      ]
+          createPort('FastEthernet5', 'Fa5', 'fastethernet', 'up'),
+        ]
       }
       break
     }
@@ -145,7 +208,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     case 'wireless': {
       model = customModel || 'WRT300N'
       name = `Wireless${index}`
-      if (model === 'WRT300N') {
+      if (model === 'WRT300N' || model === 'Linksys-WRT300N' || model === 'HomeRouter-PT-AC') {
         ports = [
           createPort('Internet', 'Internet', 'fastethernet', 'up'),
           createPort('Ethernet 1', 'Eth1', 'fastethernet', 'up'),
@@ -187,7 +250,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     }
 
     case 'security': {
-      model = customModel || 'ASA 5505'
+      model = customModel || '5505'
       name = `ASA${index}`
       const p0 = createPort('Ethernet0/0', 'Eth0/0', 'fastethernet', 'up')
       p0.nameif = 'outside'
@@ -303,10 +366,10 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     }
 
     case 'modem': {
-      model = customModel || 'Cable-Modem'
+      model = customModel || 'Cable-Modem-PT'
       name = `Modem${index}`
       ports = [
-        createPort('Port 0', 'Port0', model==='DSL-Modem'?'phone':'coaxial', 'up'),
+        createPort('Port 0', 'Port0', model.includes('DSL')?'phone':'coaxial', 'up'),
         createPort('Port 1', 'Port1', 'fastethernet', 'up'),
       ]
       break
@@ -316,7 +379,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: ['PT-LAPTOP-NM-1CFE'],
     pc: ['PT-HOST-NM-1CFE'],
-    router: !['819IOX','819HGW','829','1240'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
+    router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
     switch: [],
     wireless: [],
     wlc: [],
@@ -333,7 +396,8 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     modem: [],
   }
 
-  if (model === 'PT-Empty' || model === 'Cloud-Empty') {
+  const emptyChassis = ['PT-Empty', 'Router-PT-Empty', 'Switch-PT-Empty', 'Cloud-Empty', 'Cloud-PT-Empty'].includes(model)
+  if (emptyChassis) {
     ports = []
   }
   ports = ports.map(port => ({
@@ -349,14 +413,14 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     y,
     ports,
     power: true,
-    modules: (model === 'PT-Empty' || model === 'Cloud-Empty') ? [] : [...(defaultModules[type] || [])],
+    modules: emptyChassis ? [] : [...(defaultModules[type] || [])],
     config: {
       hostname: type === 'security' ? 'ciscoasa' : name,
       banner: 'Unauthorized access is prohibited!',
       vlans: type === 'security'
         ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
-      ...(model === 'LAP-PT' ? { apMode: 'lightweight' as const } : {}),
+      ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
       ...(type === 'iot' && iotKind
         ? {
             iotKind,

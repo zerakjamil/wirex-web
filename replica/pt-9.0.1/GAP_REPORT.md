@@ -27,14 +27,14 @@ Live capture lists **181** stock/custom models across 7 categories.
 
 | Category | Subcategory | PT models | in wireX | missing |
 | --- | --- | --- | --- | --- |
-| Network Devices | Routers | 18 | 12 | 819HG-4G-IOX, CGR1240, IR1101, IR8340, PT8200, 2811 IOS15 |
-| Network Devices | Switches | 11 | 6 | 2960 IOS15, IE-2000, IE-3400, IE-9320, Bridge-PT |
-| Network Devices | Hubs | 3 | 2 | Repeater-PT |
-| Network Devices | Wireless Devices | 15 | 6 | AccessPoint-PT-AC, Linksys-WRT300N, HomeRouter-PT-AC, DLC100, Central-Office-Server, WLC-2504, WLC-3504, 3702i, Meraki-MX65W |
-| Network Devices | Security | 4 | 0 | 5505, 5506-X, ISA-3000, CyberObserver |
+| Network Devices | Routers | 18 | 18 | — |
+| Network Devices | Switches | 11 | 11 | — |
+| Network Devices | Hubs | 3 | 3 | — |
+| Network Devices | Wireless Devices | 15 | 12 | DLC100, Central-Office-Server, Meraki-MX65W |
+| Network Devices | Security | 4 | 2 | ISA-3000, CyberObserver |
 | Network Devices | WAN Emulation | 4 | 4 | — |
-| End Devices | End Devices | 15 | 7 | Meraki-Server, NetworkController, 7960, Analog-Phone-PT, TabletPC-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer |
-| End Devices | Smart Home | 21 | 5 | AC, Appliance, Bluetooth Speaker, Ceiling Fan, Furnace, Garage Door, Home Speaker, Humidifier, Humiture Monitor, Lawn Sprinkler, Light, Motion Detector, Portable Music Player, Sound Frequency Detector, Water Level Monitor, Webcam |
+| End Devices | End Devices | 15 | 9 | Meraki-Server, NetworkController, Analog-Phone-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer |
+| End Devices | Smart Home | 21 | 21 | — |
 | End Devices | Smart City | 16 | 0 | Atm Pressure Monitor, Beacon, Carbon Dioxide Detector, Carbon Monoxide Detector, Fire Monitor, Fire Sprinkler, Humidity Monitor, Old Car, RFID Card, RFID Reader, Smart LED, Street Lamp, Temperature Monitor, Trip Sensor, Water Drain, Wind Detector |
 | End Devices | Industrial - OT | 6 | 0 | PLC-PT, DataHistorianServer, Blower, HMI, Signal Generator, Smart LED |
 | End Devices | Power Grid | 4 | 0 | Battery, Power Meter, Solar Panel, Wind Turbine |
@@ -43,20 +43,23 @@ Live capture lists **181** stock/custom models across 7 categories.
 | Components | Sensors | 21 | 2 | Flex Sensor, Generic Environment Sensor, Generic Sensor, Humidity Sensor, Humiture Sensor, Membrane Potentiometer, Metal Sensor, Motion Sensor, Photo Sensor, Potentiometer, Push Button Toggle Switch, Rocker Switch, Smoke Sensor, Sound Sensor, Temperature Sensor, Toggle Push Button, Trip Wire, Water Sensor, Wind Sensor |
 | Connections | Connections | 13 | 0 | Automatically Choose Connection Type, Console, Copper Straight-Through, Copper Cross-Over, Single Mode Fiber, Multi Mode Fiber, Phone, Coaxial, Serial DCE, Serial DTE, Octal, IoT Custom Cable, USB |
 | Connections | Structured Cabling | 4 | 0 | Copper Patch Panel, Fiber Patch Panel, Copper Wall Mount, Fiber Wall Mount |
-| Miscellaneous | Miscellaneous | 8 | 0 | 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 with IOS 12, 2811 NM-ESW-161 (2) WIC-2T, 2960 with IOS 12, PT8000 Activated, Wireless Laptop, Wireless PC |
+| Miscellaneous | Miscellaneous | 8 | 2 | 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 NM-ESW-161 (2) WIC-2T, PT8000 Activated, Wireless Laptop, Wireless PC |
 | Multiuser Connection | Multiuser Connection | 1 | 0 | Multiuser Connection |
 
-**Catalog coverage: 44/181 models recognized (24.3%).**
+**Catalog coverage: 84/181 models recognized (46.4%).**
+
+### Palette labels mapped to an existing model
+
+| PT palette label | wireX model | Reason |
+| --- | --- | --- |
+| 2811 with IOS 12 | 2811 IOS15 | IOS 12 is a software image; wireX models one IOS surface per platform |
+| 2960 with IOS 12 | 2960 IOS15 | IOS 12 is a software image; wireX models one IOS surface per platform |
 
 ### Missing models, grouped by category
 
-- **Network Devices / Routers**: 819HG-4G-IOX, CGR1240, IR1101, IR8340, PT8200, 2811 IOS15
-- **Network Devices / Switches**: 2960 IOS15, IE-2000, IE-3400, IE-9320, Bridge-PT
-- **Network Devices / Hubs**: Repeater-PT
-- **Network Devices / Wireless Devices**: AccessPoint-PT-AC, Linksys-WRT300N, HomeRouter-PT-AC, DLC100, Central-Office-Server, WLC-2504, WLC-3504, 3702i, Meraki-MX65W
-- **Network Devices / Security**: 5505, 5506-X, ISA-3000, CyberObserver
-- **End Devices / End Devices**: Meraki-Server, NetworkController, 7960, Analog-Phone-PT, TabletPC-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer
-- **End Devices / Smart Home**: AC, Appliance, Bluetooth Speaker, Ceiling Fan, Furnace, Garage Door, Home Speaker, Humidifier, Humiture Monitor, Lawn Sprinkler, Light, Motion Detector, Portable Music Player, Sound Frequency Detector, Water Level Monitor, Webcam
+- **Network Devices / Wireless Devices**: DLC100, Central-Office-Server, Meraki-MX65W
+- **Network Devices / Security**: ISA-3000, CyberObserver
+- **End Devices / End Devices**: Meraki-Server, NetworkController, Analog-Phone-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer
 - **End Devices / Smart City**: Atm Pressure Monitor, Beacon, Carbon Dioxide Detector, Carbon Monoxide Detector, Fire Monitor, Fire Sprinkler, Humidity Monitor, Old Car, RFID Card, RFID Reader, Smart LED, Street Lamp, Temperature Monitor, Trip Sensor, Water Drain, Wind Detector
 - **End Devices / Industrial - OT**: PLC-PT, DataHistorianServer, Blower, HMI, Signal Generator, Smart LED
 - **End Devices / Power Grid**: Battery, Power Meter, Solar Panel, Wind Turbine
@@ -65,7 +68,7 @@ Live capture lists **181** stock/custom models across 7 categories.
 - **Components / Sensors**: Flex Sensor, Generic Environment Sensor, Generic Sensor, Humidity Sensor, Humiture Sensor, Membrane Potentiometer, Metal Sensor, Motion Sensor, Photo Sensor, Potentiometer, Push Button Toggle Switch, Rocker Switch, Smoke Sensor, Sound Sensor, Temperature Sensor, Toggle Push Button, Trip Wire, Water Sensor, Wind Sensor
 - **Connections / Connections**: Automatically Choose Connection Type, Console, Copper Straight-Through, Copper Cross-Over, Single Mode Fiber, Multi Mode Fiber, Phone, Coaxial, Serial DCE, Serial DTE, Octal, IoT Custom Cable, USB
 - **Connections / Structured Cabling**: Copper Patch Panel, Fiber Patch Panel, Copper Wall Mount, Fiber Wall Mount
-- **Miscellaneous / Miscellaneous**: 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 with IOS 12, 2811 NM-ESW-161 (2) WIC-2T, 2960 with IOS 12, PT8000 Activated, Wireless Laptop, Wireless PC
+- **Miscellaneous / Miscellaneous**: 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 NM-ESW-161 (2) WIC-2T, PT8000 Activated, Wireless Laptop, Wireless PC
 - **Multiuser Connection / Multiuser Connection**: Multiuser Connection
 
 ## Device Config tab (captured from a live 1841)

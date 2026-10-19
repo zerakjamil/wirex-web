@@ -31,7 +31,7 @@ export interface IotThingSpec {
   kind: IotThingKind
   model: string
   label: string
-  control: 'toggle' | 'open-close' | 'level' | 'temperature' | 'smoke' | 'button'
+  control: 'toggle' | 'open-close' | 'level' | 'temperature' | 'smoke' | 'button' | 'humiture' | 'motion' | 'sound'
   unit?: string
   min?: number
   max?: number
@@ -50,6 +50,24 @@ export const IOT_THINGS: IotThingSpec[] = [
   { kind: 'water-detector', model: 'Water-Detector-PT', label: 'Water Detector', control: 'level', unit: '%', min: 0, max: 100 },
   { kind: 'light-sensor', model: 'Light-Sensor-PT', label: 'Light Sensor', control: 'level', unit: '%', min: 0, max: 100 },
   { kind: 'push-button', model: 'Push-Button-PT', label: 'Push Button', control: 'button' },
+  // Packet Tracer's Smart Home shelf. Each model reuses a simulated device
+  // class, so registration, reporting and remote control behave identically.
+  { kind: 'thermostat', model: 'AC', label: 'AC', control: 'temperature', unit: '°C', min: 16, max: 30 },
+  { kind: 'appliance', model: 'Appliance', label: 'Appliance', control: 'toggle' },
+  { kind: 'speaker', model: 'Bluetooth Speaker', label: 'Bluetooth Speaker', control: 'toggle' },
+  { kind: 'fan', model: 'Ceiling Fan', label: 'Ceiling Fan', control: 'toggle' },
+  { kind: 'thermostat', model: 'Furnace', label: 'Furnace', control: 'temperature', unit: '°C', min: 10, max: 30 },
+  { kind: 'door', model: 'Garage Door', label: 'Garage Door', control: 'open-close' },
+  { kind: 'speaker', model: 'Home Speaker', label: 'Home Speaker', control: 'toggle' },
+  { kind: 'humidifier', model: 'Humidifier', label: 'Humidifier', control: 'level', unit: '%', min: 0, max: 100 },
+  { kind: 'humiture', model: 'Humiture Monitor', label: 'Humiture Monitor', control: 'humiture' },
+  { kind: 'sprinkler', model: 'Lawn Sprinkler', label: 'Lawn Sprinkler', control: 'toggle' },
+  { kind: 'lamp', model: 'Light', label: 'Light', control: 'toggle' },
+  { kind: 'motion-sensor', model: 'Motion Detector', label: 'Motion Detector', control: 'motion' },
+  { kind: 'speaker', model: 'Portable Music Player', label: 'Portable Music Player', control: 'toggle' },
+  { kind: 'sound-sensor', model: 'Sound Frequency Detector', label: 'Sound Frequency Detector', control: 'sound', unit: 'dB', min: 0, max: 100 },
+  { kind: 'water-detector', model: 'Water Level Monitor', label: 'Water Level Monitor', control: 'level', unit: '%', min: 0, max: 100 },
+  { kind: 'camera', model: 'Webcam', label: 'Webcam', control: 'toggle' },
 ]
 
 export function iotThingSpec(model: string): IotThingSpec {
@@ -66,6 +84,9 @@ export function defaultIotState(kind: IotThingKind): IotThingState {
     case 'fan':
     case 'siren':
     case 'sprinkler':
+    case 'appliance':
+    case 'speaker':
+    case 'camera':
       return { power: false }
     case 'door':
     case 'window':
@@ -82,6 +103,14 @@ export function defaultIotState(kind: IotThingKind): IotThingState {
       return { level: 60 }
     case 'push-button':
       return {}
+    case 'humidifier':
+      return { level: 0 }
+    case 'humiture':
+      return { temperature: 22, humidity: 45 }
+    case 'motion-sensor':
+      return { motion: false }
+    case 'sound-sensor':
+      return { sound: 0 }
   }
 }
 
@@ -118,6 +147,9 @@ export function iotStateSummary(kind: IotThingKind, state: IotThingState): strin
     case 'fan':
     case 'siren':
     case 'sprinkler':
+    case 'appliance':
+    case 'speaker':
+    case 'camera':
       return state.power ? 'on' : 'off'
     case 'door':
     case 'window':
@@ -134,16 +166,27 @@ export function iotStateSummary(kind: IotThingKind, state: IotThingState): strin
       return `${Math.round(state.level ?? 0)}% light`
     case 'push-button':
       return state.pressedAtTick !== undefined ? `last pressed at tick ${state.pressedAtTick}` : 'idle'
+    case 'humidifier':
+      return `${Math.round(state.level ?? 0)}% humidity`
+    case 'humiture':
+      return `${(state.temperature ?? 0).toFixed(1)} C / ${Math.round(state.humidity ?? 0)}% RH`
+    case 'motion-sensor':
+      return state.motion ? 'motion detected' : 'no motion'
+    case 'sound-sensor':
+      return `${Math.round(state.sound ?? 0)} dB`
   }
 }
 
 export function sanitizeIotPatch(kind: IotThingKind, patch: IotThingState): IotThingState {
   const next: IotThingState = {}
-  if ('power' in patch && patch.power !== undefined && ['lamp', 'fan', 'siren', 'sprinkler'].includes(kind)) next.power = patch.power === true
+  if ('power' in patch && patch.power !== undefined && ['lamp', 'fan', 'siren', 'sprinkler', 'appliance', 'speaker', 'camera'].includes(kind)) next.power = patch.power === true
   if ('open' in patch && patch.open !== undefined && ['door', 'window'].includes(kind)) next.open = patch.open === true
-  if (patch.level !== undefined && ['blinds', 'water-detector', 'light-sensor'].includes(kind) && Number.isFinite(patch.level)) next.level = Math.max(0, Math.min(100, Math.round(patch.level)))
-  if (patch.temperature !== undefined && kind === 'thermostat' && Number.isFinite(patch.temperature)) next.temperature = Math.max(10, Math.min(40, Math.round(patch.temperature * 10) / 10))
+  if (patch.level !== undefined && ['blinds', 'water-detector', 'light-sensor', 'humidifier'].includes(kind) && Number.isFinite(patch.level)) next.level = Math.max(0, Math.min(100, Math.round(patch.level)))
+  if (patch.temperature !== undefined && (kind === 'thermostat' || kind === 'humiture') && Number.isFinite(patch.temperature)) next.temperature = Math.max(kind === 'humiture' ? 0 : 10, Math.min(40, Math.round(patch.temperature * 10) / 10))
+  if (patch.humidity !== undefined && kind === 'humiture' && Number.isFinite(patch.humidity)) next.humidity = Math.max(0, Math.min(100, Math.round(patch.humidity)))
   if ('smoke' in patch && patch.smoke !== undefined && kind === 'smoke-detector') next.smoke = patch.smoke === true
+  if ('motion' in patch && patch.motion !== undefined && kind === 'motion-sensor') next.motion = patch.motion === true
+  if (patch.sound !== undefined && kind === 'sound-sensor' && Number.isFinite(patch.sound)) next.sound = Math.max(0, Math.min(100, Math.round(patch.sound)))
   if (patch.pressedAtTick !== undefined && kind === 'push-button' && Number.isFinite(patch.pressedAtTick)) next.pressedAtTick = Math.round(patch.pressedAtTick)
   return next
 }
@@ -194,17 +237,17 @@ export function markIotRegistered(
 
 export function recordIotClient(
   server: NetworkDevice,
-  update: { deviceId: string; address: string; kind: IotThingKind },
+  update: { deviceId: string; address: string; kind: IotThingKind; model?: string },
   simulationTick: number,
 ): NetworkDevice {
   const runtime = iotServerRuntimeOf(server)
   const existing = runtime.clients.find(client => client.deviceId === update.deviceId)
   const clients = existing
     ? runtime.clients.map(client => client.deviceId === update.deviceId
-      ? { ...client, address: update.address, kind: update.kind, lastSeenTick: simulationTick }
+      ? { ...client, address: update.address, kind: update.kind, model: update.model ?? client.model, lastSeenTick: simulationTick }
       : client)
     : [...runtime.clients, {
-      deviceId: update.deviceId, address: update.address, kind: update.kind,
+      deviceId: update.deviceId, address: update.address, kind: update.kind, model: update.model,
       registeredAtTick: simulationTick, lastSeenTick: simulationTick,
     }]
   return { ...server, iotServerRuntime: { ...runtime, clients } }
