@@ -1,4 +1,4 @@
-import type { DeviceConfig, NetworkAnnotation, NetworkDevice, NetworkLink, NetworkPort } from '@/types/network'
+import type { AccessList, AclRule, DeviceConfig, HsrpGroupConfig, Ipv6AddressConfig, NetworkAnnotation, NetworkDevice, NetworkLink, NetworkPort } from '@/types/network'
 
 // Reduced instructor assessment model. An activity is authored from a finished
 // ("answer") network: the wizard derives assessment items from its live state, and the
@@ -16,6 +16,10 @@ export type ActivityFacetKind =
   | 'ipv4-address'
   | 'default-gateway'
   | 'dns-server'
+  | 'dhcp-pool'
+  | 'acl'
+  | 'hsrp'
+  | 'ipv6-address'
 
 export type ActivityFacetSpec =
   | { kind: 'vlan'; vlanId: number; name: string }
@@ -28,6 +32,10 @@ export type ActivityFacetSpec =
   | { kind: 'ipv4-address'; portId: string; ip: string; mask: string }
   | { kind: 'default-gateway'; gateway: string }
   | { kind: 'dns-server'; dns: string }
+  | { kind: 'dhcp-pool'; name: string; snapshot: string }
+  | { kind: 'acl'; id: string; snapshot: string }
+  | { kind: 'hsrp'; portId: string; group: number; snapshot: string }
+  | { kind: 'ipv6-address'; portId: string; snapshot: string }
 
 export type RoutingProtocolKind = 'rip' | 'ospf' | 'eigrp' | 'bgp'
 
@@ -97,6 +105,12 @@ export function collectAssessmentCandidates(devices: NetworkDevice[]): ActivityI
         if (port.adminStatus === 'up' && port.ipAddress && port.dot1qVlan === undefined && (device.type === 'router' || port.virtualVlan !== undefined)) {
           push(device, 'port-admin', port.id, portLabel(port), 'port up (no shutdown)', { kind: 'port-admin', portId: port.id })
         }
+        for (const group of port.hsrpGroups ?? []) {
+          push(device, 'hsrp', `${port.id}:${group.group}`, `${portLabel(port)} HSRP ${group.group}`, hsrpSummary(group), { kind: 'hsrp', portId: port.id, group: group.group, snapshot: hsrpSnapshot(group) })
+        }
+        if (port.ipv6Addresses?.length) {
+          push(device, 'ipv6-address', port.id, portLabel(port), ipv6Summary(port.ipv6Addresses), { kind: 'ipv6-address', portId: port.id, snapshot: ipv6Snapshot(port.ipv6Addresses) })
+        }
       }
     }
 
@@ -118,6 +132,14 @@ export function collectAssessmentCandidates(devices: NetworkDevice[]): ActivityI
 
     if (device.type === 'switch' && device.config.ipRouting === true) {
       push(device, 'ip-routing', '', 'IP routing', 'ip routing enabled', { kind: 'ip-routing' })
+    }
+
+    for (const pool of device.config.dhcpPools ?? []) {
+      push(device, 'dhcp-pool', pool.name, `DHCP pool ${pool.name}`, dhcpPoolSummary(pool), { kind: 'dhcp-pool', name: pool.name, snapshot: dhcpPoolSnapshot(pool) })
+    }
+
+    for (const list of device.config.accessLists ?? []) {
+      push(device, 'acl', list.id, `ACL ${list.id}`, aclSummary(list), { kind: 'acl', id: list.id, snapshot: aclSnapshot(list) })
     }
 
     if (isHostDevice(device.type) && !device.config.dhcpEnabled) {
@@ -164,6 +186,80 @@ function l2Expected(spec: L2Spec): string {
     return `trunk, allowed ${allowed}, native VLAN ${spec.native ?? 1}${voice}`
   }
   return `access VLAN ${spec.vlan ?? 1}${voice}`
+}
+
+type DhcpPool = NonNullable<DeviceConfig['dhcpPools']>[number]
+
+/** Stable, order-independent JSON for the pool fields an instructor can assess. */
+function dhcpPoolSnapshot(pool: DhcpPool): string {
+  return JSON.stringify({
+    name: pool.name,
+    network: pool.network,
+    mask: pool.mask,
+    defaultRouter: pool.defaultRouter ?? null,
+    dnsServer: pool.dnsServer ?? null,
+    tftpServer: pool.tftpServer ?? null,
+    leaseDurationSeconds: pool.leaseDurationSeconds ?? null,
+    hostIp: pool.hostIp ?? null,
+    hostMask: pool.hostMask ?? null,
+    hardwareAddress: pool.hardwareAddress ?? null,
+    clientIdentifier: pool.clientIdentifier ?? null,
+  })
+}
+
+function dhcpPoolSummary(pool: DhcpPool): string {
+  const extras = [
+    pool.defaultRouter ? `gateway ${pool.defaultRouter}` : '',
+    pool.dnsServer ? `DNS ${pool.dnsServer}` : '',
+    pool.leaseDurationSeconds ? `lease ${pool.leaseDurationSeconds}s` : '',
+  ].filter(Boolean).join(', ')
+  return `${pool.name}: ${pool.network} ${pool.mask}${extras ? ` (${extras})` : ''}`
+}
+
+function aclRuleSnapshot(rule: AclRule) {
+  if (rule.type === 'standard') {
+    return { type: 'standard', action: rule.action, sourceIp: rule.sourceIp, wildcard: rule.wildcard ?? null, remark: rule.remark ?? null }
+  }
+  return {
+    type: 'extended', action: rule.action, protocol: rule.protocol, sourceIp: rule.sourceIp,
+    sourceWildcard: rule.sourceWildcard ?? null, destIp: rule.destIp ?? null,
+    destWildcard: rule.destWildcard ?? null, destPort: rule.destPort ?? null, remark: rule.remark ?? null,
+  }
+}
+
+function aclSnapshot(list: AccessList): string {
+  return JSON.stringify({ id: list.id, number: list.number ?? null, type: list.type, rules: list.rules.map(aclRuleSnapshot) })
+}
+
+function aclRuleText(rule: AclRule): string {
+  const remark = rule.remark ? ` remark ${rule.remark}` : ''
+  if (rule.type === 'standard') return `${rule.action} ${rule.sourceIp}${rule.wildcard ? ` ${rule.wildcard}` : ''}${remark}`
+  const source = `${rule.sourceIp}${rule.sourceWildcard ? ` ${rule.sourceWildcard}` : ''}`
+  const dest = rule.destIp ? `${rule.destIp}${rule.destWildcard ? ` ${rule.destWildcard}` : ''}${rule.destPort !== undefined ? ` eq ${rule.destPort}` : ''}` : 'any'
+  return `${rule.action} ${rule.protocol} ${source} ${dest}${remark}`
+}
+
+function aclSummary(list: AccessList): string {
+  const body = list.rules.length ? list.rules.map(aclRuleText).join('; ') : 'no rules'
+  return `${list.id} ${list.type}: ${body}`
+}
+
+function hsrpSnapshot(group: HsrpGroupConfig): string {
+  return JSON.stringify({ group: group.group, virtualIp: group.virtualIp ?? null, priority: group.priority ?? null, preempt: group.preempt === true })
+}
+
+function hsrpSummary(group: HsrpGroupConfig): string {
+  return `group ${group.group} virtual ${group.virtualIp ?? 'unset'}, priority ${group.priority ?? 100}, ${group.preempt ? 'preempt' : 'no preempt'}`
+}
+
+function ipv6Snapshot(addresses: Ipv6AddressConfig[]): string {
+  return JSON.stringify([...addresses]
+    .map(entry => ({ address: entry.address, prefixLength: entry.prefixLength, source: entry.source ?? 'static' }))
+    .sort((left, right) => `${left.address}/${left.prefixLength}`.localeCompare(`${right.address}/${right.prefixLength}`)))
+}
+
+function ipv6Summary(addresses: Ipv6AddressConfig[]): string {
+  return `IPv6 ${addresses.map(entry => `${entry.address}/${entry.prefixLength}`).join(', ')}`
 }
 
 // ---------------------------------------------------------------------------
@@ -260,8 +356,27 @@ function readObserved(device: NetworkDevice, spec: ActivityFacetSpec): { ok: boo
     const snapshot = protocolSnapshot(device.config, spec.protocol)
     return { ok: snapshot === spec.snapshot, observed: protocolSummary(device.config, spec.protocol) }
   }
+  if (spec.kind === 'dhcp-pool') {
+    const pool = device.config.dhcpPools?.find(candidate => candidate.name === spec.name)
+    if (!pool) return { ok: false, observed: `no pool ${spec.name}` }
+    return { ok: dhcpPoolSnapshot(pool) === spec.snapshot, observed: dhcpPoolSummary(pool) }
+  }
+  if (spec.kind === 'acl') {
+    const list = device.config.accessLists?.find(candidate => candidate.id === spec.id)
+    if (!list) return { ok: false, observed: `no ACL ${spec.id}` }
+    return { ok: aclSnapshot(list) === spec.snapshot, observed: aclSummary(list) }
+  }
   const port = device.ports.find(p => p.id === spec.portId)
   if (!port) return { ok: false, observed: 'interface missing' }
+  if (spec.kind === 'hsrp') {
+    const group = port.hsrpGroups?.find(candidate => candidate.group === spec.group)
+    if (!group) return { ok: false, observed: `no HSRP group ${spec.group}` }
+    return { ok: hsrpSnapshot(group) === spec.snapshot, observed: hsrpSummary(group) }
+  }
+  if (spec.kind === 'ipv6-address') {
+    const addresses = port.ipv6Addresses ?? []
+    return { ok: ipv6Snapshot(addresses) === spec.snapshot, observed: addresses.length ? ipv6Summary(addresses) : 'no IPv6 addresses' }
+  }
   if (spec.kind === 'port-ip' || spec.kind === 'ipv4-address') {
     const ok = port.ipAddress === spec.ip && port.subnetMask === spec.mask
     return { ok, observed: port.ipAddress ? `IP ${port.ipAddress} / ${port.subnetMask ?? 'no mask'}` : 'no address' }
@@ -359,8 +474,25 @@ function clearItem(device: NetworkDevice, spec: ActivityFacetSpec) {
     if (device.activeRoutingProtocol === spec.protocol) delete device.activeRoutingProtocol
     return
   }
+  if (spec.kind === 'dhcp-pool') {
+    device.config.dhcpPools = (device.config.dhcpPools ?? []).filter(pool => pool.name !== spec.name)
+    return
+  }
+  if (spec.kind === 'acl') {
+    device.config.accessLists = (device.config.accessLists ?? []).filter(list => list.id !== spec.id)
+    return
+  }
   const port = device.ports.find(p => p.id === spec.portId)
   if (!port) return
+  if (spec.kind === 'hsrp') {
+    port.hsrpGroups = (port.hsrpGroups ?? []).filter(group => group.group !== spec.group)
+    if (!port.hsrpGroups.length) delete port.hsrpGroups
+    return
+  }
+  if (spec.kind === 'ipv6-address') {
+    delete port.ipv6Addresses
+    return
+  }
   if (spec.kind === 'port-ip' || spec.kind === 'ipv4-address') {
     delete port.ipAddress
     delete port.subnetMask
@@ -521,6 +653,22 @@ function parseSpec(input: unknown): ActivityFacetSpec {
     case 'dns-server': {
       if (!isText(raw.dns, 64)) throw new Error('This activity file has an invalid assessment item.')
       return { kind: 'dns-server', dns: raw.dns }
+    }
+    case 'dhcp-pool': {
+      if (!isText(raw.name, 80) || typeof raw.snapshot !== 'string' || raw.snapshot.length > 8192) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'dhcp-pool', name: raw.name, snapshot: raw.snapshot }
+    }
+    case 'acl': {
+      if (!isText(raw.id, 200) || typeof raw.snapshot !== 'string' || raw.snapshot.length > 8192) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'acl', id: raw.id, snapshot: raw.snapshot }
+    }
+    case 'hsrp': {
+      if (!isNumber(raw.group, 0, 255) || typeof raw.snapshot !== 'string' || raw.snapshot.length > 8192) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'hsrp', portId: portId(), group: raw.group, snapshot: raw.snapshot }
+    }
+    case 'ipv6-address': {
+      if (typeof raw.snapshot !== 'string' || raw.snapshot.length > 8192) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'ipv6-address', portId: portId(), snapshot: raw.snapshot }
     }
     default:
       throw new Error('This activity file has an invalid assessment item.')

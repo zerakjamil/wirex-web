@@ -208,3 +208,74 @@ test('parseActivity rejects malformed activity files', () => {
   assert.throws(() => parseActivity({ ...valid, answer: { devices: [sw, structuredClone(sw)], links: [], annotations: [] } }), /invalid answer network/)
   assert.throws(() => parseActivity({ ...valid, answer: { devices: [sw], links: [{ id: 'l1', fromDeviceId: sw.id, toDeviceId: 'ghost' }] as never, annotations: [] } }), /invalid answer network/)
 })
+
+function serviceRouter() {
+  const router = createDevice('router', 0, 0)
+  router.name = 'R2'
+  router.ports[0].ipAddress = '10.0.0.1'
+  router.ports[0].subnetMask = '255.255.255.0'
+  router.config.dhcpPools = [{ name: 'LAN', network: '10.0.0.0', mask: '255.255.255.0', defaultRouter: '10.0.0.1', dnsServer: '8.8.8.8', leaseDurationSeconds: 86400 }]
+  router.config.accessLists = [{
+    id: '101', number: 101, type: 'extended',
+    rules: [{ type: 'extended', action: 'permit', protocol: 'tcp', sourceIp: '10.0.0.0', sourceWildcard: '0.0.0.255', destIp: '192.168.1.0', destWildcard: '0.0.0.255', destPort: 80 }],
+  }]
+  router.ports[1].hsrpGroups = [{ group: 10, virtualIp: '10.0.1.1', priority: 110, preempt: true }]
+  router.ports[1].ipv6Addresses = [{ address: '2001:db8:1::1', prefixLength: 64, source: 'static' }]
+  return router
+}
+
+test('DHCP pools, ACLs, HSRP groups and IPv6 addresses become assessment items', () => {
+  const router = serviceRouter()
+  const items = collectAssessmentCandidates([router])
+  const byKind = (kind: ActivityFacetSpec['kind']) => items.find(item => item.spec.kind === kind)!
+  const hsrpPort = router.ports[1]
+  const hsrpLabel = hsrpPort.shortName || hsrpPort.name
+
+  assert.equal(byKind('dhcp-pool').label, 'DHCP pool LAN')
+  assert.equal(byKind('dhcp-pool').expected, 'LAN: 10.0.0.0 255.255.255.0 (gateway 10.0.0.1, DNS 8.8.8.8, lease 86400s)')
+  assert.equal(byKind('acl').label, 'ACL 101')
+  assert.equal(byKind('acl').expected, '101 extended: permit tcp 10.0.0.0 0.0.0.255 192.168.1.0 0.0.0.255 eq 80')
+  assert.equal(byKind('hsrp').label, `${hsrpLabel} HSRP 10`)
+  assert.equal(byKind('hsrp').expected, 'group 10 virtual 10.0.1.1, priority 110, preempt')
+  assert.equal(byKind('ipv6-address').label, hsrpLabel)
+  assert.equal(byKind('ipv6-address').expected, 'IPv6 2001:db8:1::1/64')
+})
+
+test('the new facets are cleared for students and graded against live state', () => {
+  const router = serviceRouter()
+  const activity = activityFrom([router])
+  const initial = deriveInitialNetwork(activity)
+  const student = initial.devices[0]
+  assert.deepEqual(student.config.dhcpPools, [])
+  assert.deepEqual(student.config.accessLists, [])
+  assert.equal(student.ports[1].hsrpGroups, undefined)
+  assert.equal(student.ports[1].ipv6Addresses, undefined)
+
+  const newKinds = new Set<ActivityFacetSpec['kind']>(['dhcp-pool', 'acl', 'hsrp', 'ipv6-address'])
+  const isNew = (id: string) => newKinds.has(activity.items.find(item => item.id === id)!.spec.kind)
+  assert.ok(evaluateActivityItems(initial.devices, activity.items).filter(check => isNew(check.id)).every(check => check.status === 'failed'))
+  assert.ok(evaluateActivityItems([router], activity.items).every(check => check.status === 'successful'))
+
+  const changed = structuredClone(router)
+  changed.config.dhcpPools![0].dnsServer = '1.1.1.1'
+  changed.config.accessLists![0].rules[0].action = 'deny'
+  changed.ports[1].hsrpGroups![0].priority = 90
+  changed.ports[1].ipv6Addresses![0].prefixLength = 48
+  const checks = evaluateActivityItems([changed], activity.items)
+  assert.ok(checks.filter(check => isNew(check.id)).every(check => check.status === 'failed'))
+})
+
+test('activity files round-trip the DHCP, ACL, HSRP and IPv6 snapshots', () => {
+  const router = serviceRouter()
+  const activity = activityFrom([router])
+  const parsed = parseActivity(JSON.parse(serializeActivity(activity)))
+  assert.deepEqual(parsed.items, activity.items)
+})
+
+test('parseActivity rejects invalid new facet payloads', () => {
+  const router = serviceRouter()
+  const raw = JSON.parse(serializeActivity(activityFrom([router]))) as { items: Array<{ spec: { kind: string; group?: number } }> }
+  const hsrp = raw.items.find(item => item.spec.kind === 'hsrp')!
+  hsrp.spec.group = 999
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+})

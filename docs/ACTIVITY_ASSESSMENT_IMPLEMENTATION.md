@@ -61,7 +61,7 @@ Every selected item has equal weight: `percent = round(passed / total * 100)`, s
 
 ## Architecture
 
-- `src/simulator/activity.ts` — pure module (no engine/store imports): candidate collection, facet specs, `clearAssessedConfig`, `deriveInitialNetwork`, `evaluateActivityItems`, `scoreActivity`, protocol snapshots/summaries, `serializeActivity` / `parseActivity`, slug/file-name helpers and results-document assembly.
+- `src/simulator/activity.ts` — pure module (no engine/store imports): candidate collection, facet specs, `clearAssessedConfig`, `deriveInitialNetwork`, `evaluateActivityItems`, `scoreActivity`, protocol snapshots/summaries, DHCP-pool/ACL/HSRP/IPv6 facet snapshots, `serializeActivity` / `parseActivity`, slug/file-name helpers and results-document assembly.
 - `src/store/activityStore.ts` — session store (`session`, `error`) with `start`, `loadFromFile`, `check`, `reset`, `exit`, `dismissError`, `resultsJson`, plus `saveActivityToStorage` / `restoreActivityFromStorage` under `wireforge-activity-v1` (32 MB bound for the stored payload). Exposes `window.__wireforgeActivityStore`.
 - `src/components/modals/ActivityWizardModal.tsx` — author dialog.
 - `src/components/cisco/ActivityWorkspace.tsx` — student chip, instruction panel, results list and the `role="alert"` error box.
@@ -71,10 +71,10 @@ UI chrome strings are localized (EN/AR/CKB); generated item text, parse errors a
 
 ## Evidence
 
-- Unit: `src/simulator/activity.test.ts` (8 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, serialize/parse round-trip and slugging, parser rejections) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
+- Unit: `src/simulator/activity.test.ts` (12 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, DHCP-pool/ACL/HSRP/IPv6 derivation and summaries, clear-and-grade coverage for those facets, serialize/parse round-trip and slugging, parser rejections) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
 - Browser: `e2e/activity.spec.ts` (2 flows: author via toolbar → partial selection → trial → grading → fix to 100% → reset → exit restores the answer; save file → File → New → File → Open Activity... → grade → invalid-file error → exit).
 - `npm test` 538/538, `npx tsc --noEmit` clean, lint zero errors (28 pre-existing warnings), `npm run electron:prep` green, full Playwright suite 48/48.
 
 ## Remaining boundaries
 
-No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and the reduced facet set above. Activity sessions live in browser storage; there is no classroom management around them.
+No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and no OSPF/EIGRP router-id, passive-interface or wireless facets. The facet set covers VLANs, L2 ports, interface addressing/admin state, static routes, RIP/OSPF/EIGRP/BGP snapshots, switch IP routing, host IPv4/gateway/DNS, DHCP pools, ACLs, HSRP groups and IPv6 addresses. Activity sessions live in browser storage; there is no classroom management around them.
