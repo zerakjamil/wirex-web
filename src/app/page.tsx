@@ -26,18 +26,22 @@ import { ExamRevisionModal } from '@/components/modals/ExamRevisionModal'
 import { ClusterAssociationsModal } from '@/components/modals/ClusterAssociationsModal'
 import { useNetworkStore } from '@/store/networkStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
-import { initializeWorkspacePersistence, useWorkspacePersistence } from '@/store/workspacePersistence'
+import { initializeWorkspacePersistence, STORAGE_KEY } from '@/store/workspacePersistence'
+import { useActivityStore } from '@/store/activityStore'
+import { WelcomeModal } from '@/components/modals/WelcomeModal'
 import {TrainingCatalog,TrainingPanel,TrainingDock,ConnectionDiagnostics} from '@/components/cisco/CampusTraining'
 import {useTrainingStore} from '@/store/trainingStore'
 import {initializeLocale,useI18n} from '@/i18n/useI18n'
 import {initializeTheme} from '@/store/themeStore'
 import { isLoopbackAutomationHost } from '@/store/testHost'
 
+const WELCOME_DISMISSED_KEY = 'wireforge-welcome-dismissed-v1'
+
 export default function Home() {
   const activeModal = useNetworkStore(state => state.activeModal)
-  const ready=useWorkspacePersistence(state=>state.ready)
   const training=useTrainingStore(s=>s.active),{t}=useI18n()
   const [diagnostics,setDiagnostics]=React.useState(false)
+  const [welcomeOpen,setWelcomeOpen]=React.useState(false)
   const [trainingView,setTrainingView]=React.useState<'lesson'|'network'|'cli'>('network')
   const wsDialog = useWorkspaceStore(state => state.dialog)
   const setWsDialog = useWorkspaceStore(state => state.setDialog)
@@ -56,6 +60,44 @@ export default function Home() {
       delete automationWindow.__NET_STORE__
     }
   }, [])
+  const dismissWelcome = React.useCallback(() => {
+    setWelcomeOpen(false)
+    try {
+      localStorage.setItem(WELCOME_DISMISSED_KEY, '1')
+    } catch {
+      // Storage can be unavailable in private or restricted browser modes.
+    }
+  }, [])
+  // The persistence effect above has already restored any saved or shared workspace by the
+  // time the deferred first-visit check runs, so returning users never see the start chooser.
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      if (cancelled) return
+      if (useTrainingStore.getState().active || useActivityStore.getState().session) return
+      if (useNetworkStore.getState().devices.length > 0) return
+      let hasSavedWorkspace = false
+      let welcomeDismissed = false
+      try {
+        hasSavedWorkspace = Boolean(localStorage.getItem(STORAGE_KEY))
+        welcomeDismissed = localStorage.getItem(WELCOME_DISMISSED_KEY) === '1'
+      } catch {
+        // Treat unavailable storage as a first visit.
+      }
+      if (!hasSavedWorkspace && !welcomeDismissed) setWelcomeOpen(true)
+    }, 0)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [])
+  useEffect(() => {
+    if (!welcomeOpen) return
+    return useNetworkStore.subscribe((state, previous) => {
+      if (state.devices === previous.devices || state.devices.length === 0) return
+      dismissWelcome()
+    })
+  }, [welcomeOpen, dismissWelcome])
 
   return (
     <main className="pt-app">
@@ -78,6 +120,7 @@ export default function Home() {
       <CiscoBottomBar />
       <WorkspaceDialog />
       <TrainingCatalog/>
+      {welcomeOpen && <WelcomeModal onDismiss={dismissWelcome} />}
 
       <DeviceWindows />
       {activeModal?.type === 'port-select' && <PortSelectModal />}

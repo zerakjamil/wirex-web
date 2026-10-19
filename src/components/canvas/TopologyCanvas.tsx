@@ -419,27 +419,33 @@ function InnerTopologyCanvas() {
 
       {/* Empty State Blueprint Callout */}
       {devices.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6 text-center">
-          <div className="max-w-md bg-white border border-[#cbd5e1] rounded-lg p-6 shadow-xl pointer-events-auto">
-            <div className="w-12 h-12 rounded-full bg-sky-50 border border-sky-300 text-sky-700 flex items-center justify-center mx-auto mb-3">
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-                <path d="M2 12h20" />
-              </svg>
-            </div>
-            <h2 className="text-sm font-bold text-slate-800 mb-1">{t('wireX Logical Workspace')}</h2>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-              {t('Select Routers, Switches, PCs, or Connections from the bottom device box to build your topology, or load a pre-configured practice lab.')}
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveModal({ type: 'labs' })}
-                className="px-3 py-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded text-xs font-semibold shadow-xs transition cursor-pointer"
-              >
-                {t('Open CCNA Starter Labs')}
-              </button>
+        <div className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
+          <div className="w-full max-w-[440px] rounded-lg border border-slate-200 bg-white p-5 pointer-events-auto shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_40px_-12px_rgba(15,23,42,0.18)]">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-100">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="6" height="4" rx="1" />
+                  <rect x="15" y="4" width="6" height="4" rx="1" />
+                  <rect x="9" y="16" width="6" height="4" rx="1" />
+                  <path d="M6 8v4h12V8M12 12v4" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold leading-6 text-slate-900">{t('wireX Logical Workspace')}</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {t('Select Routers, Switches, PCs, or Connections from the bottom device box to build your topology, or load a pre-configured practice lab.')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal({ type: 'labs' })}
+                  className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-md bg-sky-700 px-3 text-xs font-semibold text-white transition-colors hover:bg-sky-800 cursor-pointer"
+                >
+                  {t('Open CCNA Starter Labs')}
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -812,6 +812,14 @@ export const messages = {
   'This network has no items that can be assessed yet.':['This network has no items that can be assessed yet.','لا توجد في هذه الشبكة عناصر قابلة للتقييم بعد.','هێشتا ئەم تۆڕە هیچ بڕگەیەکی هەڵسەنگاندنی تێدا نییە.'],
   'Derive a graded activity from the current answer network, then save the activity file for a student.':['Derive a graded activity from the current answer network, then save the activity file for a student.','اشتق نشاطاً مُقيَّماً من شبكة الإجابة الحالية، ثم احفظ ملف النشاط للطالب.','چالاکییەکی هەڵسەنگێنراو لە تۆڕی وەڵامی ئێستاوە دەربهێنە، پاشان فایلی چالاکی بۆ قوتابی پاشەکەوت بکە.'],
   'Open Activity Wizard':['Open Activity Wizard','فتح معالج النشاط','کردنەوەی جادووگەری چالاکی'],
+  'Welcome to wireX':['Welcome to wireX','مرحباً بك في wireX','بەخێربێیت بۆ wireX'],
+  'Create a new topology or open an existing project.':['Create a new topology or open an existing project.','أنشئ مخططاً جديداً أو افتح مشروعاً موجوداً.','تۆپۆلۆژیایەکی نوێ دروست بکە یان پڕۆژەیەکی هەبوو بکەرەوە.'],
+  'New workspace':['New workspace','مساحة عمل جديدة','شوێنی کاری نوێ'],
+  'Start with a blank canvas and add devices from the device box.':['Start with a blank canvas and add devices from the device box.','ابدأ بلوحة فارغة وأضف الأجهزة من صندوق الأجهزة.','بە کانڤاسێکی بەتاڵ دەست پێبکە و ئامێرەکان لە سندوقی ئامێرەکان زیاد بکە.'],
+  'Open existing project':['Open existing project','فتح مشروع موجود','کردنەوەی پڕۆژەیەکی هەبوو'],
+  'Open a saved network file or browse a pre-configured practice lab.':['Open a saved network file or browse a pre-configured practice lab.','افتح ملف شبكة محفوظاً أو تصفح مختبراً تدريبياً معداً مسبقاً.','فایلی تۆڕی پاشەکەوتکراو بکەرەوە یان تاقیگەیەکی ڕاهێنانی ئامادەکراو بگەڕێ.'],
+  'Open project file...':['Open project file...','فتح ملف مشروع...','کردنەوەی فایلی پڕۆژە...'],
+  'Your work autosaves in this browser.':['Your work autosaves in this browser.','يُحفظ عملك تلقائياً في هذا المتصفح.','کارەکەت بە شێوەی خۆکار لەم وێبگەڕەدا پاشەکەوت دەکرێت.'],
 } as const
 
 export type MessageKey=keyof typeof messages

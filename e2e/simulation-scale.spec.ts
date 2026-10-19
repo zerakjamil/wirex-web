@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { loadEnterpriseLab } from './start'
 
 test('eight cold-cache campus pings complete through realtime browser simulation', async ({ page }) => {
   test.setTimeout(120_000)
-  await page.goto('/')
+  await loadEnterpriseLab(page)
   await expect(page.locator('.pt-canvas-area')).toBeVisible()
   await expect.poll(() => page.evaluate(() =>
     typeof (window as unknown as { __NET_STORE__?: unknown }).__NET_STORE__

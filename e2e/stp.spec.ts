@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { loadEnterpriseLab } from './start'
 
 interface BrowserStpVlan { rootDeviceId: string; neighbors: Array<{ senderDeviceId: string }> }
 interface BrowserHsrpGroup { group:number; virtualIp?:string; priority?:number; preempt?:boolean }
@@ -71,9 +72,8 @@ test('idle production canvas learns its spanning-tree root from switch BPDUs', a
   await expect(deviceWindow).toContainText(/Root ID Priority 24577/)
 })
 
-test('production enterprise lab tags both campus VLANs and carries real packets',async({page,baseURL})=>{
-  await page.goto(baseURL!)
-  await expect(page.getByRole('heading',{name:/Devices 14/i})).toBeVisible()
+test('production enterprise lab tags both campus VLANs and carries real packets',async({page})=>{
+  await loadEnterpriseLab(page)
   await page.waitForFunction(()=>{
     const store=(window as unknown as {__wireforgeNetworkStore?:BrowserNetworkStore}).__wireforgeNetworkStore
     return store?.getState().devices.some(device=>device.name==='Switch1')
@@ -183,9 +183,8 @@ test('production enterprise lab tags both campus VLANs and carries real packets'
   await expect(coreWindow).toContainText(/Virtual IP address is 192\.168\.10\.1/)
 })
 
-test('production enterprise VLAN 20 client receives a relayed DHCP lease',async({page,baseURL})=>{
-  await page.goto(baseURL!)
-  await expect(page.getByRole('heading',{name:/Devices 14/i})).toBeVisible()
+test('production enterprise VLAN 20 client receives a relayed DHCP lease',async({page})=>{
+  await loadEnterpriseLab(page)
   await page.waitForFunction(()=>Boolean((window as unknown as {__wireforgeNetworkStore?:BrowserNetworkStore}).__wireforgeNetworkStore))
   const lease=await page.evaluate(()=>{
     const store=(window as unknown as {__wireforgeNetworkStore:BrowserNetworkStore}).__wireforgeNetworkStore

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import type { DeviceWindow } from '@/types/network'
 import { DeviceModal } from './DeviceModal'
@@ -27,7 +27,40 @@ export function DeviceWindows() {
 function FloatingDevice({window:frame}: {window:DeviceWindow}) {
   const box=useRef<HTMLElement>(null)
   const dragging=useRef<{pointerX:number;pointerY:number;x:number;y:number}|null>(null)
+  const resizing=useRef<{pointerX:number;pointerY:number;width:number;height:number;x:number;y:number}|null>(null)
   const device=useNetworkStore(state=>state.devices.find(device=>device.id===frame.deviceId))
+  const clampSize=(width:number,height:number,x:number,y:number)=>{
+    const maxWidth=Math.max(300,window.innerWidth-x-8)
+    const maxHeight=Math.max(260,window.innerHeight-y-8)
+    return {width:Math.round(Math.max(300,Math.min(maxWidth,width))),height:Math.round(Math.max(260,Math.min(maxHeight,height)))}
+  }
+  const beginResize=(event:ReactPointerEvent<HTMLDivElement>)=>{
+    event.preventDefault()
+    event.stopPropagation()
+    resizing.current={pointerX:event.clientX,pointerY:event.clientY,width:frame.width,height:frame.height,x:frame.x,y:frame.y}
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const resizeToPointer=(event:ReactPointerEvent<HTMLDivElement>)=>{
+    const origin=resizing.current
+    if(!origin)return
+    const size=clampSize(origin.width+event.clientX-origin.pointerX,origin.height+event.clientY-origin.pointerY,origin.x,origin.y)
+    useNetworkStore.getState().updateDeviceWindow(frame.deviceId,size)
+  }
+  const endResize=(event:ReactPointerEvent<HTMLDivElement>)=>{
+    resizing.current=null
+    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+  const resizeWithKeyboard=(event:ReactKeyboardEvent<HTMLDivElement>)=>{
+    const step=event.shiftKey?48:16
+    let width=frame.width,height=frame.height
+    if(event.key==='ArrowRight')width+=step
+    else if(event.key==='ArrowLeft')width-=step
+    else if(event.key==='ArrowDown')height+=step
+    else if(event.key==='ArrowUp')height-=step
+    else return
+    event.preventDefault()
+    useNetworkStore.getState().updateDeviceWindow(frame.deviceId,clampSize(width,height,frame.x,frame.y))
+  }
   useEffect(()=>{
     if(!box.current || frame.minimized)return
     const element=box.current
@@ -56,5 +89,21 @@ function FloatingDevice({window:frame}: {window:DeviceWindow}) {
       <span>{device.name} ({device.model})</span><div><button aria-label={`Minimize ${device.name}`} onClick={()=>useNetworkStore.getState().minimizeDeviceWindow(frame.deviceId)}>−</button><button aria-label={`Close ${device.name}`} onClick={()=>useNetworkStore.getState().closeDeviceWindow(frame.deviceId)}>×</button></div>
     </header>
     <div className="pt-device-window-content"><DeviceModal deviceId={frame.deviceId} onClose={()=>useNetworkStore.getState().closeDeviceWindow(frame.deviceId)}/></div>
+    <div
+      className="pt-device-window-resize"
+      role="button"
+      tabIndex={0}
+      aria-label={`Resize ${device.name} window`}
+      title="Drag to resize"
+      onPointerDown={beginResize}
+      onPointerMove={resizeToPointer}
+      onPointerUp={endResize}
+      onPointerCancel={endResize}
+      onKeyDown={resizeWithKeyboard}
+    >
+      <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" aria-hidden="true">
+        <path d="M11 5 5 11M11 8 8 11" />
+      </svg>
+    </div>
   </section>
 }

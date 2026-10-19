@@ -14,10 +14,12 @@
   --cisco-accent: #0284c7;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html, body {
@@ -220,13 +222,17 @@ html[lang=ar] .pt-app,html[lang=ckb] .pt-app {font-family:Tahoma,Arial,sans-seri
 .pt-device-navigator p {font-size:10px;color:#53616a;padding:7px;line-height:1.4;border-top:1px solid #adb6bc}
 .pt-workspace-loading {margin:auto;font:12px Arial;color:#53616a}
 .pt-device-windows {position:fixed;inset:0;pointer-events:none;z-index:45}
-.pt-device-window {position:absolute;display:flex;flex-direction:column;pointer-events:auto;resize:both;overflow:hidden;min-width:300px;min-height:260px;max-width:calc(100vw - 8px);max-height:calc(100vh - 8px);border:2px solid #57899b;background:#eff2f7;box-shadow:0 4px 14px #0004}
+.pt-device-window {position:absolute;display:flex;flex-direction:column;pointer-events:auto;resize:none;overflow:hidden;min-width:300px;min-height:260px;max-width:calc(100vw - 8px);max-height:calc(100vh - 8px);border:2px solid #57899b;background:#eff2f7;box-shadow:0 4px 14px #0004}
 .pt-device-window-title {height:28px;flex:0 0 28px;background:#5b9fb3;color:white;display:flex;justify-content:space-between;align-items:center;padding:2px 5px;cursor:move;touch-action:none;font:12px Arial;user-select:none}
 .pt-device-window-title>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pt-device-window-title>div {display:flex;gap:3px}
 .pt-device-window-title button {width:23px;height:21px;border:1px solid #375a68;background:#e6ecee;color:#142f3a;padding:0}
 .pt-device-window-title button:last-child {background:#c74a4a;color:white;border-color:#903737}
 .pt-device-window-content {flex:1;min-height:0;overflow:hidden}
+.pt-device-window-resize {position:absolute;right:0;bottom:0;z-index:5;display:flex;align-items:flex-end;justify-content:flex-end;width:20px;height:20px;padding:3px;color:#5b7c87;background:transparent;cursor:nwse-resize;touch-action:none;user-select:none}
+.pt-device-window-resize:hover,.pt-device-window-resize:focus-visible {color:#163f4c;background:#dbe8ec}
+.pt-device-window-resize:focus-visible {outline:2px solid #0284c7;outline-offset:-2px}
+.pt-device-window-resize svg {pointer-events:none}
 .pt-device-panel,.pt-phone-content {width:100%;height:100%;display:flex;flex-direction:column;min-height:0}
 .pt-inner-device-title {display:none}
 .pt-device-panel>div>div:nth-child(2) {padding:4px 4px 0;gap:2px}
@@ -286,6 +292,9 @@ html[lang=ar] .pt-app,html[lang=ckb] .pt-app {font-family:Tahoma,Arial,sans-seri
 .pt-status { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; gap: 10px; font-size: 11px; background: #fff; border-top: 1px solid #bbb; max-height: 48px; overflow: auto; }
 .pt-status button { flex: 0 0 20px; }
 .pt-dialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(560px, calc(100% - 24px)); max-height: 85dvh; background: #f6f6f6; border: 1px solid #808080; color: #303030; box-shadow: 2px 5px 12px #0004; }
+.pt-welcome { position: fixed; inset: 0; margin: auto; padding: 0; width: min(760px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); overflow: visible; border: 0; background: transparent; color: #0f172a; }
+.pt-welcome::backdrop { background: rgb(15 23 42 / .45); backdrop-filter: blur(2px); }
+.pt-welcome > div { max-height: calc(100dvh - 32px); }
 .pt-dialog::backdrop { background: #0004; }
 .pt-dialog-title { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #fff; border-bottom: 1px solid #aaa; }
 .pt-dialog-title button { font-size: 22px; width: 28px; height: 28px; }

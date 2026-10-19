@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { startNewWorkspace } from './start'
 
 interface BrowserWlcRuntime { aps?: Array<{ apId: string; apMac: string }>; clientTunnels?: Array<{ macAddress: string }> }
 interface BrowserWlcDevice {
@@ -104,7 +105,7 @@ const lab = Buffer.from(JSON.stringify({
 }), 'utf8').toString('base64')
 
 test('the controller lab loads from the Lab Activities list, raises both access points, and serves its web interface', async ({ page, baseURL }) => {
-  await page.goto(`${baseURL}/`)
+  await startNewWorkspace(page)
   await page.locator('button[aria-haspopup="menu"]', { hasText: 'Help' }).click()
   await page.getByRole('menuitem', { name: 'Practice Labs' }).click()
   const labsDialog = page.locator('dialog.pt-training-catalog[open]').filter({ hasText: 'CCNA Practice Lab Scenarios' })

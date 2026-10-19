@@ -801,176 +801,192 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
   const selectedIpv6 = selectedPort?.ipv6Addresses?.[0]
   const selectedIpv6Value = ipv6Draft && ipv6Draft.portId === selectedPort?.id ? ipv6Draft.text : selectedIpv6 ? `${selectedIpv6.address}/${selectedIpv6.prefixLength}` : ''
 
+  const fieldLabel = 'mb-2 block text-xs font-medium text-slate-600'
+  const fieldInput = 'h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-mono text-slate-800 placeholder:text-slate-400 transition-colors focus:border-sky-600'
+  const fieldSelect = 'h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800 transition-colors focus:border-sky-600'
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row gap-4 h-full overflow-hidden bg-white p-4 rounded-xl border border-[#94a3b8] shadow-xs">
-      {/* Interface List Sidebar with Generous Spacing */}
-      <div className="w-full md:w-64 bg-[#f8fafc] rounded-xl border border-[#cbd5e1] p-3 flex flex-col flex-shrink-0">
-        <div className="text-xs font-bold text-slate-700 px-3 py-2 uppercase tracking-wider border-b border-slate-200 mb-2">
-          {t('Interfaces')}
-        </div>
-        <div className="space-y-2 mt-1 overflow-y-auto flex-1 pr-1">
+    <div className="@container h-full min-h-0 flex-1 overflow-hidden">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white @md:flex-row">
+        {/* Interface List Sidebar */}
+        <aside className="flex w-full flex-shrink-0 flex-col border-b border-slate-200 bg-slate-50 @md:w-60 @md:border-b-0 @md:border-r">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Interfaces')}</span>
+            <span className="text-xs tabular-nums text-slate-400">{device.ports.length}</span>
+          </div>
+          <div className="max-h-48 min-h-0 flex-1 space-y-1 overflow-y-auto p-2 @md:max-h-none">
           {device.ports.map((port) => (
             <button
               key={port.id}
               type="button"
               onClick={() => setSelectedPortId(port.id)}
-              className={`w-full min-h-[44px] px-3.5 py-2.5 rounded-lg text-left text-xs font-medium transition cursor-pointer flex items-center justify-between shadow-2xs ${
+              className={`flex h-9 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-xs font-medium transition-colors ${
                 selectedPortId === port.id
-                  ? 'bg-[#0284c7] text-white shadow-sm font-bold ring-1 ring-sky-400'
-                  : 'text-slate-800 bg-white hover:bg-[#e2e8f0] border border-slate-200'
+                  ? 'bg-sky-700 text-white'
+                  : 'text-slate-700 hover:bg-slate-200/70'
               }`}
             >
               <span className="truncate">{port.name}</span>
               <span
-                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                  port.status === 'up' && port.adminStatus === 'up' ? 'bg-emerald-500 shadow-[0_0_6px_#22c55e]' : 'bg-rose-500'
+                className={`h-2 w-2 flex-shrink-0 rounded-full ${
+                  port.status === 'up' && port.adminStatus === 'up'
+                    ? selectedPortId === port.id ? 'bg-emerald-300' : 'bg-emerald-500'
+                    : selectedPortId === port.id ? 'bg-rose-300' : 'bg-rose-500'
                 }`}
               />
             </button>
           ))}
         </div>
-      </div>
+      </aside>
 
       {/* Selected Interface Settings */}
       {selectedPort && (
-        <div className="flex-1 bg-white rounded-xl border border-[#cbd5e1] p-6 overflow-y-auto space-y-6">
-          <div className="border-b border-[#e2e8f0] pb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-slate-800">{selectedPort.name}</h3>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">MAC: {selectedPort.macAddress}</p>
-            </div>
+        <div className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <div className="p-4 @sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-slate-900">{selectedPort.name}</h3>
+                <p className="mt-1 truncate font-mono text-xs text-slate-500">MAC: {selectedPort.macAddress}</p>
+              </div>
 
-            {/* Port Status Toggle */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-700 font-semibold">{t('Port Status:')}</span>
-              <button
-                type="button"
-                onClick={() =>
-                  updatePortConfig(device.id, selectedPort.id, {
-                    adminStatus: selectedPort.adminStatus === 'up' ? 'down' : 'up',
-                  })
-                }
-                className={`min-h-[40px] px-4 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs ${
-                  selectedPort.adminStatus === 'up'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-rose-600 hover:bg-rose-700 text-white'
-                }`}
-              >
-                {selectedPort.adminStatus === 'up' ? t('Port On') : t('Port Off')}
-              </button>
-            </div>
-          </div>
-
-          {/* IP Configuration */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('IPv4 Address')}</label>
-              <input
-                type="text"
-                value={selectedPort.ipAddress || ''}
-                placeholder="e.g. 192.168.1.1"
-                onChange={(e) =>
-                  updatePortConfig(device.id, selectedPort.id, {
-                    ipAddress: e.target.value.trim(),
-                  })
-                }
-                className="w-full min-h-[44px] bg-[#f8fafc] border border-[#94a3b8] rounded-lg px-3.5 py-2 text-xs font-mono text-slate-800 focus:border-[#0284c7] outline-none shadow-2xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('Subnet Mask')}</label>
-              <input
-                type="text"
-                value={selectedPort.subnetMask || ''}
-                placeholder="e.g. 255.255.255.0"
-                onChange={(e) =>
-                  updatePortConfig(device.id, selectedPort.id, {
-                    subnetMask: e.target.value.trim(),
-                  })
-                }
-                className="w-full min-h-[44px] bg-[#f8fafc] border border-[#94a3b8] rounded-lg px-3.5 py-2 text-xs font-mono text-slate-800 focus:border-[#0284c7] outline-none shadow-2xs"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('IPv6 Address/Prefix')}</label>
-              <input
-                type="text"
-                value={selectedIpv6Value}
-                placeholder="e.g. 2001:db8:1::1/64"
-                onChange={(e) => {
-                  const raw = e.target.value
-                  setIpv6Draft({ portId: selectedPort.id, text: raw })
-                  const trimmed = raw.trim()
-                  if (trimmed === '') {
-                    updatePortConfig(device.id, selectedPort.id, { ipv6Addresses: undefined })
-                    return
+              {/* Port Status Toggle */}
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-xs font-medium text-slate-500">{t('Port Status')}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={selectedPort.adminStatus === 'up'}
+                  aria-label={t('Port Status')}
+                  onClick={() =>
+                    updatePortConfig(device.id, selectedPort.id, {
+                      adminStatus: selectedPort.adminStatus === 'up' ? 'down' : 'up',
+                    })
                   }
-                  const parsed = parseIpv6WithPrefix(trimmed)
-                  if (parsed) updatePortConfig(device.id, selectedPort.id, { ipv6Addresses: [{ address: parsed.address, prefixLength: parsed.prefixLength }] })
-                }}
-                onBlur={() => setIpv6Draft((current) => (current && current.portId === selectedPort.id ? null : current))}
-                className="w-full min-h-[44px] bg-[#f8fafc] border border-[#94a3b8] rounded-lg px-3.5 py-2 text-xs font-mono text-slate-800 focus:border-[#0284c7] outline-none shadow-2xs"
-              />
+                  className="inline-flex items-center gap-2 rounded-md py-1 text-xs font-medium transition-colors hover:text-slate-900"
+                >
+                  <span className={`relative h-5 w-9 rounded-full transition-colors ${selectedPort.adminStatus === 'up' ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true">
+                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-[0_1px_2px_rgba(15,23,42,0.18)] transition-transform ${selectedPort.adminStatus === 'up' ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </span>
+                  <span className={selectedPort.adminStatus === 'up' ? 'text-emerald-700' : 'text-slate-500'}>
+                    {selectedPort.adminStatus === 'up' ? t('Port On') : t('Port Off')}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Switchport VLAN settings */}
-          {device.type === 'switch' && (
-            <div className="pt-4 border-t border-[#e2e8f0]">
-              <h4 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('Switchport Settings')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('Port Mode')}</label>
-                  <select
-                    value={selectedPort.portMode || 'access'}
-                    onChange={(e) =>
-                      updatePortConfig(device.id, selectedPort.id, {
-                        portMode: e.target.value as 'access' | 'trunk',
-                      })
+            {/* IP Configuration */}
+            <div className="mt-5 grid grid-cols-1 gap-4 @sm:grid-cols-2">
+              <div className="min-w-0">
+                <label className={fieldLabel}>{t('IPv4 Address')}</label>
+                <input
+                  type="text"
+                  value={selectedPort.ipAddress || ''}
+                  placeholder="e.g. 192.168.1.1"
+                  onChange={(e) =>
+                    updatePortConfig(device.id, selectedPort.id, {
+                      ipAddress: e.target.value.trim(),
+                    })
+                  }
+                  className={fieldInput}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <label className={fieldLabel}>{t('Subnet Mask')}</label>
+                <input
+                  type="text"
+                  value={selectedPort.subnetMask || ''}
+                  placeholder="e.g. 255.255.255.0"
+                  onChange={(e) =>
+                    updatePortConfig(device.id, selectedPort.id, {
+                      subnetMask: e.target.value.trim(),
+                    })
+                  }
+                  className={fieldInput}
+                />
+              </div>
+
+              <div className="min-w-0 @sm:col-span-2">
+                <label className={fieldLabel}>{t('IPv6 Address/Prefix')}</label>
+                <input
+                  type="text"
+                  value={selectedIpv6Value}
+                  placeholder="e.g. 2001:db8:1::1/64"
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    setIpv6Draft({ portId: selectedPort.id, text: raw })
+                    const trimmed = raw.trim()
+                    if (trimmed === '') {
+                      updatePortConfig(device.id, selectedPort.id, { ipv6Addresses: undefined })
+                      return
                     }
-                    className="w-full min-h-[44px] bg-[#f8fafc] border border-[#94a3b8] rounded-lg px-3.5 py-2 text-xs text-slate-800"
-                  >
-                    <option value="access">{t('Access')}</option>
-                    <option value="trunk">{t('Trunk')}</option>
-                  </select>
+                    const parsed = parseIpv6WithPrefix(trimmed)
+                    if (parsed) updatePortConfig(device.id, selectedPort.id, { ipv6Addresses: [{ address: parsed.address, prefixLength: parsed.prefixLength }] })
+                  }}
+                  onBlur={() => setIpv6Draft((current) => (current && current.portId === selectedPort.id ? null : current))}
+                  className={fieldInput}
+                />
+              </div>
+            </div>
+
+            {/* Switchport VLAN settings */}
+            {device.type === 'switch' && (
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Switchport Settings')}</h4>
+                <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <label className={fieldLabel}>{t('Port Mode')}</label>
+                    <select
+                      value={selectedPort.portMode || 'access'}
+                      onChange={(e) =>
+                        updatePortConfig(device.id, selectedPort.id, {
+                          portMode: e.target.value as 'access' | 'trunk',
+                        })
+                      }
+                      className={fieldSelect}
+                    >
+                      <option value="access">{t('Access')}</option>
+                      <option value="trunk">{t('Trunk')}</option>
+                    </select>
+                  </div>
+                  <div className="min-w-0">
+                    <label className={fieldLabel}>{t('Access VLAN')}</label>
+                    <input
+                      type="number"
+                      value={selectedPort.vlan || 1}
+                      min={1}
+                      max={4094}
+                      onChange={(e) =>
+                        updatePortConfig(device.id, selectedPort.id, {
+                          vlan: parseInt(e.target.value, 10) || 1,
+                        })
+                      }
+                      className={fieldInput}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('Access VLAN')}</label>
+              </div>
+            )}
+
+            {/* Default Gateway for End Devices */}
+            {(device.type === 'pc' || device.type === 'server') && (
+              <div className="mt-5 border-t border-slate-200 pt-5">
+                <div className="max-w-sm">
+                  <label className={fieldLabel}>{t('Default Gateway')}</label>
                   <input
-                    type="number"
-                    value={selectedPort.vlan || 1}
-                    min={1}
-                    max={4094}
-                    onChange={(e) =>
-                      updatePortConfig(device.id, selectedPort.id, {
-                        vlan: parseInt(e.target.value, 10) || 1,
-                      })
-                    }
-                    className="w-full min-h-[44px] bg-[#f8fafc] border border-[#94a3b8] rounded-lg px-3.5 py-2 text-xs font-mono text-slate-800 focus:border-[#0284c7] outline-none shadow-2xs"
+                    type="text"
+                    value={device.config.defaultGateway || ''}
+                    placeholder="e.g. 192.168.1.1"
+                    onChange={(e) => updateDeviceConfig(device.id, { defaultGateway: e.target.value.trim() })}
+                    className={fieldInput}
                   />
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Default Gateway for End Devices */}
-          {(device.type === 'pc' || device.type === 'server') && (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">{t('Default Gateway')}</label>
-              <input
-                type="text"
-                value={device.config.defaultGateway || ''}
-                placeholder="e.g. 192.168.1.1"
-                onChange={(e) => updateDeviceConfig(device.id, { defaultGateway: e.target.value.trim() })}
-                className="w-full min-h-[40px] bg-[#f8fafc] border border-[#94a3b8] rounded px-3 py-1.5 text-xs font-mono text-slate-800 focus:border-[#0284c7] outline-none"
-              />
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { loadEnterpriseLab, startNewWorkspace } from './start'
 
 test.describe('wireX Network Simulator E2E Flow Verification', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,6 +14,13 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await page.goto('/')
     await expect(page).toHaveTitle(/wireX/i)
 
+    // A fresh browser gets a chooser, not a pre-built project.
+    const welcome = page.getByTestId('welcome-dialog')
+    await expect(welcome).toBeVisible()
+    await welcome.getByRole('button', { name: /^New$/ }).click()
+    await expect(welcome).toBeHidden()
+    await expect(page.getByRole('heading', { name: /Devices 0/i })).toBeVisible()
+
     // Verify main navigation and canvas area are present
     const canvas = page.locator('.pt-canvas-area')
     await expect(canvas).toBeVisible()
@@ -23,7 +31,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F02: Cisco IOS CLI execution, VLAN naming, and do show vlan', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     // Open Office-Router from device navigator or canvas
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
@@ -64,7 +72,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F03: Simulation mode controls and event list', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     // Toggle simulation mode from bottom dock
     const simButton = page.locator('button', { hasText: /Simulation/i }).first()
@@ -76,7 +84,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F04: Physical hardware tab and modular slot bays', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -100,7 +108,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     expect(res.status()).toBe(403)
     expect((await res.json()).ok).toBe(false)
 
-    await page.goto('/')
+    await startNewWorkspace(page)
     await page.getByRole('button', { name: /Revision & Rollbacks/i }).click()
     const vault = page.getByRole('dialog')
     await expect(vault).toContainText('Exam Revision & Rollback Vault')
@@ -112,7 +120,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     const res = await page.request.get('/api/electron-build')
     expect(res.status()).toBe(404)
 
-    await page.goto('/')
+    await startNewWorkspace(page)
     await expect(page.getByRole('button', { name: /Install Offline App/i })).toHaveCount(0)
     await page.locator('button[aria-haspopup="menu"]', { hasText: 'Help' }).click()
     await expect(page.getByRole('menuitem', { name: 'Practice Labs' })).toBeVisible()
@@ -192,7 +200,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F08: IPv6 address from the Config tab is visible in show ipv6 interface brief', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -224,7 +232,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/2001:DB8:9::1/i)
   })
   test('F09: DHCPv6 pool from the router CLI appears in show ipv6 dhcp pool', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -256,7 +264,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F10: OSPFv3 process and interface from the router CLI appear in show ipv6 ospf output', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -293,7 +301,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F11: EIGRP process and network from the router CLI appear in show ip protocols', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -328,7 +336,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F12: switch CLI configures rapid PVST+ mode and an MST region', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const switchBtn = page.getByRole('button', { name: /Switch1/i }).first()
     await expect(switchBtn).toBeVisible({ timeout: 10000 })
@@ -366,7 +374,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F13: BGP process, eBGP and iBGP neighbors and network from the router CLI appear in show ip bgp and show running-config', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -418,7 +426,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F14: EIGRPv6 process, router-id and interface from the router CLI appear in show ipv6 eigrp and show running-config', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })
@@ -457,7 +465,7 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
   })
 
   test('F15: OSPFv3 interface timers, point-to-point override and a passive interface appear in the CLI', async ({ page }) => {
-    await page.goto('/')
+    await loadEnterpriseLab(page)
 
     const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
     await expect(routerBtn).toBeVisible({ timeout: 10000 })

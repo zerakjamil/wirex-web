@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { startNewWorkspace } from './start'
 
 interface BrowserIotThingState { power?: boolean; open?: boolean; level?: number; temperature?: number; smoke?: boolean; pressedAtTick?: number }
 interface BrowserIotDevice {
@@ -76,7 +77,7 @@ const lab = Buffer.from(JSON.stringify({
 }), 'utf8').toString('base64')
 
 test('the smart-home lab registers every IoT device and forwards server commands', async ({ page, baseURL }) => {
-  await page.goto(`${baseURL}/`)
+  await startNewWorkspace(page)
   await page.locator('button[aria-haspopup="menu"]', { hasText: 'Help' }).click()
   await page.getByRole('menuitem', { name: 'Practice Labs' }).click()
   const labsDialog = page.locator('dialog.pt-training-catalog[open]').filter({ hasText: 'CCNA Practice Lab Scenarios' })

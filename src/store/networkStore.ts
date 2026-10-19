@@ -69,7 +69,6 @@ import { executeWlcCommand } from '@/simulator/ios/wlcCli'
 import { hasCapwapActivity } from '@/simulator/capwap'
 import { hasIotActivity, iotServerRuntimeOf, isIotServer, applyIotLocalState } from '@/simulator/iot'
 import { stampTrafficGeneratorPackets, trafficGeneratorFrameOptions, trafficGeneratorIntervalTicks, trafficGeneratorPaddedData, validateTrafficGeneratorSettings, TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, type TrafficGeneratorError, type TrafficGeneratorRun, type TrafficGeneratorSettings } from '@/simulator/trafficGenerator'
-import { getCcnaEnterpriseLab } from '@/simulator/starterLabs'
 import { synchronizeLinkState } from '@/simulator/linkState'
 import { cancelPendingPings, completePingResults,retainResults, type PingResult } from './pingResults'
 import { getPhoneRegistrations } from '@/simulator/voice'
@@ -263,8 +262,6 @@ function captureSimulationSnapshot(state: NetworkStore): SimulationSnapshot {
     simulationEvents: state.simulationEvents,
   })
 }
-
-const initialLab = getCcnaEnterpriseLab()
 
 function mergeHttpTransactions(current: HttpTransaction[], updates: Array<Omit<HttpTransaction, 'status'> & { status: 'successful' | 'failed' }>) {
   if (!updates.length) return current
@@ -575,9 +572,9 @@ function removeDeviceSlices<TGenerators extends { deviceId: string }>(
 
 export const useNetworkStore = create<NetworkStore>((set, get) => ({
   commandEvents:[],
-  devices: initialLab.devices,
-  links: initialLab.links,
-  annotations: initialLab.annotations || [],
+  devices: [],
+  links: [],
+  annotations: [],
   physicalContainers: defaultPhysicalContainers(),
   physicalAssignment: {},
   clusters: [],
