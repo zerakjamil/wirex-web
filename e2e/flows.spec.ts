@@ -214,6 +214,10 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     if (await configTab.isVisible()) {
       await configTab.click()
     }
+    // The Config tab opens on GLOBAL > Settings, so pick the first interface page
+    const interfacePages = modal.locator('[data-config-group="INTERFACE"] [data-config-page]')
+    await expect(interfacePages.first()).toBeVisible({ timeout: 10000 })
+    await interfacePages.first().click()
     const ipv6Input = modal.locator('input[placeholder="e.g. 2001:db8:1::1/64"]')
     await expect(ipv6Input).toBeVisible()
     await ipv6Input.fill('2001:db8:9::1/64')

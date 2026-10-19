@@ -225,6 +225,15 @@ export interface DeviceConfig {
   portfastDefault?: boolean
   hostname: string
   banner?: string
+  /** Packet Tracer's GLOBAL / Algorithm Settings page (simulation-only knobs). */
+  algorithmSettings?: {
+    halfOpenSessionMultiplier: number
+    maximumConnections: number
+    maximumOpenedSessions: number
+    maximumRetransmissionTimeoutMs: number
+  }
+  /** Snapshot written by "Save Running config to NVRAM"; cleared by "Erase NVRAM". */
+  startupConfig?: string
   dhcpEnabled?: boolean
   dhcpLease?: {
     serverId: string
