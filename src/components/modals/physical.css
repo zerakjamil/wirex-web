@@ -150,12 +150,29 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-aux .hw-aux-cf {width:30px;height:8px;border-radius:1px}
 .hw-vent {margin-top:auto;display:flex;gap:4px;height:16px;align-items:center;justify-content:flex-end;opacity:.55}
 .hw-vent i {width:3px;height:14px;background:linear-gradient(#0a1014,#3b4851);border-radius:1px}
-.hw-other-router-front {justify-content:space-around}
-.hw-router-front-vents {display:flex;align-items:center;gap:4px;height:64px}
-.hw-router-front-vents i {width:3px;height:54px;border-radius:1px;background:linear-gradient(#0a1014,#3b4851)}
-.hw-router-front-usb {display:flex;flex-direction:column;align-items:center;gap:6px;color:#7f939e;font:700 6px/1 Arial,sans-serif;letter-spacing:.12em}
-.hw-router-front-usb div {display:flex;gap:7px}
-.hw-router-front-usb i {display:block;width:14px;height:10px;border-radius:1px;border:1px solid #6d7d86;background:linear-gradient(#2b353c,#0d1317);box-shadow:inset 0 1px 2px #000}
+.hw-rack-router .hw-rack-face {height:204px;min-height:0}
+.hw-rack-router .hw-rack-face > * {height:100%}
+.hw-other-router-front {position:relative;display:block;height:100%;min-height:0;padding:0;overflow:hidden;background:radial-gradient(120% 150% at 30% 0%,#1b292e,#0e171b 62%,#0a1115)}
+.hw-router-hex {position:absolute;inset:0;width:100%;height:100%}
+.hw-router-hex path {fill:none;stroke:#2a4249;stroke-width:2.2;vector-effect:non-scaling-stroke}
+.hw-router-hex path:nth-child(3n) {stroke:#243c43}
+.hw-router-psu {position:absolute;left:15.5%;top:20%;width:18.5%;height:64%;padding:6px 7px;border-radius:3px;background:linear-gradient(160deg,#474d50,#34393c 55%,#2a2f32);border:1px solid #171c1f;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 10px rgba(0,0,0,.45);color:#b9c2bf}
+.hw-router-psu-title {display:block;font:700 6.5px/1 Arial,sans-serif;letter-spacing:.12em;color:#c8d0cd}
+.hw-router-psu-volt {display:block;margin-top:5px;font:400 6px/1.45 Arial,sans-serif;letter-spacing:.03em;color:#a3adaa;max-width:46%}
+.hw-router-psu-led {position:absolute;left:8px;bottom:9px;width:6px;height:6px;border-radius:50%;background:#142018;border:1px solid #0b110e;box-shadow:inset 0 1px 1px rgba(255,255,255,.2)}
+.hw-router-psu-led[data-on=true] {background:#5fd07e;border-color:#9ae8ae;box-shadow:0 0 7px rgba(95,208,126,.85)}
+.hw-router-psu-switch {position:absolute;left:45%;top:16%;width:12px;height:34px;border-radius:2px;background:linear-gradient(90deg,#1c2022,#3a4043 45%,#1c2022);border:1px solid #101416;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.hw-router-psu-switch i {position:absolute;left:2px;right:2px;height:11px;border-radius:1px;background:#2d3234}
+.hw-router-psu-switch i:first-child {top:3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.hw-router-psu-switch i:last-child {bottom:3px;background:#161a1c}
+.hw-router-psu-fan {position:absolute;right:6px;top:24%;width:38%;aspect-ratio:1;border-radius:3px;background:linear-gradient(#2c3134,#191d1f);border:1px solid #14181a;box-shadow:inset 0 1px 2px #000;display:flex;align-items:center;justify-content:center}
+.hw-router-psu-fan i {position:relative;width:72%;height:72%;border-radius:50%;background:radial-gradient(circle at 38% 34%,#4b5153,#22272a 65%,#14181a);border:2px solid #343a3d}
+.hw-router-psu-fan i::before {content:'';position:absolute;inset:18%;border-radius:50%;border:1px dashed rgba(190,205,200,.28)}
+.hw-router-blank {position:absolute;left:56%;top:26%;width:17.5%;height:48%;border-radius:2px;background:linear-gradient(#1c2529,#141c20);border:1px solid #35454b;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(0,0,0,.35)}
+.hw-router-blank::before {content:'';position:absolute;inset:5px;border-radius:1px;border:1px solid #2a3a40;background:linear-gradient(#111a1e,#0d1519)}
+.hw-router-blank i {position:absolute;top:50%;width:3px;height:3px;border-radius:50%;background:#55676d;box-shadow:inset 0 1px 0 #8fa1a6}
+.hw-router-blank i:first-child {left:8px}
+.hw-router-blank i:last-child {right:8px}
 .hw-other-face {min-height:112px;display:flex;align-items:center;justify-content:space-around;gap:20px;padding:14px 24px}
 .hw-fan {width:58px;height:58px;border-radius:50%;border:3px solid #4c5a64;background:radial-gradient(circle at 38% 34%,#39464e,#141b20 68%);position:relative;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 2px rgba(255,255,255,.2),0 1px 2px #000}
 .hw-fan i {position:absolute;width:38px;height:4px;border-radius:50%;background:#71838e;opacity:.7;transform-origin:center}

@@ -272,7 +272,7 @@ function RackChassis(props: ChassisProps) {
               <PortFace {...props} builtIn={builtIn} bays={bays} />
             )
           ) : (
-            <OtherFace kind={kind} model={device.model} />
+            <OtherFace kind={kind} model={device.model} power={power} />
           )}
         </div>
 
@@ -391,21 +391,35 @@ function PortFace(props: ChassisProps & { builtIn: NetworkPort[]; bays: number[]
   )
 }
 
-function OtherFace({ kind, model }: { kind: string; model: string }) {
+function RouterHexGrille() {
+  const hexes: string[] = []
+  for (let col = 0; col < 26; col += 1) {
+    for (let row = -1; row < 10; row += 1) {
+      const cx = 18 + col * 45
+      const cy = 20 + row * 36 + (col % 2 ? 18 : 0)
+      hexes.push(`M${cx - 30} ${cy} L${cx - 15} ${cy - 18} L${cx + 15} ${cy - 18} L${cx + 30} ${cy} L${cx + 15} ${cy + 18} L${cx - 15} ${cy + 18} Z`)
+    }
+  }
+  return (
+    <svg className="hw-router-hex" viewBox="0 0 1000 360" preserveAspectRatio="none" aria-hidden="true">
+      {hexes.map((d, index) => <path key={index} d={d} />)}
+    </svg>
+  )
+}
+
+function OtherFace({ kind, model, power }: { kind: string; model: string; power: boolean }) {
   if (kind === 'router') {
     return (
       <div className="hw-other-face hw-other-router-front">
-        <div className="hw-router-front-vents" aria-hidden="true">
-          {Array.from({ length: 14 }, (_, index) => <i key={index} />)}
+        <RouterHexGrille />
+        <div className="hw-router-psu">
+          <span className="hw-router-psu-title">AC OK</span>
+          <span className="hw-router-psu-volt" dir="ltr">100-240V~<br />50/60Hz</span>
+          <span className="hw-router-psu-led" data-on={power} aria-hidden="true" />
+          <span className="hw-router-psu-switch" aria-hidden="true"><i /><i /></span>
+          <span className="hw-router-psu-fan" aria-hidden="true"><i /></span>
         </div>
-        <div className="hw-other-plate">
-          <strong dir="ltr">{model}</strong>
-          <span>FRONT PANEL</span>
-        </div>
-        <div className="hw-router-front-usb">
-          <span>USB</span>
-          <div aria-hidden="true"><i /><i /></div>
-        </div>
+        <div className="hw-router-blank" aria-hidden="true"><i /><i /></div>
       </div>
     )
   }
