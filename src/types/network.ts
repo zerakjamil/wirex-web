@@ -48,6 +48,9 @@ export interface NetworkPort {
   ipv6OspfArea?: number
   ipv6OspfCost?: number
   ipv6OspfPriority?: number
+  ipv6OspfHelloInterval?: number
+  ipv6OspfDeadInterval?: number
+  ipv6OspfNetworkType?: 'broadcast' | 'point-to-point'
   ipv6EigrpAs?: number
   isGreTunnel?: boolean
   greSourceInterface?: string
@@ -295,6 +298,9 @@ export interface DeviceConfig {
   ospfActiveInterfaces?: string[]
   ipv6OspfProcessId?: number
   ipv6OspfRouterId?: string
+  ipv6OspfPassiveDefault?: boolean
+  ipv6OspfPassiveInterfaces?: string[]
+  ipv6OspfActiveInterfaces?: string[]
   ipv6EigrpAs?: number
   ipv6EigrpRouterId?: string
   ipv6EigrpShutdown?: boolean

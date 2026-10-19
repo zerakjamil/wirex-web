@@ -145,3 +145,43 @@ test('disabling OSPFv3 on one interface withdraws only that prefix from remote r
   assert.match(parseIosCommand(r1, 'show running-config').output, /ipv6 ospf 1 area 0/)
   assert.match(parseIosCommand(r1, 'show ipv6 ospf interface').output, /area 0/)
 })
+
+test('OSPFv3 hello/dead intervals must match and custom timers drive the adjacency', () => {
+  const { cli, routers } = campus()
+  cli(routers[0].id, 'enable', 'configure terminal', `interface ${routers[0].ports[1].shortName}`, 'ipv6 ospf hello-interval 3', 'ipv6 ospf dead-interval 9', 'end')
+  const mismatched = run(400).devices
+  const r1 = mismatched.find(d => d.id === routers[0].id)!
+  assert.ok(!(r1.ospfv3?.neighbors ?? []).some(n => n.state === 'Full'))
+  assert.match(parseIosCommand(r1, 'show ipv6 ospf neighbor').output, /timer mismatch/)
+  cli(routers[1].id, 'enable', 'configure terminal', `interface ${routers[1].ports[0].shortName}`, 'ipv6 ospf hello-interval 3', 'ipv6 ospf dead-interval 9', 'end')
+  const converged = run(500).devices
+  const r1b = converged.find(d => d.id === routers[0].id)!
+  assert.ok((r1b.ospfv3?.neighbors ?? []).some(n => n.routerId === '2.2.2.2' && n.state === 'Full'))
+  assert.match(parseIosCommand(r1b, 'show ipv6 ospf interface').output, /Hello 3, Dead 9/)
+  assert.match(parseIosCommand(r1b, 'show running-config').output, /ipv6 ospf hello-interval 3/)
+  assert.match(parseIosCommand(r1b, 'show running-config').output, /ipv6 ospf dead-interval 9/)
+})
+
+test('a point-to-point network override skips the DR wait and reaches Full early', () => {
+  const { cli, routers } = campus()
+  cli(routers[0].id, 'enable', 'configure terminal', `interface ${routers[0].ports[1].shortName}`, 'ipv6 ospf network point-to-point', 'end')
+  cli(routers[1].id, 'configure terminal', `interface ${routers[1].ports[0].shortName}`, 'ipv6 ospf network point-to-point', 'end')
+  const { devices } = run(300)
+  const r1 = devices.find(d => d.id === routers[0].id)!
+  assert.ok((r1.ospfv3?.neighbors ?? []).some(n => n.routerId === '2.2.2.2' && n.state === 'Full'))
+  assert.match(parseIosCommand(r1, 'show ipv6 ospf interface').output, /Network Type point-to-point/)
+  assert.match(parseIosCommand(r1, 'show running-config').output, /ipv6 ospf network point-to-point/)
+})
+
+test('a passive OSPFv3 interface advertises its prefix without forming an adjacency', () => {
+  const { cli, routers } = campus()
+  cli(routers[0].id, 'enable', 'configure terminal', 'ipv6 router ospf 1', `passive-interface ${routers[0].ports[0].shortName}`, 'end')
+  const { devices } = run(800)
+  const r1 = devices.find(d => d.id === routers[0].id)!
+  const r3 = devices.find(d => d.id === routers[2].id)!
+  assert.ok((r1.ospfv3?.neighbors ?? []).some(n => n.routerId === '2.2.2.2' && n.state === 'Full'))
+  assert.equal((r1.ospfv3?.neighbors ?? []).some(n => n.portId === routers[0].ports[0].id), false)
+  assert.ok((r3.ipv6RoutingTable ?? []).some(r => r.type === 'O' && r.network === '2001:db8:1::1'))
+  assert.match(parseIosCommand(r1, 'show ipv6 ospf interface').output, /No Hellos \(Passive interface\)/)
+  assert.match(parseIosCommand(r1, 'show running-config').output, /passive-interface GigabitEthernet0\/0/)
+})

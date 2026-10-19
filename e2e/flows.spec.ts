@@ -455,4 +455,50 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/ipv6 router eigrp 1/)
     await expect(modal).toContainText(/eigrp router-id 1\.1\.1\.1/)
   })
+
+  test('F15: OSPFv3 interface timers, point-to-point override and a passive interface appear in the CLI', async ({ page }) => {
+    await page.goto('/')
+
+    const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
+    await expect(routerBtn).toBeVisible({ timeout: 10000 })
+    await routerBtn.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const cliTab = modal.locator('button', { hasText: /^CLI$/i })
+    if (await cliTab.isVisible()) {
+      await cliTab.click()
+    }
+    const cliInput = modal.locator('input[type="text"]').last()
+    await expect(cliInput).toBeVisible()
+    for (const command of [
+      'enable',
+      'configure terminal',
+      'ipv6 router ospf 1',
+      'router-id 9.9.9.9',
+      'passive-interface GigabitEthernet0/1',
+      'exit',
+      'interface gigabitethernet0/0',
+      'ipv6 ospf 1 area 0',
+      'ipv6 ospf hello-interval 3',
+      'ipv6 ospf dead-interval 9',
+      'ipv6 ospf network point-to-point',
+      'exit',
+      'interface gigabitethernet0/1',
+      'ipv6 ospf 1 area 0',
+      'end',
+      'show ipv6 ospf interface',
+      'show running-config',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    await expect(modal).toContainText(/Hello 3, Dead 9/)
+    await expect(modal).toContainText(/Network Type point-to-point/)
+    await expect(modal).toContainText(/No Hellos \(Passive interface\)/)
+    await expect(modal).toContainText(/passive-interface GigabitEthernet0\/1/)
+    await expect(modal).toContainText(/ipv6 ospf hello-interval 3/)
+    await expect(modal).toContainText(/ipv6 ospf network point-to-point/)
+  })
 })

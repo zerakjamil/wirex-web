@@ -20,9 +20,10 @@ function globalAddresses(p: NetworkPort) {
   return (p.ipv6Addresses ?? []).filter(address => isValidIpv6(address.address) && !isIpv6LinkLocal(address.address))
 }
 export const ipv6OspfCost = (p: NetworkPort) => p.ipv6OspfCost ?? (p.type === 'serial' ? 64 : 1)
-export const ipv6OspfHello = () => 10
-export const ipv6OspfDead = () => 40
-export const ipv6OspfNetwork = (p: NetworkPort) => (p.type === 'serial' ? 'point-to-point' : 'broadcast')
+export const ipv6OspfHello = (p?: NetworkPort) => p?.ipv6OspfHelloInterval ?? 10
+export const ipv6OspfDead = (p?: NetworkPort) => p?.ipv6OspfDeadInterval ?? 40
+export const ipv6OspfNetwork = (p: NetworkPort) => p.ipv6OspfNetworkType ?? (p.type === 'serial' ? 'point-to-point' : 'broadcast')
+export const ipv6OspfPassive = (d: NetworkDevice, p: NetworkPort) => (d.config.ipv6OspfPassiveInterfaces ?? []).includes(p.name) || !!d.config.ipv6OspfPassiveDefault && !(d.config.ipv6OspfActiveInterfaces ?? []).includes(p.name)
 export const hasIpv6Ospf = (d: NetworkDevice) =>
   ((d.type === 'router' && d.config.ipRouting !== false) || (d.type === 'switch' && d.config.ipRouting === true)) &&
   d.ports.some(p => p.ipv6OspfArea !== undefined)
@@ -40,7 +41,7 @@ function packet(d: NetworkDevice, p: NetworkPort, type: Ospfv3Packet['type'], ex
   const runtime = d.ospfv3!
   const iface = runtime.interfaces.find(i => i.portId === p.id)!
   const linkLocal = ipv6LinkLocalFromMac(p.macAddress)!
-  const ospfv3: Ospfv3Packet = { type, routerId: runtime.routerId, area: iface.area, helloInterval: ipv6OspfHello(), deadInterval: ipv6OspfDead(), networkType: ipv6OspfNetwork(p), ...extra }
+  const ospfv3: Ospfv3Packet = { type, routerId: runtime.routerId, area: iface.area, helloInterval: ipv6OspfHello(p), deadInterval: ipv6OspfDead(p), networkType: ipv6OspfNetwork(p), ...extra }
   const destIp = neighbor?.address ?? 'ff02::5'
   const destMac = neighbor?.macAddress ?? ALL_SPF_ROUTERS_MAC
   return { deviceId: d.id, portId: p.id, pdu: {
@@ -126,19 +127,19 @@ export function prepareIpv6OspfTick(devices: NetworkDevice[], deltaMs = SIMULATI
     const d = copy(original), rid = routerId(d)!
     if (!d.ospfv3 || d.ospfv3.routerId !== rid) d.ospfv3 = { clock: 0, routerId: rid, neighbors: [], interfaces: [], database: [], lastOrigination: 0 }
     const rt = d.ospfv3; rt.clock += deltaMs
-    const active = ports(d)
+    const active = ports(d), talking = active.filter(p => !ipv6OspfPassive(d, p))
     rt.interfaces = active.map(p => {
       const addressSignature = globalAddresses(p).map(a => `${a.address}/${a.prefixLength}`).sort().join(',')
-      const signature = JSON.stringify([addressSignature, p.ipv6OspfArea, ipv6OspfHello(), ipv6OspfDead(), ipv6OspfNetwork(p)])
+      const signature = JSON.stringify([addressSignature, p.ipv6OspfArea, ipv6OspfHello(p), ipv6OspfDead(p), ipv6OspfNetwork(p), ipv6OspfPassive(d, p)])
       const old = rt.interfaces.find(i => i.portId === p.id && i.signature === signature)
-      return old ?? { portId: p.id, area: p.ipv6OspfArea!, signature, lastHello: -Infinity, waitUntil: rt.clock + ipv6OspfDead() * 1000, designatedRouter: '0.0.0.0', backupRouter: '0.0.0.0' }
+      return old ?? { portId: p.id, area: p.ipv6OspfArea!, signature, lastHello: -Infinity, waitUntil: rt.clock + ipv6OspfDead(p) * 1000, designatedRouter: '0.0.0.0', backupRouter: '0.0.0.0' }
     })
     rt.neighbors = rt.neighbors.filter(n => {
-      const p = active.find(p => p.id === n.portId), old = original.ospfv3?.interfaces.find(i => i.portId === n.portId), current = rt.interfaces.find(i => i.portId === n.portId)
-      return p && n.area === p.ipv6OspfArea && rt.clock - n.lastHello < ipv6OspfDead() * 1000 && (!old || old.signature === current?.signature)
+      const p = talking.find(p => p.id === n.portId), old = original.ospfv3?.interfaces.find(i => i.portId === n.portId), current = rt.interfaces.find(i => i.portId === n.portId)
+      return p && n.area === p.ipv6OspfArea && rt.clock - n.lastHello < ipv6OspfDead(p) * 1000 && (!old || old.signature === current?.signature)
     })
     rt.database = rt.database.filter(e => rt.clock - e.receivedAt < MAX_AGE_MS)
-    for (const p of active) {
+    for (const p of talking) {
       election(d, p)
       for (const n of rt.neighbors.filter(n => n.portId === p.id)) {
         if (n.state === '2-Way' && shouldAdjacent(d, p, n)) { n.state = 'ExStart'; outbound.push(databaseDescription(d, p, n)) }
@@ -148,7 +149,7 @@ export function prepareIpv6OspfTick(devices: NetworkDevice[], deltaMs = SIMULATI
         const due = n.retransmissions.filter(r => rt.clock - r.sentAt >= RETRANSMIT_MS)
         if (due.length) outbound.push(sendUpdate(d, p, n, due.map(r => r.lsa)))
       }
-      if (rt.clock - rt.interfaces.find(i => i.portId === p.id)!.lastHello >= ipv6OspfHello() * 1000) outbound.push(hello(d, p))
+      if (rt.clock - rt.interfaces.find(i => i.portId === p.id)!.lastHello >= ipv6OspfHello(p) * 1000) outbound.push(hello(d, p))
     }
     const refresh = rt.clock - rt.lastOrigination >= 1800000
     outbound.push(...originate(d, refresh))
@@ -172,7 +173,8 @@ export function receiveOspfv3Packet(original: NetworkDevice, p: NetworkPort, pdu
   if (!isIpv6LinkLocal(pdu.sourceIp)) return reject(`OSPFv3 neighbor on ${p.name} used ${pdu.sourceIp} instead of a link-local source.`)
   if (p.ipv6OspfArea !== body.area) return reject(`OSPFv3 area mismatch on ${p.name}: local ${p.ipv6OspfArea}, received ${body.area} from ${pdu.sourceIp}.`)
   if (body.routerId === original.ospfv3.routerId) return reject(`Duplicate OSPFv3 router ID ${body.routerId} received from ${pdu.sourceIp} on ${p.name}.`)
-  if (body.helloInterval !== ipv6OspfHello() || body.deadInterval !== ipv6OspfDead()) return reject(`OSPFv3 timer mismatch on ${p.name}: local Hello/Dead ${ipv6OspfHello()}/${ipv6OspfDead()}, peer ${pdu.sourceIp} ${body.helloInterval}/${body.deadInterval}.`)
+  if (ipv6OspfPassive(original, p)) return reject(`OSPFv3 is passive on ${p.name}; incoming Hello from ${pdu.sourceIp} ignored.`)
+  if (body.helloInterval !== ipv6OspfHello(p) || body.deadInterval !== ipv6OspfDead(p)) return reject(`OSPFv3 timer mismatch on ${p.name}: local Hello/Dead ${ipv6OspfHello(p)}/${ipv6OspfDead(p)}, peer ${pdu.sourceIp} ${body.helloInterval}/${body.deadInterval}.`)
   if (body.networkType !== ipv6OspfNetwork(p)) return reject(`OSPFv3 network type mismatch on ${p.name}: local ${ipv6OspfNetwork(p)}, peer ${pdu.sourceIp} ${body.networkType}.`)
   const d = copy(original), rt = d.ospfv3!
   rt.interfaces.find(i => i.portId === p.id)!.lastError = undefined
@@ -267,12 +269,18 @@ export function ipv6OspfConfigLines(d: NetworkDevice): string[] {
       p.ipv6OspfArea !== undefined && ` ipv6 ospf ${p.ipv6OspfProcess ?? processId ?? 1} area ${p.ipv6OspfArea}`,
       p.ipv6OspfCost !== undefined && ` ipv6 ospf cost ${p.ipv6OspfCost}`,
       p.ipv6OspfPriority !== undefined && ` ipv6 ospf priority ${p.ipv6OspfPriority}`,
+      p.ipv6OspfHelloInterval !== undefined && ` ipv6 ospf hello-interval ${p.ipv6OspfHelloInterval}`,
+      p.ipv6OspfDeadInterval !== undefined && ` ipv6 ospf dead-interval ${p.ipv6OspfDeadInterval}`,
+      p.ipv6OspfNetworkType !== undefined && ` ipv6 ospf network ${p.ipv6OspfNetworkType}`,
     ].filter((line): line is string => typeof line === 'string')
     if (settings.length) lines.push(`interface ${p.name}`, ...settings, '!')
   }
   if (processId !== undefined) {
     lines.push(`ipv6 router ospf ${processId}`)
     if (d.config.ipv6OspfRouterId) lines.push(` router-id ${d.config.ipv6OspfRouterId}`)
+    if (d.config.ipv6OspfPassiveDefault) lines.push(' passive-interface default')
+    for (const name of d.config.ipv6OspfPassiveInterfaces ?? []) lines.push(` passive-interface ${name}`)
+    for (const name of d.config.ipv6OspfActiveInterfaces ?? []) lines.push(` no passive-interface ${name}`)
     lines.push('!')
   }
   return lines

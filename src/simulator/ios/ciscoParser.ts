@@ -4,7 +4,7 @@ import { isValidIpv6, parseIpv6, parseIpv6WithPrefix, formatIpv6, ipv6NetworkAdd
 import { parseVoiceIos } from './voiceIos'
 import { parseAclRule, formatAccessLists, formatAclRunningConfig } from '../acl'
 import { ospfArea, ospfCost, ospfDead, ospfHello, ospfNetwork, ospfPassive, ospfConfigLines } from '../ospf'
-import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost } from '../ospfv3'
+import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost, ipv6OspfPassive } from '../ospfv3'
 import { ipv6EigrpConfigLines } from '../eigrpv6'
 import { ripMajorNetwork, ripConfigLines } from '../rip'
 import { eigrpConfigLines, eigrpEnabled, eigrpPassive, eigrpRouterId, classfulWildcard } from '../eigrp'
@@ -760,6 +760,20 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     }
     if (cmd === 'no' && parts[1]?.toLowerCase() === 'router-id' && parts.length === 2) {
       return { output: '', newDeviceConfig: { ipv6OspfRouterId: undefined }, resetOspfv3: true }
+    }
+    if (cmd === 'passive-interface') {
+      const name = parts[1]?.toLowerCase() === 'default' ? 'default' : normalizeInterfaceName(parts[1] ?? '', device.ports)
+      if (parts.length !== 2 || !name) return { output: '% Use passive-interface <interface> | default.' }
+      if (name === 'default') return { output: '', newDeviceConfig: { ipv6OspfPassiveDefault: true, ipv6OspfPassiveInterfaces: [], ipv6OspfActiveInterfaces: [] } }
+      const port = device.ports.find(candidate => candidate.id === name)!
+      return { output: '', newDeviceConfig: { ipv6OspfPassiveInterfaces: [...(device.config.ipv6OspfPassiveInterfaces ?? []).filter(entry => entry !== port.name), port.name], ipv6OspfActiveInterfaces: (device.config.ipv6OspfActiveInterfaces ?? []).filter(entry => entry !== port.name) } }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'passive-interface') {
+      if (parts.length !== 3) return { output: '% Use no passive-interface <interface> | default.' }
+      if (parts[2]?.toLowerCase() === 'default') return { output: '', newDeviceConfig: { ipv6OspfPassiveDefault: false, ipv6OspfPassiveInterfaces: [], ipv6OspfActiveInterfaces: [] } }
+      const id = normalizeInterfaceName(parts[2] ?? '', device.ports), port = device.ports.find(candidate => candidate.id === id)
+      if (!port) return { output: '% Invalid passive interface.' }
+      return { output: '', newDeviceConfig: { ipv6OspfPassiveInterfaces: (device.config.ipv6OspfPassiveInterfaces ?? []).filter(entry => entry !== port.name), ipv6OspfActiveInterfaces: [...(device.config.ipv6OspfActiveInterfaces ?? []).filter(entry => entry !== port.name), port.name] } }
     }
     if (cmd === 'do') {
       return handleDoCommand(device, parts.slice(1))
@@ -1560,6 +1574,30 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'ospf' && parts[3]?.toLowerCase() === 'priority' && parts.length === 4) {
       return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfPriority: undefined }] }
     }
+    if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'ospf' && parts[2]?.toLowerCase() === 'hello-interval') {
+      const interval = Number(parts[3])
+      if (parts.length !== 4 || !/^\d+$/.test(parts[3]) || interval < 1 || interval > 65535) return { output: '% Use ipv6 ospf hello-interval <1-65535>.' }
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfHelloInterval: interval }] }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'ospf' && parts[3]?.toLowerCase() === 'hello-interval' && parts.length === 4) {
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfHelloInterval: undefined }] }
+    }
+    if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'ospf' && parts[2]?.toLowerCase() === 'dead-interval') {
+      const interval = Number(parts[3])
+      if (parts.length !== 4 || !/^\d+$/.test(parts[3]) || interval < 1 || interval > 65535) return { output: '% Use ipv6 ospf dead-interval <1-65535>.' }
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfDeadInterval: interval }] }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'ospf' && parts[3]?.toLowerCase() === 'dead-interval' && parts.length === 4) {
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfDeadInterval: undefined }] }
+    }
+    if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'ospf' && parts[2]?.toLowerCase() === 'network') {
+      const networkType = parts[3]?.toLowerCase()
+      if (parts.length !== 4 || !['point-to-point', 'broadcast'].includes(networkType)) return { output: '% Use ipv6 ospf network point-to-point | broadcast.' }
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfNetworkType: networkType as 'broadcast' | 'point-to-point' }] }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'ospf' && parts[3]?.toLowerCase() === 'network' && parts.length === 4) {
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfNetworkType: undefined }] }
+    }
     if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'ospf' && parts[3]?.toLowerCase() === 'area') {
       if (device.type !== 'router' && !(device.type === 'switch' && device.config.ipRouting === true)) return { output: '% OSPFv3 requires a router or Layer 3 switch.' }
       const processId = Number(parts[2]), area = Number(parts[4])
@@ -2204,7 +2242,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
         return { output: `OSPFv3 Router with ID (${runtime?.routerId ?? device.config.ipv6OspfRouterId ?? 'not started'})\nRouter Link States\n${(runtime?.database ?? []).map((e) => `${e.lsa.routerId.padEnd(16)} Area ${e.lsa.area} Sequence ${e.lsa.sequence} Age ${Math.floor(((runtime?.clock ?? 0) - e.receivedAt) / 1000)}`).join('\n') || '(empty)'}` }
       }
       if (sub3 === 'interface' || sub3 === 'int') {
-        return { output: faces.map((p) => `${p.name} is ${interfaceOperational(device, p) ? 'up' : 'down'}, area ${p.ipv6OspfArea}\n  Network Type ${ipv6OspfNetwork(p)}, Cost: ${ipv6OspfCost(p)}\n  Hello ${ipv6OspfHello()}, Dead ${ipv6OspfDead()}`).join('\n\n') || 'No OSPFv3 interfaces configured.' }
+        return { output: faces.map((p) => `${p.name} is ${interfaceOperational(device, p) ? 'up' : 'down'}, area ${p.ipv6OspfArea}\n  Network Type ${ipv6OspfNetwork(p)}, Cost: ${ipv6OspfCost(p)}\n  Hello ${ipv6OspfHello(p)}, Dead ${ipv6OspfDead(p)}${ipv6OspfPassive(device, p) ? '\n  No Hellos (Passive interface)' : ''}`).join('\n\n') || 'No OSPFv3 interfaces configured.' }
       }
       return { output: `Routing Process "ospfv3 ${process ?? 1}" with ID ${runtime?.routerId ?? device.config.ipv6OspfRouterId ?? 'not started'}\n  Intra-area OSPFv3, administrative distance 110\n  Interfaces:\n${faces.map((p) => `    ${p.name} area ${p.ipv6OspfArea}`).join('\n') || '    none'}\n  Neighbors: ${runtime?.neighbors.filter((n) => n.state === 'Full').length ?? 0} full` }
     }
@@ -2410,6 +2448,9 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       if (p.ipv6OspfArea !== undefined) out += ` ipv6 ospf ${p.ipv6OspfProcess ?? device.config.ipv6OspfProcessId ?? 1} area ${p.ipv6OspfArea}\n`
       if (p.ipv6OspfCost !== undefined) out += ` ipv6 ospf cost ${p.ipv6OspfCost}\n`
       if (p.ipv6OspfPriority !== undefined) out += ` ipv6 ospf priority ${p.ipv6OspfPriority}\n`
+      if (p.ipv6OspfHelloInterval !== undefined) out += ` ipv6 ospf hello-interval ${p.ipv6OspfHelloInterval}\n`
+      if (p.ipv6OspfDeadInterval !== undefined) out += ` ipv6 ospf dead-interval ${p.ipv6OspfDeadInterval}\n`
+      if (p.ipv6OspfNetworkType !== undefined) out += ` ipv6 ospf network ${p.ipv6OspfNetworkType}\n`
       if (p.ipv6EigrpAs !== undefined) out += ` ipv6 eigrp ${p.ipv6EigrpAs}\n`
       if (p.inboundAcl) out += ` ip access-group ${p.inboundAcl} in\n`
       if (p.outboundAcl) out += ` ip access-group ${p.outboundAcl} out\n`

@@ -134,8 +134,11 @@ Status: slices 1–5 (address layer, engine ICMPv6 + NDP, CLI + UI, SLAAC + DHCP
   route installation.
 - Enablement: `ipv6 router ospf <1-65535>` enters `config-rtr` mode
   (` router-id <A.B.C.D>`), an interface joins with
-  `ipv6 ospf <process> area <area>` plus `ipv6 ospf cost <1-65535>` and
-  `ipv6 ospf priority <0-255>`. One process per device (mismatched process
+  `ipv6 ospf <process> area <area>` plus `ipv6 ospf cost <1-65535>`,
+  `ipv6 ospf priority <0-255>`, `ipv6 ospf hello-interval|dead-interval
+  <1-65535>` and `ipv6 ospf network point-to-point|broadcast`; the router
+  process accepts `passive-interface <interface>|default` and
+  `no passive-interface`. One process per device (mismatched process
   numbers are rejected); numeric area IDs only (no dotted-quad areas, no
   multi-area processes beyond what the LSA DB models per area).
 - Router-ID sourcing follows IOS-adjacent behavior: `router-id` config first,
@@ -156,15 +159,18 @@ Status: slices 1–5 (address layer, engine ICMPv6 + NDP, CLI + UI, SLAAC + DHCP
   prefixes from different routers on one segment collapse to the lowest
   metric), and prefixes that overlap the router's own connected subnets are
   never installed.
-- Timing model: Hello 10 s / Dead 40 s fixed, the standard 40 s DR-election
-  wait before the first election (tests must drain past ~700 ticks before an
-  adjacency reaches Full), max-age 3600 s, retransmit 5 s, 30-minute LSA
-  refresh.
+- Timing model: Hello 10 s / Dead 40 s defaults, overridable per interface
+  with `ipv6 ospf hello-interval` / `dead-interval`; the standard 40 s
+  DR-election wait before the first election (broadcast tests must drain past
+  ~700 ticks before an adjacency reaches Full; point-to-point links skip it),
+  max-age 3600 s, retransmit 5 s, 30-minute LSA refresh.
 - Known simplifications / by-design limits:
-  - Fixed Hello/Dead intervals (no `ipv6 ospf hello-interval|dead-interval`),
-    no `ipv6 ospf network point-to-point` override (serials are
-    point-to-point automatically), no passive-interface, no authentication
-    (IPsec trailer), no instance IDs.
+  - No authentication (IPsec trailer) and no instance IDs; Hello/Dead
+    intervals are configurable per interface (`ipv6 ospf hello-interval` /
+    `dead-interval`), the network type can be forced with `ipv6 ospf network
+    point-to-point|broadcast`, and `passive-interface <interface>|default`
+    (with `no passive-interface`) suppresses Hellos while still advertising
+    the interface's prefixes in the router LSA.
   - No multi-area originate for a second area's process; the runtime tracks
     interfaces and LSAs per area, which is what the (single-process,
     multi-area-capable) labs need.
@@ -173,6 +179,8 @@ Status: slices 1–5 (address layer, engine ICMPv6 + NDP, CLI + UI, SLAAC + DHCP
   - `no ipv6 router ospf <process>` clears the runtime and instantly withdraws
     local `O` routes; remote routers drop the prefixes after their own dead
     interval, matching the tested topology-timeout behavior.
+
+Depth pass 2026-10-19: the per-interface timer, network-type and passive-interface controls landed. `src/simulator/ospfv3.test.ts` now has seven packet-level tests — the three new ones verify that a Hello/Dead mismatch records `OSPFv3 timer mismatch` and blocks the adjacency until both sides match, that a point-to-point override reaches Full inside 300 ticks instead of waiting out the DR election, and that a passive interface keeps its connected prefix in the router LSA (a remote router still installs the `O` route) while the non-passive link stays Full. E2E flow F15 configures the controls from the browser CLI and checks `show ipv6 ospf interface`, `show running-config` and the passive marker. Verification: `npm test` 567/567, `tsc` clean, lint zero errors / 28 existing warnings, optimized build green, browser flows 16/16.
 
 ## Rules
 
