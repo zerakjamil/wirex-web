@@ -106,11 +106,14 @@ test('IoT factory defaults, catalog entries and spec lookup', () => {
   assert.deepEqual(iotStateOf(unsupported), { power: false })
   const models = deviceCatalog.iot?.flatMap(entry => entry.models) ?? []
   assert.equal(models.length, IOT_THINGS.length)
-  assert.equal(models.length, 28)
+  assert.equal(models.length, 48)
   assert.ok(models.includes('Smoke-Detector-PT'))
   assert.ok(models.includes('Push-Button-PT'))
   assert.ok(models.includes('Humiture Monitor'))
   assert.ok(models.includes('Webcam'))
+  assert.ok(models.includes('Solar Panel'))
+  assert.ok(models.includes('Fire Monitor'))
+  assert.ok(models.includes('Smart LED'))
   const lab = getIotLab()
   assert.equal(lab.devices.filter(device => device.type === 'iot').length, 6)
   const server = lab.devices.find(device => device.name === 'IoTServer')
@@ -160,6 +163,48 @@ test('PT smart-home shelf models map to real device classes and sensor state', (
   assert.equal(iotStateSummary('motion-sensor', { motion: true }), 'motion detected')
   assert.equal(iotStateSummary('sound-sensor', { sound: 61 }), '61 dB')
   assert.equal(iotStateSummary('camera', { power: true }), 'on')
+})
+
+test('smart-city, industrial and power-grid models carry their own measurement units', () => {
+  const sensors: Array<[string, string, number]> = [
+    ['Atm Pressure Monitor', 'hPa', 1013],
+    ['Carbon Dioxide Detector', 'ppm', 420],
+    ['Carbon Monoxide Detector', 'ppm', 0],
+    ['Humidity Monitor', '%', 45],
+    ['Temperature Monitor', '°C', 22],
+    ['Wind Detector', 'm/s', 3],
+    ['Power Meter', 'W', 0],
+  ]
+  for (const [model, unit, reading] of sensors) {
+    const device = createDevice('iot', 0, 0, model)
+    assert.equal(device.config.iotKind, 'sensor')
+    assert.equal(device.config.iotState?.unit, unit)
+    assert.equal(device.config.iotState?.reading, reading)
+    assert.ok(iotStateSummary('sensor', device.config.iotState!).includes(unit))
+  }
+
+  const solar = createDevice('iot', 0, 0, 'Solar Panel')
+  assert.equal(solar.config.iotKind, 'generator')
+  assert.deepEqual(solar.config.iotState, { output: 0 })
+  assert.equal(iotStateSummary('generator', { output: 40 }), '40% output')
+
+  const battery = createDevice('iot', 0, 0, 'Battery')
+  assert.equal(battery.config.iotKind, 'battery')
+  assert.deepEqual(battery.config.iotState, { level: 100 })
+  assert.equal(iotStateSummary('battery', { level: 75 }), '75% charge')
+
+  const drain = createDevice('iot', 0, 0, 'Water Drain')
+  assert.equal(drain.config.iotKind, 'valve')
+  assert.deepEqual(sanitizeIotPatch('valve', { open: true }), { open: true })
+  assert.equal(iotStateSummary('valve', { open: true }), 'open')
+
+  const fire = createDevice('iot', 0, 0, 'Fire Monitor')
+  assert.equal(fire.config.iotKind, 'fire-detector')
+  assert.deepEqual(sanitizeIotPatch('fire-detector', { fire: true }), { fire: true })
+  assert.equal(iotStateSummary('fire-detector', { fire: true }), 'fire detected')
+
+  assert.deepEqual(sanitizeIotPatch('sensor', { reading: 1013.44, unit: 'hPa' }), { reading: 1013.4, unit: 'hPa' })
+  assert.deepEqual(sanitizeIotPatch('generator', { output: 140 }), { output: 100 })
 })
 
 test('smart things discover the IoT server, register, and report state periodically', () => {

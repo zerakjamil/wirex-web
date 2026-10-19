@@ -35,18 +35,18 @@ Live capture lists **181** stock/custom models across 7 categories.
 | Network Devices | WAN Emulation | 4 | 4 | — |
 | End Devices | End Devices | 15 | 9 | Meraki-Server, NetworkController, Analog-Phone-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer |
 | End Devices | Smart Home | 21 | 21 | — |
-| End Devices | Smart City | 16 | 0 | Atm Pressure Monitor, Beacon, Carbon Dioxide Detector, Carbon Monoxide Detector, Fire Monitor, Fire Sprinkler, Humidity Monitor, Old Car, RFID Card, RFID Reader, Smart LED, Street Lamp, Temperature Monitor, Trip Sensor, Water Drain, Wind Detector |
-| End Devices | Industrial - OT | 6 | 0 | PLC-PT, DataHistorianServer, Blower, HMI, Signal Generator, Smart LED |
-| End Devices | Power Grid | 4 | 0 | Battery, Power Meter, Solar Panel, Wind Turbine |
+| End Devices | Smart City | 16 | 14 | RFID Card, RFID Reader |
+| End Devices | Industrial - OT | 6 | 3 | PLC-PT, DataHistorianServer, HMI |
+| End Devices | Power Grid | 4 | 4 | — |
 | Components | Boards | 3 | 0 | MCU-PT, SBC-PT, Thing |
-| Components | Actuators | 14 | 0 | Air Cooler, Alarm, Ceiling Sprinkler, Dimmable LED, Floor Sprinkler, Heating Element, LCD, LED, Motor, Piezo Speaker, RGB LED, Servo, Smart LED, Speaker |
+| Components | Actuators | 14 | 1 | Air Cooler, Alarm, Ceiling Sprinkler, Dimmable LED, Floor Sprinkler, Heating Element, LCD, LED, Motor, Piezo Speaker, RGB LED, Servo, Speaker |
 | Components | Sensors | 21 | 2 | Flex Sensor, Generic Environment Sensor, Generic Sensor, Humidity Sensor, Humiture Sensor, Membrane Potentiometer, Metal Sensor, Motion Sensor, Photo Sensor, Potentiometer, Push Button Toggle Switch, Rocker Switch, Smoke Sensor, Sound Sensor, Temperature Sensor, Toggle Push Button, Trip Wire, Water Sensor, Wind Sensor |
 | Connections | Connections | 13 | 0 | Automatically Choose Connection Type, Console, Copper Straight-Through, Copper Cross-Over, Single Mode Fiber, Multi Mode Fiber, Phone, Coaxial, Serial DCE, Serial DTE, Octal, IoT Custom Cable, USB |
 | Connections | Structured Cabling | 4 | 0 | Copper Patch Panel, Fiber Patch Panel, Copper Wall Mount, Fiber Wall Mount |
 | Miscellaneous | Miscellaneous | 8 | 2 | 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 NM-ESW-161 (2) WIC-2T, PT8000 Activated, Wireless Laptop, Wireless PC |
 | Multiuser Connection | Multiuser Connection | 1 | 0 | Multiuser Connection |
 
-**Catalog coverage: 84/181 models recognized (46.4%).**
+**Catalog coverage: 106/181 models recognized (58.6%).**
 
 ### Palette labels mapped to an existing model
 
@@ -60,11 +60,10 @@ Live capture lists **181** stock/custom models across 7 categories.
 - **Network Devices / Wireless Devices**: DLC100, Central-Office-Server, Meraki-MX65W
 - **Network Devices / Security**: ISA-3000, CyberObserver
 - **End Devices / End Devices**: Meraki-Server, NetworkController, Analog-Phone-PT, WirelessEndDevice-PT, WiredEndDevice-PT, Sniffer
-- **End Devices / Smart City**: Atm Pressure Monitor, Beacon, Carbon Dioxide Detector, Carbon Monoxide Detector, Fire Monitor, Fire Sprinkler, Humidity Monitor, Old Car, RFID Card, RFID Reader, Smart LED, Street Lamp, Temperature Monitor, Trip Sensor, Water Drain, Wind Detector
-- **End Devices / Industrial - OT**: PLC-PT, DataHistorianServer, Blower, HMI, Signal Generator, Smart LED
-- **End Devices / Power Grid**: Battery, Power Meter, Solar Panel, Wind Turbine
+- **End Devices / Smart City**: RFID Card, RFID Reader
+- **End Devices / Industrial - OT**: PLC-PT, DataHistorianServer, HMI
 - **Components / Boards**: MCU-PT, SBC-PT, Thing
-- **Components / Actuators**: Air Cooler, Alarm, Ceiling Sprinkler, Dimmable LED, Floor Sprinkler, Heating Element, LCD, LED, Motor, Piezo Speaker, RGB LED, Servo, Smart LED, Speaker
+- **Components / Actuators**: Air Cooler, Alarm, Ceiling Sprinkler, Dimmable LED, Floor Sprinkler, Heating Element, LCD, LED, Motor, Piezo Speaker, RGB LED, Servo, Speaker
 - **Components / Sensors**: Flex Sensor, Generic Environment Sensor, Generic Sensor, Humidity Sensor, Humiture Sensor, Membrane Potentiometer, Metal Sensor, Motion Sensor, Photo Sensor, Potentiometer, Push Button Toggle Switch, Rocker Switch, Smoke Sensor, Sound Sensor, Temperature Sensor, Toggle Push Button, Trip Wire, Water Sensor, Wind Sensor
 - **Connections / Connections**: Automatically Choose Connection Type, Console, Copper Straight-Through, Copper Cross-Over, Single Mode Fiber, Multi Mode Fiber, Phone, Coaxial, Serial DCE, Serial DTE, Octal, IoT Custom Cable, USB
 - **Connections / Structured Cabling**: Copper Patch Panel, Fiber Patch Panel, Copper Wall Mount, Fiber Wall Mount

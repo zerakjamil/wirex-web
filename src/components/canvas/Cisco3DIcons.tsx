@@ -875,6 +875,9 @@ function Iot3DIcon({ model, iotState }: { model?: string; iotState?: IotThingSta
   const humidity = Math.max(0, Math.min(100, state.humidity ?? 0))
   const motion = state.motion === true
   const sound = Math.max(0, Math.min(100, state.sound ?? 0))
+  const reading = state.reading ?? 0
+  const output = Math.max(0, Math.min(100, state.output ?? 0))
+  const fire = state.fire === true
   const smoke = state.smoke === true
   const recentlyPressed = state.pressedAtTick !== undefined
   const plate = '#94a3b8'
@@ -1110,6 +1113,107 @@ function Iot3DIcon({ model, iotState }: { model?: string; iotState?: IotThingSta
           <circle cx="47" cy="44" r="2" fill={powered ? '#bae6fd' : '#475569'} />
           <rect x="44" y="58" width="12" height="8" rx="3" fill={plateDark} />
           <circle cx="64" cy="40" r="2" fill={powered ? '#22c55e' : '#64748b'} />
+        </g>
+      )}
+      {kind === 'sensor' && (
+        <g>
+          <rect x="24" y="16" width="52" height="54" rx="7" fill="#f8fafc" stroke={outline} strokeWidth="1.5" />
+          <rect x="29" y="21" width="42" height="28" rx="3" fill="#0f172a" />
+          <text x="50" y="34" textAnchor="middle" fontSize="10" fontWeight="700" fill="#7dd3fc">{reading}</text>
+          <text x="50" y="43" textAnchor="middle" fontSize="7.5" fontWeight="600" fill="#94a3b8">{state.unit ?? ''}</text>
+          {[30, 36, 42, 48, 54, 60].map(x => (
+            <line key={x} x1={x} y1="55" x2={x} y2="64" stroke={plate} strokeWidth="2" strokeLinecap="round" />
+          ))}
+          <circle cx="68" cy="25" r="2.2" fill="#22c55e" />
+        </g>
+      )}
+      {kind === 'generator' && model?.includes('Solar') && (
+        <g>
+          <g transform="rotate(-10 50 42)">
+            <rect x="18" y="20" width="64" height="42" rx="2" fill="#1e3a8a" stroke={outline} strokeWidth="1.5" />
+            {[34, 50, 66].map(x => <line key={x} x1={x} y1="22" x2={x} y2="60" stroke="#3b82f6" strokeWidth="1" />)}
+            {[34, 48].map(y => <line key={y} x1="20" y1={y} x2="80" y2={y} stroke="#3b82f6" strokeWidth="1" />)}
+          </g>
+          <rect x="46" y="60" width="8" height="12" rx="1" fill={plateDark} />
+          <rect x="38" y="70" width="24" height="4" rx="2" fill="#334155" />
+          <circle cx="82" cy="15" r="7" fill="#fbbf24" stroke={outline} strokeWidth="1" />
+          {output > 0 && (
+            <g stroke="#fbbf24" strokeWidth="1.8" strokeLinecap="round">
+              <line x1="82" y1="4" x2="82" y2="-1" /><line x1="91" y1="8" x2="95" y2="5" /><line x1="93" y1="16" x2="98" y2="17" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'generator' && model?.includes('Wind') && (
+        <g>
+          <line x1="50" y1="34" x2="50" y2="72" stroke={plateDark} strokeWidth="4" strokeLinecap="round" />
+          <rect x="38" y="70" width="24" height="5" rx="2.5" fill="#334155" />
+          <g transform={`rotate(${output * 3.6} 50 30)`}>
+            <circle cx="50" cy="30" r="4" fill="#e2e8f0" stroke={outline} strokeWidth="1" />
+            <path d="M50 26 L48 6 L54 6 Z" fill="#f1f5f9" stroke={outline} strokeWidth="1" />
+            <path d="M53 32 L71 42 L69 47 Z" fill="#f1f5f9" stroke={outline} strokeWidth="1" />
+            <path d="M47 32 L30 44 L28 39 Z" fill="#f1f5f9" stroke={outline} strokeWidth="1" />
+          </g>
+          {output > 0 && (
+            <g stroke="#7dd3fc" strokeWidth="1.8" fill="none" strokeLinecap="round">
+              <path d="M14 22 Q22 18 30 22" /><path d="M10 30 Q20 25 30 30" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'generator' && !model?.includes('Solar') && !model?.includes('Wind') && (
+        <g>
+          <rect x="20" y="24" width="60" height="40" rx="5" fill="#e2e8f0" stroke={outline} strokeWidth="1.5" />
+          <rect x="25" y="29" width="34" height="20" rx="2" fill="#0f172a" />
+          <path d={`M27 39 Q32 ${39 - output / 10} 37 39 T47 39 T57 39`} stroke="#38bdf8" strokeWidth="1.6" fill="none" />
+          <text x="42" y="60" textAnchor="middle" fontSize="7" fontWeight="700" fill="#475569">SIGNAL</text>
+          <circle cx="68" cy="36" r="6" fill="#cbd5e1" stroke={outline} strokeWidth="1" />
+          <line x1="68" y1="36" x2={68 + 4 * Math.cos((output / 100) * Math.PI * 1.5)} y2={36 - 4 * Math.sin((output / 100) * Math.PI * 1.5)} stroke={outline} strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="68" cy="55" r="2" fill={output > 0 ? '#22c55e' : '#94a3b8'} />
+        </g>
+      )}
+      {kind === 'battery' && (
+        <g>
+          <rect x="22" y="24" width="54" height="40" rx="5" fill="#e2e8f0" stroke={outline} strokeWidth="1.5" />
+          <rect x="76" y="36" width="6" height="16" rx="2" fill={plateDark} />
+          {[0, 1, 2, 3].map(index => (
+            <rect key={index} x={28 + index * 11} y="30" width="8" height="28" rx="1.5"
+              fill={(level / 100) * 4 > index ? (level > 25 ? '#22c55e' : '#f59e0b') : '#cbd5e1'} />
+          ))}
+          {level > 0 && (
+            <path d="M50 32 L44 45 H50 L47 56 L58 41 H51 L55 32 Z" fill="#f8fafc" stroke={outline} strokeWidth="0.8" opacity="0.9" />
+          )}
+        </g>
+      )}
+      {kind === 'valve' && (
+        <g>
+          <rect x="10" y="40" width="30" height="12" rx="3" fill={plate} stroke={outline} strokeWidth="1.2" />
+          <rect x="60" y="40" width="30" height="12" rx="3" fill={plate} stroke={outline} strokeWidth="1.2" />
+          <rect x="38" y="36" width="24" height="20" rx="3" fill={plateDark} stroke={outline} strokeWidth="1.2" />
+          <rect x="47" y="24" width="6" height="14" fill={plateDark} />
+          <circle cx="50" cy="20" r="11" fill="#e2e8f0" stroke={outline} strokeWidth="1.4" />
+          <g transform={`rotate(${open ? 45 : 0} 50 20)`}>
+            <line x1="42" y1="12" x2="58" y2="28" stroke={plateDark} strokeWidth="2.4" strokeLinecap="round" />
+            <line x1="58" y1="12" x2="42" y2="28" stroke={plateDark} strokeWidth="2.4" strokeLinecap="round" />
+          </g>
+          {open && (
+            <g fill="#38bdf8">
+              <circle cx="33" cy="58" r="2.4" /><circle cx="47" cy="62" r="2" /><circle cx="63" cy="58" r="2.4" />
+            </g>
+          )}
+        </g>
+      )}
+      {kind === 'fire-detector' && (
+        <g>
+          <ellipse cx="50" cy="58" rx="28" ry="8" fill="#cbd5e1" stroke={outline} strokeWidth="1.2" />
+          <path d="M22 58 Q22 34 50 30 Q78 34 78 58 Z" fill="#f1f5f9" stroke={outline} strokeWidth="1.5" />
+          <circle cx="50" cy="48" r="4" fill={fire ? '#ef4444' : '#22c55e'} stroke={outline} strokeWidth="1" />
+          {fire && (
+            <g>
+              <path d="M50 24 Q42 34 46 42 Q48 36 50 34 Q52 42 58 38 Q58 30 50 24 Z" fill="#f97316" stroke="#b91c1c" strokeWidth="1" />
+              <path d="M50 34 Q46 39 49 43 Q50 40 52 39 Q53 43 55 41 Q55 36 50 34 Z" fill="#fde047" />
+            </g>
+          )}
         </g>
       )}
       {kind === 'push-button' && (

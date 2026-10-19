@@ -42,6 +42,16 @@ function sensorReading(kind: IotThingKind, state: IotThingState, translate: (key
       return state.motion ? translate('Motion detected') : translate('No motion')
     case 'sound-sensor':
       return `${Math.round(state.sound ?? 0)} dB`
+    case 'sensor':
+      return `${state.reading ?? 0} ${state.unit ?? ''}`.trim()
+    case 'generator':
+      return `${Math.round(state.output ?? 0)}%`
+    case 'battery':
+      return `${Math.round(state.level ?? 0)}%`
+    case 'valve':
+      return state.open ? translate('Open') : translate('Close')
+    case 'fire-detector':
+      return state.fire ? translate('Fire detected') : translate('No fire')
     default:
       return ''
   }
@@ -68,6 +78,8 @@ function IotThingSession({ device }: { device: NetworkDevice }) {
   const temperature = state.temperature ?? 22
   const humidity = Math.max(0, Math.min(100, state.humidity ?? 0))
   const sound = Math.max(0, Math.min(100, state.sound ?? 0))
+  const reading = state.reading ?? 0
+  const output = Math.max(0, Math.min(100, state.output ?? 0))
   const ageSeconds = runtime?.lastReportTick !== undefined ? Math.max(0, (simulationTick - runtime.lastReportTick) * 0.06) : undefined
   const saveServerAddress = () => {
     const value = serverAddressDraft.trim() || 'auto'
@@ -201,6 +213,44 @@ function IotThingSession({ device }: { device: NetworkDevice }) {
               aria-label={t('Sound level')}
             />
             <span className="min-w-[4rem] text-xs font-bold text-slate-700">{Math.round(sound)}{spec.unit}</span>
+          </div>
+        )}
+        {spec.control === 'reading' && (
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={spec.min ?? 0}
+              max={spec.max ?? 1000}
+              step={spec.max !== undefined && spec.max <= 50 ? 0.1 : 1}
+              value={reading}
+              data-iot-action="reading"
+              onChange={event => setIotState(device.id, { reading: Number(event.target.value) })}
+              className="h-2 w-full max-w-sm cursor-pointer accent-sky-600"
+              aria-label={t('Reading')}
+            />
+            <span className="min-w-[5rem] text-xs font-bold text-slate-700">{reading} {state.unit ?? spec.unit ?? ''}</span>
+          </div>
+        )}
+        {spec.control === 'output' && (
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(output)}
+              data-iot-action="output"
+              onChange={event => setIotState(device.id, { output: Number(event.target.value) })}
+              className="h-2 w-full max-w-sm cursor-pointer accent-sky-600"
+              aria-label={t('Output')}
+            />
+            <span className="min-w-[4rem] text-xs font-bold text-slate-700">{Math.round(output)}%</span>
+          </div>
+        )}
+        {spec.control === 'fire' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {actionButton({ fire: true }, t('Simulate fire'), 'fire-on', state.fire === true)}
+            {actionButton({ fire: false }, t('Clear fire'), 'fire-off', state.fire !== true)}
+            <span className="text-xs text-slate-500">{sensorReading(kind, state, t)}</span>
           </div>
         )}
         {spec.control === 'button' && (

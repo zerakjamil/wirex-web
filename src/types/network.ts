@@ -480,6 +480,11 @@ export type IotThingKind =
   | 'motion-sensor'
   | 'sound-sensor'
   | 'camera'
+  | 'sensor'
+  | 'generator'
+  | 'battery'
+  | 'valve'
+  | 'fire-detector'
 
 export interface IotThingState {
   power?: boolean
@@ -490,6 +495,10 @@ export interface IotThingState {
   smoke?: boolean
   motion?: boolean
   sound?: number
+  reading?: number
+  unit?: string
+  output?: number
+  fire?: boolean
   pressedAtTick?: number
 }
 

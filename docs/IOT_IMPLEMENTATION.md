@@ -94,6 +94,38 @@ control; actuators accept the same local and server-issued controls as the
 original things. Smart-city, industrial-OT, power-grid and MCU/breadboard
 shelves are still outside this implementation.
 
+## Smart City, Industrial OT and Power Grid (2026-10-20)
+
+Coverage after this pass: **14/16 Smart City**, **3/6 Industrial OT** and
+**4/4 Power Grid** palette models (48 IoT shelf entries in total).
+
+| PT shelf model | Class | State and controls |
+| --- | --- | --- |
+| Atm Pressure Monitor | sensor | 950–1050 hPa |
+| Carbon Dioxide Detector | sensor | 400–2000 ppm |
+| Carbon Monoxide Detector | sensor | 0–100 ppm |
+| Humidity Monitor | sensor | 0–100 % |
+| Temperature Monitor | sensor | −10–50 °C |
+| Wind Detector | sensor | 0–40 m/s |
+| Power Meter | sensor | 0–5000 W |
+| Fire Monitor | fire-detector | fire detected/clear |
+| Water Drain | valve | open/closed |
+| Beacon | siren | on/off |
+| Fire Sprinkler | sprinkler | on/off |
+| Old Car | appliance | ignition on/off |
+| Smart LED, Street Lamp | lamp | on/off |
+| Trip Sensor | motion-sensor | beam broken/clear |
+| Blower | fan | on/off |
+| Signal Generator | generator | output 0–100 % |
+| Solar Panel, Wind Turbine | generator | output 0–100 % |
+| Battery | battery | charge 0–100 % |
+
+Sensors carry their unit in device state, so reports and the server client list
+read `1013 hPa` or `420 ppm` rather than a unitless number. Generator output is
+a device-level percentage; there is no electrical load-flow between power-grid
+devices. RFID Card/Reader, PLC-PT, HMI and DataHistorianServer remain missing
+because they need tag pairing, programming or a historian service.
+
 ## Documented simplifications (no parity claim)
 
 - The application layer is structured simulator metadata over IP/UDP ports

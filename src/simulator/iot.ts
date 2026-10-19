@@ -31,10 +31,11 @@ export interface IotThingSpec {
   kind: IotThingKind
   model: string
   label: string
-  control: 'toggle' | 'open-close' | 'level' | 'temperature' | 'smoke' | 'button' | 'humiture' | 'motion' | 'sound'
+  control: 'toggle' | 'open-close' | 'level' | 'temperature' | 'smoke' | 'button' | 'humiture' | 'motion' | 'sound' | 'reading' | 'output' | 'fire'
   unit?: string
   min?: number
   max?: number
+  initial?: IotThingState
 }
 
 export const IOT_THINGS: IotThingSpec[] = [
@@ -68,6 +69,29 @@ export const IOT_THINGS: IotThingSpec[] = [
   { kind: 'sound-sensor', model: 'Sound Frequency Detector', label: 'Sound Frequency Detector', control: 'sound', unit: 'dB', min: 0, max: 100 },
   { kind: 'water-detector', model: 'Water Level Monitor', label: 'Water Level Monitor', control: 'level', unit: '%', min: 0, max: 100 },
   { kind: 'camera', model: 'Webcam', label: 'Webcam', control: 'toggle' },
+  // Smart City. Sensors expose one measured quantity with its own unit and
+  // range; binary detectors report an alarm; the rest are actuators.
+  { kind: 'sensor', model: 'Atm Pressure Monitor', label: 'Atm Pressure Monitor', control: 'reading', unit: 'hPa', min: 950, max: 1050, initial: { reading: 1013, unit: 'hPa' } },
+  { kind: 'siren', model: 'Beacon', label: 'Beacon', control: 'toggle' },
+  { kind: 'sensor', model: 'Carbon Dioxide Detector', label: 'Carbon Dioxide Detector', control: 'reading', unit: 'ppm', min: 400, max: 2000, initial: { reading: 420, unit: 'ppm' } },
+  { kind: 'sensor', model: 'Carbon Monoxide Detector', label: 'Carbon Monoxide Detector', control: 'reading', unit: 'ppm', min: 0, max: 100, initial: { reading: 0, unit: 'ppm' } },
+  { kind: 'fire-detector', model: 'Fire Monitor', label: 'Fire Monitor', control: 'fire' },
+  { kind: 'sprinkler', model: 'Fire Sprinkler', label: 'Fire Sprinkler', control: 'toggle' },
+  { kind: 'sensor', model: 'Humidity Monitor', label: 'Humidity Monitor', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 45, unit: '%' } },
+  { kind: 'appliance', model: 'Old Car', label: 'Old Car', control: 'toggle' },
+  { kind: 'lamp', model: 'Smart LED', label: 'Smart LED', control: 'toggle' },
+  { kind: 'lamp', model: 'Street Lamp', label: 'Street Lamp', control: 'toggle' },
+  { kind: 'sensor', model: 'Temperature Monitor', label: 'Temperature Monitor', control: 'reading', unit: '°C', min: -10, max: 50, initial: { reading: 22, unit: '°C' } },
+  { kind: 'motion-sensor', model: 'Trip Sensor', label: 'Trip Sensor', control: 'motion' },
+  { kind: 'valve', model: 'Water Drain', label: 'Water Drain', control: 'open-close' },
+  { kind: 'sensor', model: 'Wind Detector', label: 'Wind Detector', control: 'reading', unit: 'm/s', min: 0, max: 40, initial: { reading: 3, unit: 'm/s' } },
+  // Industrial OT and Power Grid.
+  { kind: 'fan', model: 'Blower', label: 'Blower', control: 'toggle' },
+  { kind: 'generator', model: 'Signal Generator', label: 'Signal Generator', control: 'output' },
+  { kind: 'battery', model: 'Battery', label: 'Battery', control: 'level', unit: '%', min: 0, max: 100, initial: { level: 100 } },
+  { kind: 'sensor', model: 'Power Meter', label: 'Power Meter', control: 'reading', unit: 'W', min: 0, max: 5000, initial: { reading: 0, unit: 'W' } },
+  { kind: 'generator', model: 'Solar Panel', label: 'Solar Panel', control: 'output' },
+  { kind: 'generator', model: 'Wind Turbine', label: 'Wind Turbine', control: 'output' },
 ]
 
 export function iotThingSpec(model: string): IotThingSpec {
@@ -111,6 +135,16 @@ export function defaultIotState(kind: IotThingKind): IotThingState {
       return { motion: false }
     case 'sound-sensor':
       return { sound: 0 }
+    case 'sensor':
+      return { reading: 0, unit: '' }
+    case 'generator':
+      return { output: 0 }
+    case 'battery':
+      return { level: 100 }
+    case 'valve':
+      return { open: false }
+    case 'fire-detector':
+      return { fire: false }
   }
 }
 
@@ -174,14 +208,28 @@ export function iotStateSummary(kind: IotThingKind, state: IotThingState): strin
       return state.motion ? 'motion detected' : 'no motion'
     case 'sound-sensor':
       return `${Math.round(state.sound ?? 0)} dB`
+    case 'sensor':
+      return `${state.reading ?? 0} ${state.unit ?? ''}`.trim()
+    case 'generator':
+      return `${Math.round(state.output ?? 0)}% output`
+    case 'battery':
+      return `${Math.round(state.level ?? 0)}% charge`
+    case 'valve':
+      return state.open ? 'open' : 'closed'
+    case 'fire-detector':
+      return state.fire ? 'fire detected' : 'clear'
   }
 }
 
 export function sanitizeIotPatch(kind: IotThingKind, patch: IotThingState): IotThingState {
   const next: IotThingState = {}
   if ('power' in patch && patch.power !== undefined && ['lamp', 'fan', 'siren', 'sprinkler', 'appliance', 'speaker', 'camera'].includes(kind)) next.power = patch.power === true
-  if ('open' in patch && patch.open !== undefined && ['door', 'window'].includes(kind)) next.open = patch.open === true
-  if (patch.level !== undefined && ['blinds', 'water-detector', 'light-sensor', 'humidifier'].includes(kind) && Number.isFinite(patch.level)) next.level = Math.max(0, Math.min(100, Math.round(patch.level)))
+  if ('open' in patch && patch.open !== undefined && ['door', 'window', 'valve'].includes(kind)) next.open = patch.open === true
+  if (patch.level !== undefined && ['blinds', 'water-detector', 'light-sensor', 'humidifier', 'battery'].includes(kind) && Number.isFinite(patch.level)) next.level = Math.max(0, Math.min(100, Math.round(patch.level)))
+  if (patch.reading !== undefined && kind === 'sensor' && Number.isFinite(patch.reading)) next.reading = Math.max(0, Math.min(2000, Math.round(patch.reading * 10) / 10))
+  if (patch.unit !== undefined && kind === 'sensor' && typeof patch.unit === 'string') next.unit = patch.unit.slice(0, 8)
+  if (patch.output !== undefined && kind === 'generator' && Number.isFinite(patch.output)) next.output = Math.max(0, Math.min(100, Math.round(patch.output)))
+  if ('fire' in patch && patch.fire !== undefined && kind === 'fire-detector') next.fire = patch.fire === true
   if (patch.temperature !== undefined && (kind === 'thermostat' || kind === 'humiture') && Number.isFinite(patch.temperature)) next.temperature = Math.max(kind === 'humiture' ? 0 : 10, Math.min(40, Math.round(patch.temperature * 10) / 10))
   if (patch.humidity !== undefined && kind === 'humiture' && Number.isFinite(patch.humidity)) next.humidity = Math.max(0, Math.min(100, Math.round(patch.humidity)))
   if ('smoke' in patch && patch.smoke !== undefined && kind === 'smoke-detector') next.smoke = patch.smoke === true

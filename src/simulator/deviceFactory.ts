@@ -424,7 +424,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       ...(type === 'iot' && iotKind
         ? {
             iotKind,
-            iotState: defaultIotState(iotKind),
+            iotState: { ...(iotThingSpec(model).initial ?? defaultIotState(iotKind)) },
             iotServerAddress: 'auto',
             dhcpEnabled: true,
           }
