@@ -235,36 +235,40 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-server-power-rear {left:87.1%;top:86.7%;width:6.34%;height:8.13%;border-radius:4px}
 .hw-face-hint {color:#91a3ad;font-size:10px;text-align:center;padding:4px}
 
-/* ---------- laptop ---------- */
-.hw-laptop {position:relative;width:540px;max-width:100%;height:340px;flex:0 0 auto}
-.hw-laptop.is-top {height:380px}
-.hw-laptop-rear,.hw-laptop-top {position:absolute;inset:0}
-.hw-laptop-shadow {position:absolute;left:72px;right:72px;bottom:12px;height:26px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(12,22,28,.34),rgba(12,22,28,0) 70%);filter:blur(3px)}
-.hw-laptop-lid-back {position:absolute;left:92px;top:26px;width:356px;height:202px;border-radius:13px 13px 7px 7px;background:linear-gradient(135deg,#f0f4f5 0%,#d7dfe3 20%,#b2c0c7 64%,#8b9aa3 100%);border:1px solid #6d7c85;box-shadow:inset 0 1px 0 rgba(255,255,255,.92),inset 0 -2px 0 rgba(0,0,0,.16),0 13px 24px rgba(12,22,28,.2);transform:perspective(900px) rotateX(2.5deg) rotateY(-6deg);transform-origin:50% 100%;z-index:2}
-.hw-laptop-lid-back::before {content:'';position:absolute;inset:8px;border-radius:8px;border:1px solid rgba(44,59,68,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
-.hw-laptop-lid-back::after {content:'';position:absolute;left:20px;right:20px;top:18px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent)}
-.hw-laptop-logo {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 13px/1 Arial,sans-serif;letter-spacing:.3em;color:#697981;text-shadow:0 1px 0 rgba(255,255,255,.6)}
-.hw-laptop-hinge {position:absolute;left:108px;top:220px;width:324px;height:14px;border-radius:6px;background:linear-gradient(#3e4b53,#11181d);border:1px solid #0a0f13;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 4px rgba(0,0,0,.35);z-index:4;display:flex;align-items:center;justify-content:space-between;padding:0 7px}
-.hw-laptop-hinge i {width:13px;height:7px;border-radius:3px;background:linear-gradient(#667781,#1b2329);border:1px solid #0b1115}
-.hw-laptop-base-rear {position:absolute;left:58px;top:230px;width:424px;height:86px;border-radius:5px 5px 16px 16px;background:linear-gradient(#4d5b63,#273239 34%,#141b20);border:1px solid #0a0f13;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),inset 0 -3px 0 rgba(0,0,0,.35),0 11px 18px rgba(12,22,28,.28);transform:perspective(900px) rotateX(-2.5deg) rotateY(-4.5deg);z-index:3}
-.hw-laptop-base-side {position:absolute;right:-11px;top:7px;bottom:7px;width:14px;border-radius:0 8px 10px 0;background:linear-gradient(90deg,#313d44,#0e1418 72%);border:1px solid #0a0f13;border-inline-start:0;transform:skewY(-7deg);box-shadow:0 7px 10px rgba(12,22,28,.22)}
-.hw-laptop-base-lip {position:absolute;left:10px;right:10px;top:-2px;height:5px;border-radius:3px;background:linear-gradient(#d6dfe3,#8d9ba3);border:1px solid #6c7a82;box-shadow:0 1px 2px rgba(0,0,0,.35)}
-.hw-laptop-foot {position:absolute;left:12px;right:12px;bottom:6px;display:flex;align-items:center;gap:8px;height:18px}
-.hw-laptop-model {font:700 7px/1 Arial,sans-serif;letter-spacing:.12em;color:#8fa1ac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hw-laptop-badge {margin-inline-start:auto;font:700 6px/1 Arial,sans-serif;letter-spacing:.16em;color:#6f838f;border:1px solid #41515a;border-radius:2px;padding:2px 5px}
-.hw-laptop-power {display:inline-flex;align-items:center;gap:3px;background:transparent!important;border:0!important;padding:0!important;color:#aabcc6!important;cursor:pointer;flex:0 0 auto}
-.hw-laptop-power-dot {width:9px;height:9px;border-radius:50%;border:1px solid #5d707b;background:#182228;box-shadow:inset 0 1px 1px #000}
-.hw-laptop-power[data-on=true] .hw-laptop-power-dot {background:#4ee07a;border-color:#8af0ab;box-shadow:0 0 6px rgba(78,224,122,.9)}
-.hw-laptop-power small {font:700 5.5px/1 Arial,sans-serif;letter-spacing:.1em}
-.hw-laptop-io {position:absolute;left:14px;top:8px;display:flex;flex-direction:column;gap:3px;z-index:5}
-.hw-laptop-io .hw-port-row {gap:4px}
-.hw-laptop-bay {position:absolute;right:-6px;top:232px;width:152px;z-index:6;filter:drop-shadow(0 7px 9px rgba(0,0,0,.3))}
-.hw-laptop-bay::before {content:'';position:absolute;left:-7px;top:14px;width:10px;height:34px;border-radius:2px 0 0 2px;background:linear-gradient(90deg,#8f6d22,#e0bf63 45%,#a9852f);border:1px solid #6d5318;border-inline-end:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
-.hw-laptop-bay::after {content:'';position:absolute;left:-2px;top:18px;width:2px;height:26px;background:repeating-linear-gradient(0deg,#5b4514 0 2px,#f3d47b 2px 3px,#5b4514 3px 4px)}
-.hw-laptop-bay .hw-bay {width:100%;min-height:62px;background:linear-gradient(#2b3941,#172127);border-color:#5c727f;border-radius:2px 4px 4px 2px;box-shadow:0 1px 0 rgba(255,255,255,.12) inset}
-.hw-laptop-bay .hw-bay-head strong {max-width:88px}
-.hw-laptop-bay .hw-bay-ports {min-height:26px}
-.hw-laptop-bay .hw-bay-action {padding:3px 6px!important}
+/* ---------- laptop (Packet Tracer side elevation) ---------- */
+.hw-laptop {position:relative;width:560px;max-width:100%;height:392px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.hw-laptop-side {position:relative;width:478px;height:380px}
+.hw-laptop-side-art {position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.hw-laptop-slotbay {position:absolute;left:45.2%;top:82.4%;width:21.8%;height:9.4%;z-index:5;display:flex;align-items:center}
+.hw-laptop-slotbay .hw-bay {display:flex;flex-direction:row;align-items:center;gap:4px;width:100%;height:100%;min-height:0;padding:2px 3px;border-radius:2px;border:1px solid #4e5f68!important;background:linear-gradient(#1a242a,#0a0f12)!important;box-shadow:0 1px 0 rgba(255,255,255,.14) inset,0 2px 6px rgba(0,0,0,.45)}
+.hw-laptop-slotbay .hw-bay-head {flex-direction:column;align-items:flex-start;gap:1px;flex:0 0 auto;line-height:1}
+.hw-laptop-slotbay .hw-bay-head span {font-size:5px;letter-spacing:.08em;color:#8ba0ab}
+.hw-laptop-slotbay .hw-bay-head strong {display:none}
+.hw-laptop-slotbay .hw-bay-ports {flex:0 0 auto;min-height:0;flex-wrap:nowrap;align-items:center}
+.hw-laptop-slotbay .hw-bay-foot {flex:0 0 auto;margin:0;padding:0;border:0;background:none}
+.hw-laptop-slotbay .hw-bay-action {font-size:5.5px!important;padding:3px 4px!important}
+.hw-laptop-slotbay .hw-port {width:32px;gap:2px;padding:0}
+.hw-laptop-slotbay .hw-jack {width:20px;height:15px}
+.hw-laptop-slotbay .hw-jack::before {left:4px;right:4px;top:3px;height:4px}
+.hw-laptop-slotbay .hw-jack::after {left:7px;bottom:-2px;width:5px;height:2px}
+.hw-laptop-slotbay .hw-port-name {font-size:6px}
+.hw-laptop-slotbay .hw-led {width:5px;height:5px;flex:0 0 5px}
+.hw-laptop-slotbay .hw-bay-slot {min-height:24px;width:44px;gap:8px}
+.hw-laptop-slotbay .hw-bay-slot i {width:4px;height:4px}
+.hw-laptop-slotbay .hw-bay-blank {font-size:6px;padding:2px 0}
+.hw-laptop-power {position:absolute;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent!important;border:0!important;padding:0!important;cursor:pointer}
+.hw-laptop.is-side .hw-laptop-power {left:95.8%;top:86.2%;transform:translate(-50%,-50%)}
+.hw-laptop.is-side .hw-laptop-power-dome {width:21px;height:21px}
+.hw-laptop.is-side .hw-laptop-power-dome::before {top:4px;height:6px;width:1.5px}
+.hw-laptop.is-side .hw-laptop-power-dome::after {top:6px;width:8px;height:8px;border-width:1.5px}
+.hw-laptop.is-side .hw-laptop-power-led {width:21px;height:4px}
+.hw-laptop.is-side .hw-laptop-power {gap:2px}
+.hw-laptop-power-dome {position:relative;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#eef2f3,#aab4b8 58%,#6d797e 70%,#3d474c);border:1px solid #3c464b;box-shadow:0 1px 2px rgba(0,0,0,.45),inset 0 1px 1px rgba(255,255,255,.7)}
+.hw-laptop-power-dome::before {content:'';position:absolute;left:50%;top:5px;width:2px;height:8px;transform:translateX(-50%);background:#2c353a;border-radius:1px}
+.hw-laptop-power-dome::after {content:'';position:absolute;left:50%;top:8px;width:10px;height:10px;transform:translateX(-50%);border:2px solid #2c353a;border-top-color:transparent;border-radius:50%}
+.hw-laptop-power-led {width:26px;height:5px;border-radius:2px;background:#1a2420;border:1px solid #11181a}
+.hw-laptop-power[data-on=true] .hw-laptop-power-led {background:#b7e04c;border-color:#d6f07a;box-shadow:0 0 6px rgba(183,224,76,.8)}
+.hw-laptop-top {position:relative;width:540px;height:380px}
 .hw-laptop-screen-top {position:absolute;left:86px;top:8px;width:368px;height:152px;border-radius:9px 9px 4px 4px;background:linear-gradient(#d7dfe3,#aab8c0);border:1px solid #6d7c85;box-shadow:0 10px 18px rgba(12,22,28,.18),inset 0 1px 0 rgba(255,255,255,.8);transform:perspective(1100px) rotateX(8deg);z-index:2;padding:9px}
 .hw-laptop-screen-panel {width:100%;height:100%;border-radius:4px;border:2px solid #0a0f12;background:linear-gradient(135deg,#16323d,#0b1a21);display:flex;align-items:center;justify-content:center;color:#6fc9dd;font:700 12px/1 Arial,sans-serif;letter-spacing:.3em;text-shadow:0 0 10px rgba(111,201,221,.4)}
 .hw-laptop-screen-panel[data-on=false] {background:#0b1114;color:#2c3a41;text-shadow:none}
@@ -274,12 +278,13 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-laptop-keyrow {display:flex;gap:4px;flex:1}
 .hw-laptop-keyrow i {flex:1;border-radius:2px;background:linear-gradient(#3c484f,#202a30);border:1px solid #0d1317;box-shadow:inset 0 1px 0 rgba(255,255,255,.13)}
 .hw-laptop-trackpad {width:88px;height:40px;margin:10px auto 0;border-radius:4px;background:linear-gradient(#c3ced3,#9fadb4);border:1px solid #7b8991;box-shadow:inset 0 1px 2px rgba(0,0,0,.18)}
+.hw-laptop-model {font:700 7px/1 Arial,sans-serif;letter-spacing:.12em;color:#8fa1ac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hw-laptop-top .hw-laptop-model {position:absolute;left:26px;bottom:10px;color:#4f5f67}
-.hw-laptop-top .hw-laptop-power {position:absolute;right:24px;bottom:12px;color:#4a5a63!important}
-.hw-laptop-top .hw-laptop-power small {color:#4a5a63}
-.hw-laptop-top .hw-laptop-io {left:56px;top:auto;bottom:8px;flex-direction:row;align-items:center;gap:6px}
-.hw-laptop-top .hw-laptop-io .hw-panel-label {color:#4f5f67}
-.hw-laptop-top .hw-laptop-bay {top:auto;bottom:28px;right:6px}
+.hw-laptop-top .hw-laptop-power {right:24px;bottom:12px;color:#4a5a63!important}
+.hw-laptop-top .hw-laptop-power-dome {width:16px;height:16px}
+.hw-laptop-top .hw-laptop-power-dome::before {top:3px;height:5px;width:1.5px}
+.hw-laptop-top .hw-laptop-power-dome::after {top:5px;width:6px;height:6px;border-width:1.5px}
+.hw-laptop-top .hw-laptop-power-led {width:16px;height:3px}
 
 /* ---------- phone ---------- */
 .hw-phone {display:flex;flex-direction:column;align-items:center;gap:6px;width:480px;max-width:100%}

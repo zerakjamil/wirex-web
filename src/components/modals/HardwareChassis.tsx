@@ -818,14 +818,10 @@ function DesktopChassis(props: ChassisProps) {
 }
 
 function LaptopChassis(props: ChassisProps) {
-  const { device, ports, power, face } = props
-  const top = face === 'front'
-  const builtIn = ports.filter(port => port.moduleSlot === undefined)
+  const { device, power, face } = props
+  const side = face === 'rear'
   const bay = props.profile.slots > 0 ? (
-    <div className="hw-laptop-bay">
-      <span className="hw-laptop-bay-rail" aria-hidden="true" />
-      <ModuleBay {...props} slot={0} compact />
-    </div>
+    <div className="hw-laptop-slotbay"><ModuleBay {...props} slot={0} compact /></div>
   ) : null
   const powerButton = (
     <button
@@ -836,30 +832,98 @@ function LaptopChassis(props: ChassisProps) {
       aria-label="Power"
       title="Power"
     >
-      <span className="hw-laptop-power-dot" aria-hidden="true" />
-      <small>PWR</small>
+      <span className="hw-laptop-power-dome" aria-hidden="true" />
+      <span className="hw-laptop-power-led" aria-hidden="true" />
     </button>
   )
-  const builtInRow = builtIn.length ? (
-    <div className="hw-laptop-io">
-      <span className="hw-panel-label">I/O</span>
-      <div className="hw-port-row">
-        {builtIn.map(port => (
-          <PortJack
-            key={port.id}
-            port={port}
-            power={power}
-            compact
-            selected={props.selectedPortId === port.id}
-            onSelect={props.onSelectPort}
-          />
-        ))}
-      </div>
-    </div>
-  ) : null
   return (
-    <div className={`hw-laptop ${top ? 'is-top' : 'is-rear'}`} data-face={face}>
-      {top ? (
+    <div className={`hw-laptop ${side ? 'is-side' : 'is-top'}`} data-face={face}>
+      {side ? (
+        <div className="hw-laptop-side">
+          <svg className="hw-laptop-side-art" viewBox="0 0 760 604" aria-hidden="true">
+            <defs>
+              <linearGradient id="lap-lid" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#aab2b6" />
+                <stop offset=".16" stopColor="#8b969b" />
+                <stop offset=".58" stopColor="#616c71" />
+                <stop offset="1" stopColor="#3d474c" />
+              </linearGradient>
+              <linearGradient id="lap-base" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#d7dcde" />
+                <stop offset=".3" stopColor="#c3cbcd" />
+                <stop offset=".72" stopColor="#a7b2b6" />
+                <stop offset="1" stopColor="#828e93" />
+              </linearGradient>
+              <linearGradient id="lap-cap" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#4c565b" />
+                <stop offset="1" stopColor="#2c353a" />
+              </linearGradient>
+              <linearGradient id="lap-hinge" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#e4e8e9" />
+                <stop offset="1" stopColor="#a2acb0" />
+              </linearGradient>
+              <radialGradient id="lap-shadow" cx=".5" cy=".5" r=".5">
+                <stop offset="0" stopColor="#0b1418" stopOpacity=".34" />
+                <stop offset="1" stopColor="#0b1418" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <ellipse cx="392" cy="594" rx="336" ry="16" fill="url(#lap-shadow)" />
+            <path d="M6 588 L6 34 Q6 6 26 6 Q44 6 44 34 L44 588 Z" fill="url(#lap-lid)" stroke="#2f393e" strokeWidth="1" />
+            <path d="M11 42 L11 574" stroke="#dde3e5" strokeWidth="1.6" opacity=".38" />
+            <path d="M39 24 L39 582" stroke="#20292d" strokeWidth="2" opacity=".5" />
+            <path d="M44 478 L120 476 L300 483 L540 496 L700 502 Q748 505 754 522 L758 550 Q758 568 738 575 L92 592 Q54 593 46 576 L44 478 Z" fill="url(#lap-base)" stroke="#7b878c" strokeWidth="1.2" />
+            <path d="M46 574 L738 556 L734 574 L92 591 Q64 591 54 580 Z" fill="#6f7b80" opacity=".5" />
+            <path d="M46 480 L120 478 L300 485 L540 498 L700 504" fill="none" stroke="#eef2f3" strokeWidth="1.5" opacity=".72" />
+            <path d="M36 480 L52 480 L58 570 Q58 584 44 586 L36 584 Z" fill="url(#lap-cap)" opacity=".9" />
+            {Array.from({ length: 6 }, (_, index) => (
+              <rect key={`vent-${index}`} x={128 + index * 19} y={506} width={11} height={62} rx={4} fill="#1a2327" stroke="#5f6c72" strokeWidth=".8" />
+            ))}
+            <path d="M86 532 C86 556 70 566 66 584 C63 594 70 600 82 598" fill="none" stroke="#1b2226" strokeWidth="4" />
+            <rect x="68" y="506" width="30" height="26" rx="5" fill="#20282c" stroke="#59666c" strokeWidth="1.4" />
+            <rect x="74" y="512" width="18" height="14" rx="4" fill="#0a0e10" stroke="#8d9aa0" strokeWidth="1" />
+            <circle cx="106" cy="512" r="3" fill="#8ad34f" stroke="#c8f39a" strokeWidth=".8" />
+            <rect x="248" y="506" width="84" height="58" rx="3" fill="#b7c1c4" stroke="#748187" strokeWidth="1.2" />
+            <rect x="255" y="513" width="70" height="44" rx="2" fill="#a7b2b6" stroke="#8b979c" strokeWidth=".8" />
+            <path d="M332 522 L340 522 L340 548 L332 548" fill="#9aa5a9" stroke="#6f7b80" strokeWidth="1" />
+            <path d="M340 528 L346 528 M340 536 L346 536 M340 544 L346 544" stroke="#5e6a6f" strokeWidth="2" />
+            <rect x="344" y="500" width="154" height="46" rx="3" fill="#0a0f12" stroke="#6e7a80" strokeWidth="1.4" />
+            <rect x="348" y="504" width="146" height="38" rx="2" fill="#05080a" stroke="#2c363b" strokeWidth="1" />
+            <path d="M352 542 L492 542" stroke="#8d9a9f" strokeWidth="1" opacity=".55" />
+            <circle cx="524" cy="524" r="10" fill="#2a3338" stroke="#5e6b70" strokeWidth="1.2" />
+            <circle cx="524" cy="524" r="5" fill="#3f9a4a" stroke="#8fd39a" strokeWidth="1" />
+            <circle cx="548" cy="524" r="10" fill="#2a3338" stroke="#5e6b70" strokeWidth="1.2" />
+            <circle cx="548" cy="524" r="5" fill="#b45a6a" stroke="#e0a0ac" strokeWidth="1" />
+            <rect x="592" y="512" width="34" height="20" rx="2" fill="#2f393e" stroke="#8d9aa0" strokeWidth="1.2" />
+            <rect x="596" y="516" width="26" height="12" rx="1" fill="#0a0f12" />
+            <rect x="636" y="512" width="34" height="20" rx="2" fill="#2f393e" stroke="#8d9aa0" strokeWidth="1.2" />
+            <rect x="640" y="516" width="26" height="12" rx="1" fill="#0a0f12" />
+            <path d="M609 500 L609 507 M606 502 L612 502 M609 502 L605 498 M609 503 L613 499" stroke="#6f7d82" strokeWidth="1.1" fill="none" />
+            <circle cx="605" cy="498" r="1.4" fill="#6f7d82" />
+            <rect x="611.5" y="497" width="3" height="3" fill="#6f7d82" />
+            <path d="M653 500 L653 507 M650 502 L656 502 M653 502 L649 498 M653 503 L657 499" stroke="#6f7d82" strokeWidth="1.1" fill="none" />
+            <circle cx="649" cy="498" r="1.4" fill="#6f7d82" />
+            <rect x="655.5" y="497" width="3" height="3" fill="#6f7d82" />
+            <circle cx="732" cy="522" r="15" fill="#222b30" stroke="#5f6c72" strokeWidth="1.4" />
+            <circle cx="732" cy="522" r="11" fill="#3a4449" />
+            {Array.from({ length: 16 }, (_, index) => {
+              const x = 112 + index * 27
+              const y = 477 + (x - 120) * 0.06
+              return (
+                <g key={`key-${index}`}>
+                  <rect x={x} y={y - 13} width={23} height={8} rx={3} fill="#ccd4d6" stroke="#7c888d" strokeWidth="1" />
+                  <rect x={x + 1} y={y - 6} width={21} height={6} rx={1.5} fill="#8e9a9f" stroke="#6f7b80" strokeWidth=".8" />
+                </g>
+              )
+            })}
+            <path d="M38 486 Q38 458 62 458 L88 458 Q106 458 110 478 L112 488 L38 488 Z" fill="url(#lap-hinge)" stroke="#7b878c" strokeWidth="1.2" />
+            <path d="M46 462 Q54 461 64 461 L88 461" fill="none" stroke="#eef2f3" strokeWidth="1.4" opacity=".8" />
+            <rect x="104" y="590" width="34" height="10" rx="4" fill="#2a3338" />
+            <rect x="596" y="584" width="30" height="10" rx="4" fill="#2a3338" />
+          </svg>
+          {bay}
+          {powerButton}
+        </div>
+      ) : (
         <div className="hw-laptop-top">
           <div className="hw-laptop-screen-top">
             <div className="hw-laptop-screen-panel" data-on={power}><span>wireX</span></div>
@@ -877,27 +941,6 @@ function LaptopChassis(props: ChassisProps) {
             <span className="hw-laptop-model" dir="ltr">{device.model}</span>
             {powerButton}
           </div>
-          {bay}
-          {builtInRow}
-        </div>
-      ) : (
-        <div className="hw-laptop-rear">
-          <span className="hw-laptop-shadow" aria-hidden="true" />
-          <div className="hw-laptop-lid-back">
-            <span className="hw-laptop-logo" dir="ltr">wireX</span>
-          </div>
-          <div className="hw-laptop-hinge" aria-hidden="true"><i /><i /></div>
-          <div className="hw-laptop-base-rear">
-            <span className="hw-laptop-base-side" aria-hidden="true" />
-            <span className="hw-laptop-base-lip" aria-hidden="true" />
-            {builtInRow}
-            <div className="hw-laptop-foot">
-              {powerButton}
-              <span className="hw-laptop-model" dir="ltr">{device.model}</span>
-              <span className="hw-laptop-badge" dir="ltr">LAPTOP</span>
-            </div>
-          </div>
-          {bay}
         </div>
       )}
     </div>

@@ -38,6 +38,7 @@ export const messages = {
   'Offline study storage':['Offline study storage','تخزين الدراسة دون اتصال','پاشەکەوتی خوێندن بەبێ ئینتەرنێت'],
   'Front':['Front','الأمام','پێشەوە'],
   'Rear':['Rear','الخلف','پشتەوە'],
+  'Side':['Side','الجانب','لای'],
   'Top':['Top','الأعلى','سەرەوە'],
   'Device power':['Device power','طاقة الجهاز','کارەبای ئامێر'],
   'On':['On','مشغّل','پێکراو'],

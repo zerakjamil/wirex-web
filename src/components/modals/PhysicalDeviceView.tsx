@@ -50,7 +50,7 @@ function PhysicalHardware({device}:{device:NetworkDevice}){
     <header className="hardware-toolbar">
       <strong dir="ltr">{device.name} · {device.model}</strong>
       <div className="hardware-toolbar-controls">
-        {(profile.shape==='laptop'?['rear','front'] as const:['front','rear'] as const).map(value=><button key={value} className={face===value?'is-active':''} aria-pressed={face===value} onClick={()=>setFace(value)}>{t(profile.shape==='laptop'?(value==='front'?'Top':'Rear'):(value==='front'?'Front':'Rear'))}</button>)}
+        {(profile.shape==='laptop'?['rear','front'] as const:['front','rear'] as const).map(value=><button key={value} className={face===value?'is-active':''} aria-pressed={face===value} onClick={()=>setFace(value)}>{t(profile.shape==='laptop'?(value==='front'?'Top':'Side'):(value==='front'?'Front':'Rear'))}</button>)}
         <span className="hardware-toolbar-sep" aria-hidden="true"/>
         <button aria-label={t('Zoom Out')} disabled={zoom<=.5} onClick={()=>setZoom(z=>Math.max(.5,z-.25))}>−</button>
         <button onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button>
