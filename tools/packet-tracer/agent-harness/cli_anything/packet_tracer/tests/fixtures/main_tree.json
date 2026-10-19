@@ -1,0 +1,634 @@
+{
+  "title": "Cisco Packet Tracer",
+  "tree": {
+    "description": "",
+    "name": "Cisco Packet Tracer",
+    "position": [
+      0,
+      30
+    ],
+    "role": "AXWindow",
+    "size": [
+      1920,
+      960
+    ],
+    "title": "Cisco Packet Tracer",
+    "value": "",
+    "children": [
+      {
+        "description": "",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter",
+        "name": "",
+        "position": [
+          0,
+          824
+        ],
+        "role": "AXSplitGroup",
+        "size": [
+          1920,
+          166
+        ],
+        "title": "",
+        "value": "",
+        "children": [
+          {
+            "description": "Network Devices Ctrl+Alt+R",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Network_Devices",
+            "name": "Network Devices",
+            "position": [
+              3,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Network Devices",
+            "value": "0"
+          },
+          {
+            "description": "End Devices Ctrl+Alt+V",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_End_Devices",
+            "name": "End Devices",
+            "position": [
+              51,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "End Devices",
+            "value": "0"
+          },
+          {
+            "description": "Components Ctrl+Alt+B",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Components",
+            "name": "Components",
+            "position": [
+              99,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Components",
+            "value": "0"
+          },
+          {
+            "description": "Connections Ctrl+Alt+O",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Connections",
+            "name": "Connections",
+            "position": [
+              147,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Connections",
+            "value": "0"
+          },
+          {
+            "description": "Miscellaneous Ctrl+Alt+E",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Miscellaneous",
+            "name": "Miscellaneous",
+            "position": [
+              195,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Miscellaneous",
+            "value": "0"
+          },
+          {
+            "description": "Multiuser Connection Ctrl+Alt+M",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Multiuser_Connection",
+            "name": "Multiuser Connection",
+            "position": [
+              243,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Multiuser Connection",
+            "value": "0"
+          },
+          {
+            "description": "Legacy Devices",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Legacy",
+            "name": "Legacy",
+            "position": [
+              291,
+              834
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Legacy",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.QLabel",
+            "name": "",
+            "position": [
+              3,
+              899
+            ],
+            "role": "AXImage",
+            "size": [
+              13,
+              22
+            ],
+            "title": "",
+            "value": ""
+          },
+          {
+            "description": "Search for device",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.CDeviceTypesBox_SearchInput",
+            "name": "Search for device",
+            "position": [
+              18,
+              899
+            ],
+            "role": "AXTextField",
+            "size": [
+              307,
+              22
+            ],
+            "title": "Search for device",
+            "value": ""
+          },
+          {
+            "description": "Routers Ctrl+Alt+R",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Routers",
+            "name": "Routers",
+            "position": [
+              3,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Routers",
+            "value": "0"
+          },
+          {
+            "description": "Switches Ctrl+Alt+S",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Switches",
+            "name": "Switches",
+            "position": [
+              59,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Switches",
+            "value": "0"
+          },
+          {
+            "description": "Hubs Ctrl+Alt+U",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Hubs",
+            "name": "Hubs",
+            "position": [
+              115,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Hubs",
+            "value": "0"
+          },
+          {
+            "description": "Wireless Devices Ctrl+Alt+W",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Wireless_Devices",
+            "name": "Wireless Devices",
+            "position": [
+              171,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Wireless Devices",
+            "value": "0"
+          },
+          {
+            "description": "Security Ctrl+Alt+C",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Security",
+            "name": "Security",
+            "position": [
+              227,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "Security",
+            "value": "0"
+          },
+          {
+            "description": "WAN Emulation Ctrl+Alt+N",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_WAN_Emulation",
+            "name": "WAN Emulation",
+            "position": [
+              283,
+              935
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              45,
+              45
+            ],
+            "title": "WAN Emulation",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.CDeviceLabel",
+            "name": "",
+            "position": [
+              328,
+              970
+            ],
+            "role": "AXStaticText",
+            "size": [
+              396,
+              20
+            ],
+            "title": "",
+            "value": " (Select a Device to Drag and Drop to the Workspace) "
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_1841",
+            "name": "1841",
+            "position": [
+              1073,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "1841",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_1941",
+            "name": "1941",
+            "position": [
+              543,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "1941",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_2620XM",
+            "name": "2620XM",
+            "position": [
+              1126,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "2620XM",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_2621XM",
+            "name": "2621XM",
+            "position": [
+              1179,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "2621XM",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_2901",
+            "name": "2901",
+            "position": [
+              596,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "2901",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_2911",
+            "name": "2911",
+            "position": [
+              649,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "2911",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_819HG_4G_IOX",
+            "name": "819HG-4G-IOX",
+            "position": [
+              702,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "819HG-4G-IOX",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_819HGW",
+            "name": "819HGW",
+            "position": [
+              755,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "819HGW",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_829",
+            "name": "829",
+            "position": [
+              808,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "829",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_CGR1240",
+            "name": "CGR1240",
+            "position": [
+              861,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "CGR1240",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_IR1101",
+            "name": "IR1101",
+            "position": [
+              914,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "IR1101",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_IR8340",
+            "name": "IR8340",
+            "position": [
+              490,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "IR8340",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_ISR4321",
+            "name": "ISR4321",
+            "position": [
+              437,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "ISR4321",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_ISR4331",
+            "name": "ISR4331",
+            "position": [
+              384,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "ISR4331",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_PT8200",
+            "name": "PT8200",
+            "position": [
+              331,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "PT8200",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_Router_PT",
+            "name": "Router-PT",
+            "position": [
+              967,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "Router-PT",
+            "value": "0"
+          },
+          {
+            "description": "stock",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_Router_PT_Empty",
+            "name": "Router-PT-Empty",
+            "position": [
+              1020,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "Router-PT-Empty",
+            "value": "0"
+          },
+          {
+            "description": "custom",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_viewport.scroll_frame_Routers.device_Routers_2811",
+            "name": "2811 IOS15",
+            "position": [
+              1232,
+              827
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              48,
+              48
+            ],
+            "title": "2811 IOS15",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceSpecificBox.scroll_Routers.qt_scrollarea_hcontainer.QScrollBar",
+            "name": "",
+            "position": [
+              329,
+              954
+            ],
+            "role": "AXScrollBar",
+            "size": [
+              394,
+              15
+            ],
+            "title": "",
+            "value": "0"
+          }
+        ]
+      }
+    ]
+  }
+}

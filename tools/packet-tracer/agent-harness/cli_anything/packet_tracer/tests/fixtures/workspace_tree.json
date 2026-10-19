@@ -1,0 +1,551 @@
+{
+  "title": "Cisco Packet Tracer",
+  "tree": {
+    "description": "",
+    "name": "Cisco Packet Tracer",
+    "position": [
+      0,
+      30
+    ],
+    "role": "AXWindow",
+    "size": [
+      1920,
+      960
+    ],
+    "title": "Cisco Packet Tracer",
+    "value": "",
+    "children": [
+      {
+        "description": "Logical Mode (Shift+L)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalSwitch",
+        "name": "Logical Mode",
+        "position": [
+          0,
+          141
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          88,
+          35
+        ],
+        "title": "Logical Mode",
+        "value": "1"
+      },
+      {
+        "description": "Physical Mode (Shift+P)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_physicalSwitch",
+        "name": "Physical Mode",
+        "position": [
+          90,
+          141
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          92,
+          35
+        ],
+        "title": "Physical Mode",
+        "value": "0"
+      },
+      {
+        "description": "X and Y coordinates of mouse",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_xyLabel",
+        "name": "X and Y coordinates of mouse",
+        "position": [
+          185,
+          153
+        ],
+        "role": "AXStaticText",
+        "size": [
+          139,
+          10
+        ],
+        "title": "",
+        "value": "X and Y coordinates of mouse"
+      },
+      {
+        "description": "Root",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_curClusterNameLbl",
+        "name": "Current Cluster Name",
+        "position": [
+          1330,
+          150
+        ],
+        "role": "AXTextField",
+        "size": [
+          350,
+          16
+        ],
+        "title": "Current Cluster Name",
+        "value": "Root"
+      },
+      {
+        "description": "Go Back One Level (Alt+Left)",
+        "enabled": false,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_BtnBack",
+        "name": "Go Back One Level (Alt+Left)",
+        "position": [
+          1681,
+          142
+        ],
+        "role": "AXButton",
+        "size": [
+          37,
+          33
+        ],
+        "title": "Go Back One Level (Alt+Left)",
+        "value": ""
+      },
+      {
+        "description": "Create New Cluster (Shift+U)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_createClusterBtn",
+        "name": "Create New Cluster (Shift+U)",
+        "position": [
+          1719,
+          141
+        ],
+        "role": "AXButton",
+        "size": [
+          39,
+          35
+        ],
+        "title": "Create New Cluster (Shift+U)",
+        "value": ""
+      },
+      {
+        "description": "Move Object(Shift+M)",
+        "enabled": false,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_moveBtn",
+        "name": "Move Object(Shift+M)",
+        "position": [
+          1759,
+          142
+        ],
+        "role": "AXButton",
+        "size": [
+          37,
+          33
+        ],
+        "title": "Move Object(Shift+M)",
+        "value": ""
+      },
+      {
+        "description": "Set Background Image (Shift+I)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_setBGImageBtn",
+        "name": "Set Background Image (Shift+I)",
+        "position": [
+          1797,
+          141
+        ],
+        "role": "AXButton",
+        "size": [
+          39,
+          35
+        ],
+        "title": "Set Background Image (Shift+I)",
+        "value": ""
+      },
+      {
+        "description": "Environment (Shift+E)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_PLFrame.m_logicalToolbar.m_environmentBtn",
+        "name": "Environment (Shift+E)",
+        "position": [
+          1837,
+          141
+        ],
+        "role": "AXButton",
+        "size": [
+          82,
+          35
+        ],
+        "title": "Environment (Shift+E)",
+        "value": ""
+      },
+      {
+        "description": "Time",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_RSFrame.CRealtimeToolbar.m_timeLbl",
+        "name": "Time",
+        "position": [
+          17,
+          800
+        ],
+        "role": "AXStaticText",
+        "size": [
+          73,
+          11
+        ],
+        "title": "",
+        "value": "Time: 24:30:38"
+      },
+      {
+        "description": "Power Cycle Devices (Alt+S)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_RSFrame.CRealtimeToolbar.ResetNetworkBtn",
+        "name": "Power Cycle Devices (Alt+S)",
+        "position": [
+          91,
+          788
+        ],
+        "role": "AXButton",
+        "size": [
+          39,
+          35
+        ],
+        "title": "Power Cycle Devices (Alt+S)",
+        "value": ""
+      },
+      {
+        "description": "Fast Forward Time (Alt+D)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_RSFrame.CRealtimeToolbar.FastForwardTimeBtn",
+        "name": "Fast Forward Time (Alt+D)",
+        "position": [
+          131,
+          788
+        ],
+        "role": "AXButton",
+        "size": [
+          39,
+          35
+        ],
+        "title": "Fast Forward Time (Alt+D)",
+        "value": ""
+      },
+      {
+        "description": "Realtime Mode (Shift+R)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_RSFrame.m_realtimeSwitch",
+        "name": "Realtime Mode",
+        "position": [
+          1715,
+          788
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          98,
+          35
+        ],
+        "title": "Realtime Mode",
+        "value": "1"
+      },
+      {
+        "description": "Simulation Mode (Shift+S)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_RSFrame.m_simulationSwitch",
+        "name": "Simulation Mode",
+        "position": [
+          1815,
+          788
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          105,
+          35
+        ],
+        "title": "Simulation Mode",
+        "value": "0"
+      },
+      {
+        "description": "",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter",
+        "name": "",
+        "position": [
+          0,
+          824
+        ],
+        "role": "AXSplitGroup",
+        "size": [
+          1920,
+          166
+        ],
+        "title": "",
+        "value": "",
+        "children": [
+          {
+            "description": "Description of what this scenario represents.",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.UserCreatedPDU.m_scenarioInfoBtn",
+            "name": "Scenario Information",
+            "position": [
+              748,
+              847
+            ],
+            "role": "AXButton",
+            "size": [
+              36,
+              32
+            ],
+            "title": "Scenario Information",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.UserCreatedPDU.m_scenarioComboBox",
+            "name": "Scenario 0",
+            "position": [
+              781,
+              848
+            ],
+            "role": "AXComboBox",
+            "size": [
+              120,
+              32
+            ],
+            "title": "Scenario 0",
+            "value": "",
+            "children": [
+              {
+                "description": "",
+                "enabled": true,
+                "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.UserCreatedPDU.m_scenarioComboBox.QLineEdit",
+                "name": "",
+                "position": [
+                  787,
+                  855
+                ],
+                "role": "AXTextField",
+                "size": [
+                  89,
+                  17
+                ],
+                "title": "",
+                "value": "Scenario 0"
+              }
+            ]
+          },
+          {
+            "description": "Add another scenario.",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.UserCreatedPDU.NewScenarioBtn",
+            "name": "New",
+            "position": [
+              773,
+              903
+            ],
+            "role": "AXButton",
+            "size": [
+              34,
+              23
+            ],
+            "title": "New",
+            "value": ""
+          },
+          {
+            "description": "Delete the current scenario including the user PDUs",
+            "enabled": true,
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.UserCreatedPDU.DeleteScenarioBtn",
+            "name": "Delete",
+            "position": [
+              832,
+              903
+            ],
+            "role": "AXButton",
+            "size": [
+              44,
+              23
+            ],
+            "title": "Delete",
+            "value": ""
+          }
+        ]
+      },
+      {
+        "description": "Select (Esc)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Select (Esc)",
+        "position": [
+          1,
+          99
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          40,
+          40
+        ],
+        "title": "Select (Esc)",
+        "value": "1"
+      },
+      {
+        "description": "Inspect (I)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Inspect (I)",
+        "position": [
+          45,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Inspect (I)",
+        "value": "0"
+      },
+      {
+        "description": "Delete (Del)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Delete (Del)",
+        "position": [
+          87,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Delete (Del)",
+        "value": "0"
+      },
+      {
+        "description": "Resize (Alt+R)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Resize (Alt+R)",
+        "position": [
+          129,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Resize (Alt+R)",
+        "value": "0"
+      },
+      {
+        "description": "Place Note (N)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Place Note (N)",
+        "position": [
+          181,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Place Note (N)",
+        "value": "0"
+      },
+      {
+        "description": "Draw Line (L)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Draw Line (L)",
+        "position": [
+          223,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Draw Line (L)",
+        "value": "0"
+      },
+      {
+        "description": "Draw Rectangle (R)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Draw Rectangle (R)",
+        "position": [
+          265,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Draw Rectangle (R)",
+        "value": "0"
+      },
+      {
+        "description": "Draw Ellipse (E)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Draw Ellipse (E)",
+        "position": [
+          307,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Draw Ellipse (E)",
+        "value": "0"
+      },
+      {
+        "description": "Draw Freeform (F)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Draw Freeform (F)",
+        "position": [
+          349,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Draw Freeform (F)",
+        "value": "0"
+      },
+      {
+        "description": "Add Simple PDU (P)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Add Simple PDU (P)",
+        "position": [
+          401,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Add Simple PDU (P)",
+        "value": "0"
+      },
+      {
+        "description": "Add Complex PDU (C)",
+        "enabled": true,
+        "identifier": "PtApp.CAppWindowBase.m_pPlToolBar.QToolButton",
+        "name": "Add Complex PDU (C)",
+        "position": [
+          443,
+          100
+        ],
+        "role": "AXCheckBox",
+        "size": [
+          38,
+          38
+        ],
+        "title": "Add Complex PDU (C)",
+        "value": "0"
+      }
+    ]
+  }
+}

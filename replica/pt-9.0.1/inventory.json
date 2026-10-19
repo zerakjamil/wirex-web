@@ -1,0 +1,2329 @@
+{
+  "source": "Cisco Packet Tracer (live AX + bundled help)",
+  "sections": [
+    "config",
+    "help",
+    "menus",
+    "palette",
+    "workspace"
+  ],
+  "windows": [
+    {
+      "position": [
+        808,
+        92
+      ],
+      "role": "AXWindow",
+      "size": [
+        700,
+        786
+      ],
+      "title": "Router1"
+    },
+    {
+      "position": [
+        0,
+        30
+      ],
+      "role": "AXWindow",
+      "size": [
+        1920,
+        960
+      ],
+      "title": "Cisco Packet Tracer"
+    }
+  ],
+  "menus": [
+    {
+      "title": "Cisco Packet Tracer",
+      "items": [
+        {
+          "title": "About Cisco Packet Tracer"
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Preferences..."
+        },
+        {
+          "title": "Exit and Logout"
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Services",
+          "items": [
+            "Activity Monitor",
+            "Allocations & Leaks",
+            "File Activity",
+            "System Trace",
+            "Time Profile Active Application",
+            "Time Profile App Under Mouse",
+            "Time Profile Entire System",
+            "Toggle Instruments Recording",
+            "Services Settings\u2026"
+          ]
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Hide Cisco Packet Tracer"
+        },
+        {
+          "title": "Hide Others"
+        },
+        {
+          "title": "Show All",
+          "disabled": true
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Quit Cisco Packet Tracer"
+        }
+      ]
+    },
+    {
+      "title": "File",
+      "items": [
+        {
+          "title": "New"
+        },
+        {
+          "title": "Open ..."
+        },
+        {
+          "title": "Open Samples ..."
+        },
+        {
+          "title": "Recent Files"
+        },
+        {
+          "title": "Save"
+        },
+        {
+          "title": "Save As ..."
+        },
+        {
+          "title": "Save As PKZ ..."
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Reset Activity",
+          "disabled": true
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Print ..."
+        },
+        {
+          "title": "",
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "title": "Edit",
+      "items": [
+        {
+          "title": "Copy"
+        },
+        {
+          "title": "Paste"
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Undo"
+        },
+        {
+          "title": "Redo"
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Writing Tools",
+          "items": [
+            "Show Writing Tools",
+            "",
+            "Proofread",
+            "Rewrite",
+            "",
+            "Make Friendly",
+            "Make Professional",
+            "Make Concise",
+            "",
+            "Summarize",
+            "Create Key Points",
+            "Make List",
+            "Make Table",
+            "",
+            "Compose\u2026"
+          ]
+        },
+        {
+          "title": "AutoFill",
+          "items": [
+            "Contact\u2026",
+            "Passwords\u2026",
+            "Credit Card\u2026"
+          ]
+        },
+        {
+          "title": "Start Dictation\u2026"
+        },
+        {
+          "title": "Emoji & Symbols"
+        }
+      ]
+    },
+    {
+      "title": "Options",
+      "items": [
+        {
+          "title": "Algorithm Settings"
+        },
+        {
+          "title": "User Profile ..."
+        },
+        {
+          "title": "View Command Log"
+        }
+      ]
+    },
+    {
+      "title": "View",
+      "items": [
+        {
+          "title": "Zoom",
+          "items": [
+            "Zoom In",
+            "Zoom Out",
+            "Zoom Reset"
+          ]
+        },
+        {
+          "title": "Toolbars",
+          "items": [
+            "Main Toolbar",
+            "Secondary Toolbar",
+            "Bottom Toolbar"
+          ]
+        },
+        {
+          "title": "Simulation Mode"
+        },
+        {
+          "title": "Realtime Mode"
+        },
+        {
+          "title": "Logical View"
+        },
+        {
+          "title": "Physical View"
+        },
+        {
+          "title": "Show Viewport"
+        },
+        {
+          "title": "Show Workspace List"
+        },
+        {
+          "title": "Enter Full Screen"
+        }
+      ]
+    },
+    {
+      "title": "Tools",
+      "items": [
+        {
+          "title": "Drawing Palette ..."
+        },
+        {
+          "title": "Custom Devices Dialog"
+        },
+        {
+          "title": "Script Project Manager ..."
+        },
+        {
+          "title": "Cluster Associations Dialog"
+        }
+      ]
+    },
+    {
+      "title": "Extensions",
+      "items": [
+        {
+          "title": "Activity Wizard ..."
+        },
+        {
+          "title": "Listening Ports ..."
+        },
+        {
+          "title": "Multiuser",
+          "items": [
+            "Listen ...",
+            "Port Visibility ...",
+            "",
+            "Options ...",
+            "Save Offline Copy As ..."
+          ]
+        },
+        {
+          "title": "IPC",
+          "items": [
+            "Configure Apps ...",
+            "Show Active Apps ...",
+            "",
+            "Options ...",
+            "Log ...",
+            "Test ..."
+          ]
+        },
+        {
+          "title": "Scripting",
+          "items": [
+            "Configure PT Script Modules ...",
+            "New PT Script Module ...",
+            "Edit File Script Module ...",
+            "",
+            "Configure Global Custom Interfaces ...",
+            "Configure File Custom Interfaces ..."
+          ]
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Clear Terminal Agent"
+        },
+        {
+          "title": "Marvel"
+        },
+        {
+          "title": "Resource Attributes"
+        }
+      ]
+    },
+    {
+      "title": "Window",
+      "items": [
+        {
+          "title": "Enter Full Screen"
+        },
+        {
+          "title": "Router1"
+        }
+      ]
+    },
+    {
+      "title": "Help",
+      "items": [
+        {
+          "title": "Getting Started"
+        },
+        {
+          "title": "Contents"
+        },
+        {
+          "title": "Tutorials"
+        },
+        {
+          "title": "Accessibility"
+        },
+        {
+          "title": "",
+          "disabled": true
+        },
+        {
+          "title": "Report an Issue"
+        }
+      ]
+    }
+  ],
+  "workspace": {
+    "toolbar": [
+      {
+        "name": "Go Back One Level (Alt+Left)",
+        "description": "Go Back One Level (Alt+Left)"
+      },
+      {
+        "name": "Create New Cluster (Shift+U)",
+        "description": "Create New Cluster (Shift+U)"
+      },
+      {
+        "name": "Move Object(Shift+M)",
+        "description": "Move Object(Shift+M)"
+      },
+      {
+        "name": "Set Background Image (Shift+I)",
+        "description": "Set Background Image (Shift+I)"
+      },
+      {
+        "name": "Environment (Shift+E)",
+        "description": "Environment (Shift+E)"
+      }
+    ],
+    "modes": [
+      {
+        "name": "Logical Mode",
+        "value": "1"
+      },
+      {
+        "name": "Physical Mode",
+        "value": "0"
+      },
+      {
+        "name": "Realtime Mode",
+        "value": "1"
+      },
+      {
+        "name": "Simulation Mode",
+        "value": "0"
+      }
+    ],
+    "tools": [
+      {
+        "name": "Select",
+        "hotkey": "Esc"
+      },
+      {
+        "name": "Inspect",
+        "hotkey": "I"
+      },
+      {
+        "name": "Delete",
+        "hotkey": "Del"
+      },
+      {
+        "name": "Resize",
+        "hotkey": "Alt+R"
+      },
+      {
+        "name": "Place Note",
+        "hotkey": "N"
+      },
+      {
+        "name": "Draw Line",
+        "hotkey": "L"
+      },
+      {
+        "name": "Draw Rectangle",
+        "hotkey": "R"
+      },
+      {
+        "name": "Draw Ellipse",
+        "hotkey": "E"
+      },
+      {
+        "name": "Draw Freeform",
+        "hotkey": "F"
+      },
+      {
+        "name": "Add Simple PDU",
+        "hotkey": "P"
+      },
+      {
+        "name": "Add Complex PDU",
+        "hotkey": "C"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "Scenario Information",
+        "description": "Description of what this scenario represents.",
+        "value": ""
+      },
+      {
+        "name": "Scenario 0",
+        "description": "",
+        "value": ""
+      },
+      {
+        "name": "New",
+        "description": "Add another scenario.",
+        "value": ""
+      },
+      {
+        "name": "Delete",
+        "description": "Delete the current scenario including the user PDUs",
+        "value": ""
+      }
+    ]
+  },
+  "palette": {
+    "categories": [
+      {
+        "name": "Network Devices",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Network_Devices",
+        "subcategories": [
+          {
+            "name": "Routers",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Routers",
+            "models": [
+              {
+                "name": "1841",
+                "source": "stock"
+              },
+              {
+                "name": "1941",
+                "source": "stock"
+              },
+              {
+                "name": "2620XM",
+                "source": "stock"
+              },
+              {
+                "name": "2621XM",
+                "source": "stock"
+              },
+              {
+                "name": "2901",
+                "source": "stock"
+              },
+              {
+                "name": "2911",
+                "source": "stock"
+              },
+              {
+                "name": "819HG-4G-IOX",
+                "source": "stock"
+              },
+              {
+                "name": "819HGW",
+                "source": "stock"
+              },
+              {
+                "name": "829",
+                "source": "stock"
+              },
+              {
+                "name": "CGR1240",
+                "source": "stock"
+              },
+              {
+                "name": "IR1101",
+                "source": "stock"
+              },
+              {
+                "name": "IR8340",
+                "source": "stock"
+              },
+              {
+                "name": "ISR4321",
+                "source": "stock"
+              },
+              {
+                "name": "ISR4331",
+                "source": "stock"
+              },
+              {
+                "name": "PT8200",
+                "source": "stock"
+              },
+              {
+                "name": "Router-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Router-PT-Empty",
+                "source": "stock"
+              },
+              {
+                "name": "2811 IOS15",
+                "source": "custom"
+              }
+            ]
+          },
+          {
+            "name": "Switches",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Switches",
+            "models": [
+              {
+                "name": "2960 IOS15",
+                "source": "custom"
+              },
+              {
+                "name": "2950-24",
+                "source": "stock"
+              },
+              {
+                "name": "2950T-24",
+                "source": "stock"
+              },
+              {
+                "name": "Switch-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Switch-PT-Empty",
+                "source": "stock"
+              },
+              {
+                "name": "3560-24PS",
+                "source": "stock"
+              },
+              {
+                "name": "3650-24PS",
+                "source": "stock"
+              },
+              {
+                "name": "IE-2000",
+                "source": "stock"
+              },
+              {
+                "name": "IE-3400",
+                "source": "stock"
+              },
+              {
+                "name": "IE-9320",
+                "source": "stock"
+              },
+              {
+                "name": "Bridge-PT",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Hubs",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Hubs",
+            "models": [
+              {
+                "name": "Hub-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Repeater-PT",
+                "source": "stock"
+              },
+              {
+                "name": "CoAxialSplitter-PT",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Wireless Devices",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Wireless_Devices",
+            "models": [
+              {
+                "name": "AccessPoint-PT",
+                "source": "stock"
+              },
+              {
+                "name": "AccessPoint-PT-A",
+                "source": "stock"
+              },
+              {
+                "name": "AccessPoint-PT-AC",
+                "source": "stock"
+              },
+              {
+                "name": "AccessPoint-PT-N",
+                "source": "stock"
+              },
+              {
+                "name": "Linksys-WRT300N",
+                "source": "stock"
+              },
+              {
+                "name": "HomeRouter-PT-AC",
+                "source": "stock"
+              },
+              {
+                "name": "DLC100",
+                "source": "stock"
+              },
+              {
+                "name": "Cell-Tower",
+                "source": "stock"
+              },
+              {
+                "name": "Central-Office-Server",
+                "source": "stock"
+              },
+              {
+                "name": "WLC-2504",
+                "source": "stock"
+              },
+              {
+                "name": "WLC-3504",
+                "source": "stock"
+              },
+              {
+                "name": "WLC-PT",
+                "source": "stock"
+              },
+              {
+                "name": "3702i",
+                "source": "stock"
+              },
+              {
+                "name": "LAP-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Meraki-MX65W",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Security",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Security",
+            "models": [
+              {
+                "name": "5505",
+                "source": "stock"
+              },
+              {
+                "name": "5506-X",
+                "source": "stock"
+              },
+              {
+                "name": "ISA-3000",
+                "source": "stock"
+              },
+              {
+                "name": "CyberObserver",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "WAN Emulation",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_WAN_Emulation",
+            "models": [
+              {
+                "name": "Cloud-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Cloud-PT-Empty",
+                "source": "stock"
+              },
+              {
+                "name": "DSL-Modem-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Cable-Modem-PT",
+                "source": "stock"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "End Devices",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_End_Devices",
+        "subcategories": [
+          {
+            "name": "End Devices",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_End_Devices",
+            "models": [
+              {
+                "name": "PC-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Laptop-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Server-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Meraki-Server",
+                "source": "stock"
+              },
+              {
+                "name": "NetworkController",
+                "source": "stock"
+              },
+              {
+                "name": "Printer-PT",
+                "source": "stock"
+              },
+              {
+                "name": "7960",
+                "source": "stock"
+              },
+              {
+                "name": "Home-VoIP-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Analog-Phone-PT",
+                "source": "stock"
+              },
+              {
+                "name": "TV-PT",
+                "source": "stock"
+              },
+              {
+                "name": "TabletPC-PT",
+                "source": "stock"
+              },
+              {
+                "name": "SMARTPHONE-PT",
+                "source": "stock"
+              },
+              {
+                "name": "WirelessEndDevice-PT",
+                "source": "stock"
+              },
+              {
+                "name": "WiredEndDevice-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Sniffer",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Smart Home",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Smart_Home",
+            "models": [
+              {
+                "name": "AC",
+                "source": "custom"
+              },
+              {
+                "name": "Appliance",
+                "source": "custom"
+              },
+              {
+                "name": "Bluetooth Speaker",
+                "source": "custom"
+              },
+              {
+                "name": "Ceiling Fan",
+                "source": "custom"
+              },
+              {
+                "name": "Door",
+                "source": "custom"
+              },
+              {
+                "name": "Furnace",
+                "source": "custom"
+              },
+              {
+                "name": "Garage Door",
+                "source": "custom"
+              },
+              {
+                "name": "Home Speaker",
+                "source": "custom"
+              },
+              {
+                "name": "Humidifier",
+                "source": "custom"
+              },
+              {
+                "name": "Humiture Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Lawn Sprinkler",
+                "source": "custom"
+              },
+              {
+                "name": "Light",
+                "source": "custom"
+              },
+              {
+                "name": "Motion Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Portable Music Player",
+                "source": "custom"
+              },
+              {
+                "name": "Siren",
+                "source": "custom"
+              },
+              {
+                "name": "Smoke Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Sound Frequency Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Thermostat",
+                "source": "custom"
+              },
+              {
+                "name": "Water Level Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Webcam",
+                "source": "custom"
+              },
+              {
+                "name": "Window",
+                "source": "custom"
+              }
+            ]
+          },
+          {
+            "name": "Smart City",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Smart_City",
+            "models": [
+              {
+                "name": "Atm Pressure Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Beacon",
+                "source": "custom"
+              },
+              {
+                "name": "Carbon Dioxide Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Carbon Monoxide Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Fire Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Fire Sprinkler",
+                "source": "custom"
+              },
+              {
+                "name": "Humidity Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Old Car",
+                "source": "custom"
+              },
+              {
+                "name": "RFID Card",
+                "source": "custom"
+              },
+              {
+                "name": "RFID Reader",
+                "source": "custom"
+              },
+              {
+                "name": "Smart LED",
+                "source": "custom"
+              },
+              {
+                "name": "Street Lamp",
+                "source": "custom"
+              },
+              {
+                "name": "Temperature Monitor",
+                "source": "custom"
+              },
+              {
+                "name": "Trip Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Water Drain",
+                "source": "custom"
+              },
+              {
+                "name": "Wind Detector",
+                "source": "custom"
+              }
+            ]
+          },
+          {
+            "name": "Industrial - OT",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Industrial___OT",
+            "models": [
+              {
+                "name": "PLC-PT",
+                "source": "stock"
+              },
+              {
+                "name": "DataHistorianServer",
+                "source": "stock"
+              },
+              {
+                "name": "Blower",
+                "source": "custom"
+              },
+              {
+                "name": "HMI",
+                "source": "custom"
+              },
+              {
+                "name": "Signal Generator",
+                "source": "custom"
+              },
+              {
+                "name": "Smart LED",
+                "source": "custom"
+              }
+            ]
+          },
+          {
+            "name": "Power Grid",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Power_Grid",
+            "models": [
+              {
+                "name": "Battery",
+                "source": "custom"
+              },
+              {
+                "name": "Power Meter",
+                "source": "custom"
+              },
+              {
+                "name": "Solar Panel",
+                "source": "custom"
+              },
+              {
+                "name": "Wind Turbine",
+                "source": "custom"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Components",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Components",
+        "subcategories": [
+          {
+            "name": "Boards",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Boards",
+            "models": [
+              {
+                "name": "MCU-PT",
+                "source": "stock"
+              },
+              {
+                "name": "SBC-PT",
+                "source": "stock"
+              },
+              {
+                "name": "Thing",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Actuators",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Actuators",
+            "models": [
+              {
+                "name": "Air Cooler",
+                "source": "custom"
+              },
+              {
+                "name": "Alarm",
+                "source": "custom"
+              },
+              {
+                "name": "Ceiling Sprinkler",
+                "source": "custom"
+              },
+              {
+                "name": "Dimmable LED",
+                "source": "custom"
+              },
+              {
+                "name": "Floor Sprinkler",
+                "source": "custom"
+              },
+              {
+                "name": "Heating Element",
+                "source": "custom"
+              },
+              {
+                "name": "LCD",
+                "source": "custom"
+              },
+              {
+                "name": "LED",
+                "source": "custom"
+              },
+              {
+                "name": "Motor",
+                "source": "custom"
+              },
+              {
+                "name": "Piezo Speaker",
+                "source": "custom"
+              },
+              {
+                "name": "RGB LED",
+                "source": "custom"
+              },
+              {
+                "name": "Servo",
+                "source": "custom"
+              },
+              {
+                "name": "Smart LED",
+                "source": "custom"
+              },
+              {
+                "name": "Speaker",
+                "source": "custom"
+              }
+            ]
+          },
+          {
+            "name": "Sensors",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Sensors",
+            "models": [
+              {
+                "name": "Flex Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Generic Environment Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Generic Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Humidity Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Humiture Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Membrane Potentiometer",
+                "source": "custom"
+              },
+              {
+                "name": "Metal Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Motion Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Photo Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Potentiometer",
+                "source": "custom"
+              },
+              {
+                "name": "Push Button Toggle Switch",
+                "source": "custom"
+              },
+              {
+                "name": "Push Button",
+                "source": "custom"
+              },
+              {
+                "name": "Rocker Switch",
+                "source": "custom"
+              },
+              {
+                "name": "Smoke Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Sound Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Temperature Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Toggle Push Button",
+                "source": "custom"
+              },
+              {
+                "name": "Trip Wire",
+                "source": "custom"
+              },
+              {
+                "name": "Water Detector",
+                "source": "custom"
+              },
+              {
+                "name": "Water Sensor",
+                "source": "custom"
+              },
+              {
+                "name": "Wind Sensor",
+                "source": "custom"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Connections",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Connections",
+        "subcategories": [
+          {
+            "name": "Connections",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Connections",
+            "models": [
+              {
+                "name": "Automatically Choose Connection Type",
+                "source": "stock"
+              },
+              {
+                "name": "Console",
+                "source": "stock"
+              },
+              {
+                "name": "Copper Straight-Through",
+                "source": "stock"
+              },
+              {
+                "name": "Copper Cross-Over",
+                "source": "stock"
+              },
+              {
+                "name": "Single Mode Fiber",
+                "source": "stock"
+              },
+              {
+                "name": "Multi Mode Fiber",
+                "source": "stock"
+              },
+              {
+                "name": "Phone",
+                "source": "stock"
+              },
+              {
+                "name": "Coaxial",
+                "source": "stock"
+              },
+              {
+                "name": "Serial DCE",
+                "source": "stock"
+              },
+              {
+                "name": "Serial DTE",
+                "source": "stock"
+              },
+              {
+                "name": "Octal",
+                "source": "stock"
+              },
+              {
+                "name": "IoT Custom Cable",
+                "source": "stock"
+              },
+              {
+                "name": "USB",
+                "source": "stock"
+              }
+            ]
+          },
+          {
+            "name": "Structured Cabling",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Structured_Cabling",
+            "models": [
+              {
+                "name": "Copper Patch Panel",
+                "source": "stock"
+              },
+              {
+                "name": "Fiber Patch Panel",
+                "source": "stock"
+              },
+              {
+                "name": "Copper Wall Mount",
+                "source": "stock"
+              },
+              {
+                "name": "Fiber Wall Mount",
+                "source": "stock"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Miscellaneous",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Miscellaneous",
+        "subcategories": [
+          {
+            "name": "Miscellaneous",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Miscellaneous",
+            "models": [
+              {
+                "name": "1841 WIC-2T",
+                "source": "custom"
+              },
+              {
+                "name": "2621XM NM-2FE2W (2) WIC-2T",
+                "source": "custom"
+              },
+              {
+                "name": "2811 with IOS 12",
+                "source": "custom"
+              },
+              {
+                "name": "2811 NM-ESW-161 (2) WIC-2T",
+                "source": "custom"
+              },
+              {
+                "name": "2960 with IOS 12",
+                "source": "custom"
+              },
+              {
+                "name": "PT8000 Activated",
+                "source": "custom"
+              },
+              {
+                "name": "Wireless Laptop",
+                "source": "custom"
+              },
+              {
+                "name": "Wireless PC",
+                "source": "custom"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Multiuser Connection",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Multiuser_Connection",
+        "subcategories": [
+          {
+            "name": "Multiuser Connection",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Multiuser_Connection",
+            "models": [
+              {
+                "name": "Multiuser Connection",
+                "source": "stock"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Legacy",
+        "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.group_Legacy",
+        "subcategories": [
+          {
+            "name": "Legacy",
+            "identifier": "PtApp.CAppWindowBase.centralwidget.m_pNetWorkCompBoxFrame.m_bottomSplitter.m_pNetWorkCompBox.CDeviceTypesBox.type_Legacy",
+            "models": []
+          }
+        ]
+      }
+    ]
+  },
+  "config": {
+    "window": "Router1",
+    "groups": [
+      {
+        "name": "GLOBAL",
+        "pages": [
+          {
+            "name": "Settings",
+            "identifier": "Settings",
+            "selected": false
+          },
+          {
+            "name": "Algorithm Settings",
+            "identifier": "Algorithm Settings",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "ROUTING",
+        "pages": [
+          {
+            "name": "Static",
+            "identifier": "Static",
+            "selected": false
+          },
+          {
+            "name": "RIP",
+            "identifier": "RIP",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "SWITCHING",
+        "pages": [
+          {
+            "name": "VLAN Database",
+            "identifier": "VLAN Database",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "INTERFACE",
+        "pages": [
+          {
+            "name": "GigabitEthernet0/0/0",
+            "identifier": "GigabitEthernet0/0/0",
+            "selected": false
+          },
+          {
+            "name": "GigabitEthernet0/0/1",
+            "identifier": "GigabitEthernet0/0/1",
+            "selected": false
+          },
+          {
+            "name": "GigabitEthernet0/0/2",
+            "identifier": "GigabitEthernet0/0/2",
+            "selected": true
+          }
+        ]
+      }
+    ]
+  },
+  "help": [
+    {
+      "file": "AccessibilityBasics.htm",
+      "title": "AccessibilityBasics",
+      "category": "AccessibilityBasics",
+      "characters": 8953
+    },
+    {
+      "file": "CLI_asa.htm",
+      "title": "CLI_asa",
+      "category": "CLI",
+      "characters": 8715
+    },
+    {
+      "file": "CLI_router829.htm",
+      "title": "CLI_router829",
+      "category": "CLI",
+      "characters": 4634
+    },
+    {
+      "file": "CLI_routerIOS.htm",
+      "title": "CLI_routerIOS",
+      "category": "CLI",
+      "characters": 65874
+    },
+    {
+      "file": "CLI_routerIOS15.htm",
+      "title": "CLI_routerIOS15",
+      "category": "CLI",
+      "characters": 65261
+    },
+    {
+      "file": "CLI_switchIOS.htm",
+      "title": "CLI_switchIOS",
+      "category": "CLI",
+      "characters": 12828
+    },
+    {
+      "file": "GUI_HomeRouter.htm",
+      "title": "GUI_HomeRouter",
+      "category": "GUI",
+      "characters": 6296
+    },
+    {
+      "file": "GUI_wrt300n.htm",
+      "title": "GUI_wrt300n",
+      "category": "GUI",
+      "characters": 5290
+    },
+    {
+      "file": "OpenSSL_License.htm",
+      "title": "<div id=\"main-content\" tabindex=\"0\">",
+      "category": "OpenSSL",
+      "characters": 5684
+    },
+    {
+      "file": "WebEngineViewsAccessibility.htm",
+      "title": "WebEngineViewsAccessibility",
+      "category": "WebEngineViewsAccessibility",
+      "characters": 3188
+    },
+    {
+      "file": "about2.htm",
+      "title": "about2",
+      "category": "about2",
+      "characters": 495
+    },
+    {
+      "file": "acknowledgements.htm",
+      "title": "acknowledgements",
+      "category": "acknowledgements",
+      "characters": 2892
+    },
+    {
+      "file": "activityWizard.htm",
+      "title": "activityWizard",
+      "category": "activityWizard",
+      "characters": 2622
+    },
+    {
+      "file": "activityWizard_answerNetwork.htm",
+      "title": "activityWizard_answerNetwork",
+      "category": "activityWizard",
+      "characters": 5292
+    },
+    {
+      "file": "activityWizard_assessmentItems.htm",
+      "title": "activityWizard_assessmentItems",
+      "category": "activityWizard",
+      "characters": 35976
+    },
+    {
+      "file": "activityWizard_initialNetwork.htm",
+      "title": "activityWizard_initialNetwork",
+      "category": "activityWizard",
+      "characters": 2517
+    },
+    {
+      "file": "activityWizard_instructions.htm",
+      "title": "activityWizard_instructions",
+      "category": "activityWizard",
+      "characters": 1399
+    },
+    {
+      "file": "activityWizard_password.htm",
+      "title": "activityWizard_password",
+      "category": "activityWizard",
+      "characters": 366
+    },
+    {
+      "file": "activityWizard_run.htm",
+      "title": "activityWizard_run",
+      "category": "activityWizard",
+      "characters": 5000
+    },
+    {
+      "file": "activityWizard_scoringModelAndScripting.htm",
+      "title": "activityWizard_scoringModelAndScripting",
+      "category": "activityWizard",
+      "characters": 12639
+    },
+    {
+      "file": "activityWizard_test.htm",
+      "title": "activityWizard_test",
+      "category": "activityWizard",
+      "characters": 677
+    },
+    {
+      "file": "activityWizard_variableManager.htm",
+      "title": "activityWizard_variableManager",
+      "category": "activityWizard",
+      "characters": 11569
+    },
+    {
+      "file": "config_CyberObserver.htm",
+      "title": "config_CyberObserver",
+      "category": "config",
+      "characters": 4985
+    },
+    {
+      "file": "config_DataHistorian.htm",
+      "title": "config_DataHistorian",
+      "category": "config",
+      "characters": 1620
+    },
+    {
+      "file": "config_HMI.htm",
+      "title": "config_HMI",
+      "category": "config",
+      "characters": 3107
+    },
+    {
+      "file": "config_HomeRouter.htm",
+      "title": "config_HomeRouter",
+      "category": "config",
+      "characters": 2608
+    },
+    {
+      "file": "config_IE2000.htm",
+      "title": "config_IE2000",
+      "category": "config",
+      "characters": 4320
+    },
+    {
+      "file": "config_MerakiDevices.htm",
+      "title": "config_MerakiDevices",
+      "category": "config",
+      "characters": 4167
+    },
+    {
+      "file": "config_NetworkControllers.htm",
+      "title": "config_NetworkControllers",
+      "category": "config",
+      "characters": 13355
+    },
+    {
+      "file": "config_PCs.htm",
+      "title": "config_PCs",
+      "category": "config",
+      "characters": 11069
+    },
+    {
+      "file": "config_PLC.htm",
+      "title": "config_PLC",
+      "category": "config",
+      "characters": 1978
+    },
+    {
+      "file": "config_PT8200.htm",
+      "title": "config_PT8200",
+      "category": "config",
+      "characters": 2240
+    },
+    {
+      "file": "config_WLCs.htm",
+      "title": "config_WLCs",
+      "category": "config",
+      "characters": 3168
+    },
+    {
+      "file": "config_asa.htm",
+      "title": "config_asa",
+      "category": "config",
+      "characters": 1482
+    },
+    {
+      "file": "config_clouds.htm",
+      "title": "config_clouds",
+      "category": "config",
+      "characters": 2901
+    },
+    {
+      "file": "config_isa.htm",
+      "title": "config_isa",
+      "category": "config",
+      "characters": 6051
+    },
+    {
+      "file": "config_others.htm",
+      "title": "config_others",
+      "category": "config",
+      "characters": 4112
+    },
+    {
+      "file": "config_routers.htm",
+      "title": "config_routers",
+      "category": "config",
+      "characters": 3656
+    },
+    {
+      "file": "config_servers.htm",
+      "title": "config_servers",
+      "category": "config",
+      "characters": 9982
+    },
+    {
+      "file": "config_switches.htm",
+      "title": "config_switches",
+      "category": "config",
+      "characters": 4073
+    },
+    {
+      "file": "config_wrt300n.htm",
+      "title": "config_wrt300n",
+      "category": "config",
+      "characters": 1604
+    },
+    {
+      "file": "configuringDevices.htm",
+      "title": "configuringDevices",
+      "category": "configuringDevices",
+      "characters": 2416
+    },
+    {
+      "file": "connectionsLinks.htm",
+      "title": "connectionsLinks",
+      "category": "connectionsLinks",
+      "characters": 4619
+    },
+    {
+      "file": "copyrights.htm",
+      "title": "copyrights",
+      "category": "copyrights",
+      "characters": 646
+    },
+    {
+      "file": "devicesAndModules.htm",
+      "title": "devicesAndModules",
+      "category": "devicesAndModules",
+      "characters": 1797
+    },
+    {
+      "file": "devicesAndModules_endDevices.htm",
+      "title": "devicesAndModules_endDevices",
+      "category": "devicesAndModules",
+      "characters": 8624
+    },
+    {
+      "file": "devicesAndModules_others.htm",
+      "title": "devicesAndModules_others",
+      "category": "devicesAndModules",
+      "characters": 10725
+    },
+    {
+      "file": "devicesAndModules_routers.htm",
+      "title": "devicesAndModules_routers",
+      "category": "devicesAndModules",
+      "characters": 28549
+    },
+    {
+      "file": "devicesAndModules_structuredCabling.htm",
+      "title": "devicesAndModules_structuredCabling",
+      "category": "devicesAndModules",
+      "characters": 1105
+    },
+    {
+      "file": "devicesAndModules_switches.htm",
+      "title": "devicesAndModules_switches",
+      "category": "devicesAndModules",
+      "characters": 5684
+    },
+    {
+      "file": "environment.htm",
+      "title": "environment",
+      "category": "environment",
+      "characters": 15432
+    },
+    {
+      "file": "faqTroubleShoot.htm",
+      "title": "faqTroubleShoot",
+      "category": "faqTroubleShoot",
+      "characters": 132675
+    },
+    {
+      "file": "fontPreference.htm",
+      "title": "fontPreference",
+      "category": "fontPreference",
+      "characters": 780
+    },
+    {
+      "file": "gettingStarted.htm",
+      "title": "gettingStarted",
+      "category": "gettingStarted",
+      "characters": 486
+    },
+    {
+      "file": "high_Contrast.htm",
+      "title": "high_Contrast",
+      "category": "high",
+      "characters": 373
+    },
+    {
+      "file": "index.htm",
+      "title": "index",
+      "category": "index",
+      "characters": 31
+    },
+    {
+      "file": "industrial_otFeatures.htm",
+      "title": "industrial_otFeatures",
+      "category": "industrial",
+      "characters": 8139
+    },
+    {
+      "file": "industrial_router_IR1101.htm",
+      "title": "industrial_router_IR1101",
+      "category": "industrial",
+      "characters": 91
+    },
+    {
+      "file": "industrial_router_IR8340.htm",
+      "title": "industrial_router_IR8340",
+      "category": "industrial",
+      "characters": 86
+    },
+    {
+      "file": "industrial_switch_IE3400.htm",
+      "title": "industrial_switch_IE3400",
+      "category": "industrial",
+      "characters": 77
+    },
+    {
+      "file": "industrial_switch_IE9320.htm",
+      "title": "industrial_switch_IE9320",
+      "category": "industrial",
+      "characters": 82
+    },
+    {
+      "file": "interfaceOverview.htm",
+      "title": "interfaceOverview",
+      "category": "interfaceOverview",
+      "characters": 4814
+    },
+    {
+      "file": "intro.htm",
+      "title": "intro",
+      "category": "intro",
+      "characters": 3521
+    },
+    {
+      "file": "iot.htm",
+      "title": "iot",
+      "category": "iot",
+      "characters": 1012
+    },
+    {
+      "file": "iot_creating_things.htm",
+      "title": "iot_creating_things",
+      "category": "iot",
+      "characters": 4552
+    },
+    {
+      "file": "iot_ios_iox.htm",
+      "title": "iot_ios_iox",
+      "category": "iot",
+      "characters": 1039
+    },
+    {
+      "file": "iot_javascript_api.htm",
+      "title": "iot_javascript_api",
+      "category": "iot",
+      "characters": 48535
+    },
+    {
+      "file": "iot_python_api.htm",
+      "title": "iot_python_api",
+      "category": "iot",
+      "characters": 54710
+    },
+    {
+      "file": "iot_using_things.htm",
+      "title": "iot_using_things",
+      "category": "iot",
+      "characters": 7436
+    },
+    {
+      "file": "iot_visual_api.htm",
+      "title": "iot_visual_api",
+      "category": "iot",
+      "characters": 454
+    },
+    {
+      "file": "ipc.htm",
+      "title": "ipc",
+      "category": "ipc",
+      "characters": 3581
+    },
+    {
+      "file": "keyboardShortcuts.htm",
+      "title": "keyboardShortcuts",
+      "category": "keyboardShortcuts",
+      "characters": 8757
+    },
+    {
+      "file": "large_Interface.htm",
+      "title": "large_Interface",
+      "category": "large",
+      "characters": 224
+    },
+    {
+      "file": "login.htm",
+      "title": "login",
+      "category": "login",
+      "characters": 1805
+    },
+    {
+      "file": "menu.htm",
+      "title": "menu",
+      "category": "menu",
+      "characters": 7315
+    },
+    {
+      "file": "mode_realtime.htm",
+      "title": "mode_realtime",
+      "category": "mode",
+      "characters": 3024
+    },
+    {
+      "file": "mode_simulation.htm",
+      "title": "mode_simulation",
+      "category": "mode",
+      "characters": 14830
+    },
+    {
+      "file": "mode_simulation_PDUcolor.htm",
+      "title": "mode_simulation_PDUcolor",
+      "category": "mode",
+      "characters": 1543
+    },
+    {
+      "file": "mode_simulation_PDUinfo.htm",
+      "title": "mode_simulation_PDUinfo",
+      "category": "mode",
+      "characters": 2969
+    },
+    {
+      "file": "mode_simulation_Scenarios.htm",
+      "title": "mode_simulation_Scenarios",
+      "category": "mode",
+      "characters": 3452
+    },
+    {
+      "file": "mode_simulation_complexPDUs.htm",
+      "title": "mode_simulation_complexPDUs",
+      "category": "mode",
+      "characters": 1164
+    },
+    {
+      "file": "mode_simulation_specialNotes.htm",
+      "title": "mode_simulation_specialNotes",
+      "category": "mode",
+      "characters": 3832
+    },
+    {
+      "file": "model_layer1.htm",
+      "title": "model_layer1",
+      "category": "model",
+      "characters": 1007
+    },
+    {
+      "file": "model_layer2.htm",
+      "title": "model_layer2",
+      "category": "model",
+      "characters": 37883
+    },
+    {
+      "file": "model_layer3IP.htm",
+      "title": "model_layer3IP",
+      "category": "model",
+      "characters": 18851
+    },
+    {
+      "file": "model_layer3Routing.htm",
+      "title": "model_layer3Routing",
+      "category": "model",
+      "characters": 16793
+    },
+    {
+      "file": "model_layer4.htm",
+      "title": "model_layer4",
+      "category": "model",
+      "characters": 5518
+    },
+    {
+      "file": "model_layer5.htm",
+      "title": "model_layer5",
+      "category": "model",
+      "characters": 9076
+    },
+    {
+      "file": "model_layer7.htm",
+      "title": "model_layer7",
+      "category": "model",
+      "characters": 35022
+    },
+    {
+      "file": "model_misc.htm",
+      "title": "model_misc",
+      "category": "model",
+      "characters": 8291
+    },
+    {
+      "file": "modeling.htm",
+      "title": "modeling",
+      "category": "modeling",
+      "characters": 699
+    },
+    {
+      "file": "multiuser.htm",
+      "title": "multiuser",
+      "category": "multiuser",
+      "characters": 9453
+    },
+    {
+      "file": "myFirstPTLab.htm",
+      "title": "myFirstPTLab",
+      "category": "myFirstPTLab",
+      "characters": 16962
+    },
+    {
+      "file": "operatingModes.htm",
+      "title": "operatingModes",
+      "category": "operatingModes",
+      "characters": 1625
+    },
+    {
+      "file": "ot.htm",
+      "title": "ot",
+      "category": "ot",
+      "characters": 145
+    },
+    {
+      "file": "ot_cip.htm",
+      "title": "ot_cip",
+      "category": "ot",
+      "characters": 3340
+    },
+    {
+      "file": "ot_hmi.htm",
+      "title": "ot_hmi",
+      "category": "ot",
+      "characters": 1692
+    },
+    {
+      "file": "ot_icp.htm",
+      "title": "ot_icp",
+      "category": "ot",
+      "characters": 6189
+    },
+    {
+      "file": "ot_iec.htm",
+      "title": "ot_iec",
+      "category": "ot",
+      "characters": 5423
+    },
+    {
+      "file": "ot_ladder_logic.htm",
+      "title": "ot_ladder_logic",
+      "category": "ot",
+      "characters": 2163
+    },
+    {
+      "file": "ot_modbus.htm",
+      "title": "ot_modbus",
+      "category": "ot",
+      "characters": 2848
+    },
+    {
+      "file": "ot_opcua.htm",
+      "title": "ot_opcua",
+      "category": "ot",
+      "characters": 2878
+    },
+    {
+      "file": "ot_profinet.htm",
+      "title": "ot_profinet",
+      "category": "ot",
+      "characters": 4910
+    },
+    {
+      "file": "ot_protocol_model_limitation.htm",
+      "title": "ot_protocol_model_limitation",
+      "category": "ot",
+      "characters": 1994
+    },
+    {
+      "file": "ot_prp.htm",
+      "title": "ot_prp",
+      "category": "ot",
+      "characters": 4849
+    },
+    {
+      "file": "ot_ptp.htm",
+      "title": "ot_ptp",
+      "category": "ot",
+      "characters": 6142
+    },
+    {
+      "file": "ot_rep.htm",
+      "title": "ot_rep",
+      "category": "ot",
+      "characters": 2663
+    },
+    {
+      "file": "portConstants.htm",
+      "title": "portConstants",
+      "category": "portConstants",
+      "characters": 2612
+    },
+    {
+      "file": "preferences.htm",
+      "title": "preferences",
+      "category": "preferences",
+      "characters": 8073
+    },
+    {
+      "file": "programming.htm",
+      "title": "programming",
+      "category": "programming",
+      "characters": 373
+    },
+    {
+      "file": "programming_javascript.htm",
+      "title": "programming_javascript",
+      "category": "programming",
+      "characters": 0
+    },
+    {
+      "file": "programming_python.htm",
+      "title": "programming_python",
+      "category": "programming",
+      "characters": 0
+    },
+    {
+      "file": "programming_visual.htm",
+      "title": "programming_visual",
+      "category": "programming",
+      "characters": 0
+    },
+    {
+      "file": "sampleFilesAndDesignPatterns.htm",
+      "title": "sampleFilesAndDesignPatterns",
+      "category": "sampleFilesAndDesignPatterns",
+      "characters": 1623
+    },
+    {
+      "file": "sampleFilesAndDesignPatterns_conceptBuilder.htm",
+      "title": "sampleFilesAndDesignPatterns_conceptBuilder",
+      "category": "sampleFilesAndDesignPatterns",
+      "characters": 2629
+    },
+    {
+      "file": "sampleFilesAndDesignPatterns_design.htm",
+      "title": "sampleFilesAndDesignPatterns_design",
+      "category": "sampleFilesAndDesignPatterns",
+      "characters": 1498
+    },
+    {
+      "file": "sampleFilesAndDesignPatterns_skillBuilder.htm",
+      "title": "sampleFilesAndDesignPatterns_skillBuilder",
+      "category": "sampleFilesAndDesignPatterns",
+      "characters": 1455
+    },
+    {
+      "file": "sampleFilesAndDesignPatterns_troubleshoot.htm",
+      "title": "sampleFilesAndDesignPatterns_troubleshoot",
+      "category": "sampleFilesAndDesignPatterns",
+      "characters": 1195
+    },
+    {
+      "file": "screenreader_basics.htm",
+      "title": "screenreader_basics",
+      "category": "screenreader",
+      "characters": 812
+    },
+    {
+      "file": "scriptModules.htm",
+      "title": "scriptModules",
+      "category": "scriptModules",
+      "characters": 3245
+    },
+    {
+      "file": "scriptModules_customUdp.htm",
+      "title": "scriptModules_customUdp",
+      "category": "scriptModules",
+      "characters": 2158
+    },
+    {
+      "file": "scriptModules_dataStore.htm",
+      "title": "scriptModules_dataStore",
+      "category": "scriptModules",
+      "characters": 1575
+    },
+    {
+      "file": "scriptModules_data_store_editor.htm",
+      "title": "scriptModules_data_store_editor",
+      "category": "scriptModules",
+      "characters": 1484
+    },
+    {
+      "file": "scriptModules_scriptEngine.htm",
+      "title": "scriptModules_scriptEngine",
+      "category": "scriptModules",
+      "characters": 6999
+    },
+    {
+      "file": "scriptModules_scriptingInterface.htm",
+      "title": "scriptModules_scriptingInterface",
+      "category": "scriptModules",
+      "characters": 7052
+    },
+    {
+      "file": "scriptModules_tips.htm",
+      "title": "scriptModules_tips",
+      "category": "scriptModules",
+      "characters": 2395
+    },
+    {
+      "file": "scriptModules_webViews.htm",
+      "title": "scriptModules_webViews",
+      "category": "scriptModules",
+      "characters": 15089
+    },
+    {
+      "file": "shapetest.htm",
+      "title": "shapetest",
+      "category": "shapetest",
+      "characters": 4102
+    },
+    {
+      "file": "support.htm",
+      "title": "support",
+      "category": "support",
+      "characters": 224
+    },
+    {
+      "file": "systemRequirements.htm",
+      "title": "systemRequirements",
+      "category": "systemRequirements",
+      "characters": 1018
+    },
+    {
+      "file": "tab_Navigation.htm",
+      "title": "tab_Navigation",
+      "category": "tab",
+      "characters": 687
+    },
+    {
+      "file": "timeConstants.htm",
+      "title": "timeConstants",
+      "category": "timeConstants",
+      "characters": 3259
+    },
+    {
+      "file": "translation.htm",
+      "title": "translation",
+      "category": "translation",
+      "characters": 9500
+    },
+    {
+      "file": "tutorials.htm",
+      "title": "tutorials",
+      "category": "tutorials",
+      "characters": 16
+    },
+    {
+      "file": "tutorials_stub.htm",
+      "title": "tutorials_stub",
+      "category": "tutorials",
+      "characters": 205
+    },
+    {
+      "file": "usesForPT.htm",
+      "title": "usesForPT",
+      "category": "usesForPT",
+      "characters": 4373
+    },
+    {
+      "file": "whatsNew.htm",
+      "title": "whatsNew",
+      "category": "whatsNew",
+      "characters": 2857
+    },
+    {
+      "file": "workspaceBasics.htm",
+      "title": "workspaceBasics",
+      "category": "workspaceBasics",
+      "characters": 610
+    },
+    {
+      "file": "workspaceViewport.htm",
+      "title": "workspaceViewport",
+      "category": "workspaceViewport",
+      "characters": 1677
+    },
+    {
+      "file": "workspace_logical.htm",
+      "title": "workspace_logical",
+      "category": "workspace",
+      "characters": 11308
+    },
+    {
+      "file": "workspace_logical_creating_custom_templates.htm",
+      "title": "workspace_logical_creating_custom_templates",
+      "category": "workspace",
+      "characters": 1951
+    },
+    {
+      "file": "workspace_logical_customIconsAndBG.htm",
+      "title": "workspace_logical_customIconsAndBG",
+      "category": "workspace",
+      "characters": 3198
+    },
+    {
+      "file": "workspace_physical.htm",
+      "title": "workspace_physical",
+      "category": "workspace",
+      "characters": 13319
+    },
+    {
+      "file": "workspace_physical_accessibility.htm",
+      "title": "workspace_physical_accessibility",
+      "category": "workspace",
+      "characters": 5563
+    },
+    {
+      "file": "workspace_physical_cableManipulation.htm",
+      "title": "workspace_physical_cableManipulation",
+      "category": "workspace",
+      "characters": 3708
+    },
+    {
+      "file": "workspace_physical_customIconsAndBG.htm",
+      "title": "workspace_physical_customIconsAndBG",
+      "category": "workspace",
+      "characters": 3530
+    },
+    {
+      "file": "workspace_physical_distanceMeasurements.htm",
+      "title": "workspace_physical_distanceMeasurements",
+      "category": "workspace",
+      "characters": 3685
+    },
+    {
+      "file": "workspace_physical_movingDevices.htm",
+      "title": "workspace_physical_movingDevices",
+      "category": "workspace",
+      "characters": 3637
+    },
+    {
+      "file": "workspace_physical_specialNotes.htm",
+      "title": "workspace_physical_specialNotes",
+      "category": "workspace",
+      "characters": 1850
+    },
+    {
+      "file": "workspacelist.htm",
+      "title": "workspacelist",
+      "category": "workspacelist",
+      "characters": 2464
+    }
+  ],
+  "bundle": "/Applications/Cisco Packet Tracer 9.0.1/Cisco Packet Tracer 9.0.1.app",
+  "version": "9.0.1"
+}

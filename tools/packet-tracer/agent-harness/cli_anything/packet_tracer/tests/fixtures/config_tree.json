@@ -1,0 +1,518 @@
+{
+  "title": "Router1",
+  "tree": {
+    "description": "",
+    "name": "Router1",
+    "position": [
+      808,
+      92
+    ],
+    "role": "AXWindow",
+    "size": [
+      700,
+      786
+    ],
+    "title": "Router1",
+    "value": "",
+    "children": [
+      {
+        "description": "",
+        "enabled": true,
+        "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget",
+        "name": "",
+        "position": [
+          820,
+          147
+        ],
+        "role": "AXGroup",
+        "size": [
+          661,
+          690
+        ],
+        "title": "",
+        "value": "",
+        "children": [
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.GLOBAL",
+            "name": "GLOBAL",
+            "position": [
+              833,
+              160
+            ],
+            "role": "AXButton",
+            "size": [
+              139,
+              24
+            ],
+            "title": "GLOBAL",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.Settings",
+            "name": "Settings",
+            "position": [
+              833,
+              184
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "Settings",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.Algorithm Settings",
+            "name": "Algorithm Settings",
+            "position": [
+              833,
+              208
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "Algorithm Settings",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.ROUTING",
+            "name": "ROUTING",
+            "position": [
+              833,
+              232
+            ],
+            "role": "AXButton",
+            "size": [
+              139,
+              24
+            ],
+            "title": "ROUTING",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.Static",
+            "name": "Static",
+            "position": [
+              833,
+              256
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "Static",
+            "value": "1"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.RIP",
+            "name": "RIP",
+            "position": [
+              833,
+              280
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "RIP",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.SWITCHING",
+            "name": "SWITCHING",
+            "position": [
+              833,
+              304
+            ],
+            "role": "AXButton",
+            "size": [
+              139,
+              24
+            ],
+            "title": "SWITCHING",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.VLAN Database",
+            "name": "VLAN Database",
+            "position": [
+              833,
+              328
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "VLAN Database",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.INTERFACE",
+            "name": "INTERFACE",
+            "position": [
+              833,
+              352
+            ],
+            "role": "AXButton",
+            "size": [
+              139,
+              24
+            ],
+            "title": "INTERFACE",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.GigabitEthernet0/0/0",
+            "name": "GigabitEthernet0/0/0",
+            "position": [
+              833,
+              376
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "GigabitEthernet0/0/0",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.GigabitEthernet0/0/1",
+            "name": "GigabitEthernet0/0/1",
+            "position": [
+              833,
+              400
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "GigabitEthernet0/0/1",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_viewport.scrollAreaWidget.GigabitEthernet0/0/2",
+            "name": "GigabitEthernet0/0/2",
+            "position": [
+              833,
+              424
+            ],
+            "role": "AXCheckBox",
+            "size": [
+              139,
+              24
+            ],
+            "title": "GigabitEthernet0/0/2",
+            "value": "0"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_menuCfgScrollView.qt_scrollarea_vcontainer.QScrollBar",
+            "name": "",
+            "position": [
+              973,
+              159
+            ],
+            "role": "AXScrollBar",
+            "size": [
+              15,
+              425
+            ],
+            "title": "",
+            "value": "0"
+          },
+          {
+            "description": "Equivalent IOS Commands",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.m_ConfigDescription",
+            "name": "Equivalent IOS Commands",
+            "position": [
+              831,
+              607
+            ],
+            "role": "AXStaticText",
+            "size": [
+              639,
+              11
+            ],
+            "title": "",
+            "value": "Equivalent IOS Commands"
+          },
+          {
+            "description": "Static Routes",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_widgetLabel",
+            "name": "Static Routes",
+            "position": [
+              1200,
+              169
+            ],
+            "role": "AXStaticText",
+            "size": [
+              66,
+              20
+            ],
+            "title": "",
+            "value": "Static Routes"
+          },
+          {
+            "description": "Network",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_networkLabel",
+            "name": "Network",
+            "position": [
+              1006,
+              195
+            ],
+            "role": "AXStaticText",
+            "size": [
+              46,
+              21
+            ],
+            "title": "",
+            "value": "Network"
+          },
+          {
+            "description": "Next Hop",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.label_5",
+            "name": "Next Hop",
+            "position": [
+              1006,
+              249
+            ],
+            "role": "AXStaticText",
+            "size": [
+              46,
+              21
+            ],
+            "title": "",
+            "value": "Next Hop"
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_maskEdit",
+            "name": "",
+            "position": [
+              1058,
+              222
+            ],
+            "role": "AXTextField",
+            "size": [
+              401,
+              21
+            ],
+            "title": "",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_nextHopEdit",
+            "name": "",
+            "position": [
+              1058,
+              249
+            ],
+            "role": "AXTextField",
+            "size": [
+              401,
+              21
+            ],
+            "title": "",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_networkEdit",
+            "name": "",
+            "position": [
+              1058,
+              195
+            ],
+            "role": "AXTextField",
+            "size": [
+              401,
+              21
+            ],
+            "title": "",
+            "value": ""
+          },
+          {
+            "description": "Mask",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_maskLabel",
+            "name": "Mask",
+            "position": [
+              1006,
+              222
+            ],
+            "role": "AXStaticText",
+            "size": [
+              46,
+              21
+            ],
+            "title": "",
+            "value": "Mask"
+          },
+          {
+            "description": "Add",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_addButton",
+            "name": "Add",
+            "position": [
+              1309,
+              276
+            ],
+            "role": "AXButton",
+            "size": [
+              150,
+              32
+            ],
+            "title": "Add",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_networkTableWidget",
+            "name": "",
+            "position": [
+              1006,
+              334
+            ],
+            "role": "AXTable",
+            "size": [
+              453,
+              202
+            ],
+            "title": "",
+            "value": "",
+            "children": [
+              {
+                "description": "",
+                "enabled": true,
+                "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_networkTableWidget",
+                "name": "",
+                "position": [
+                  0,
+                  0
+                ],
+                "role": "AXColumn",
+                "size": [
+                  0,
+                  0
+                ],
+                "title": "",
+                "value": ""
+              }
+            ]
+          },
+          {
+            "description": "Remove",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CBaseRouterStaticCfg.m_removeButton",
+            "name": "Remove",
+            "position": [
+              1388,
+              542
+            ],
+            "role": "AXButton",
+            "size": [
+              71,
+              32
+            ],
+            "title": "Remove",
+            "value": ""
+          },
+          {
+            "description": "",
+            "enabled": true,
+            "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CCommandLine",
+            "name": "Command+F6 to exit CLI focus.",
+            "position": [
+              831,
+              618
+            ],
+            "role": "AXTextArea",
+            "size": [
+              639,
+              192
+            ],
+            "title": "Command+F6 to exit CLI focus.",
+            "value": "Initializing Hardware ...\n\nChecking for PCIe device presence...done\nSystem integrity status: 0x610\nRom image verified correctly\n\n\nSystem Bootstrap, Version 16.7(3r), RELEASE SOFTWARE\nCopyright (c) 1994-2018  by cisco Systems, Inc.\n\nCurrent image running: Boot ROM0\n\nLast reset cause: LocalSoft\nCisco ISR4331/K9 platform with 4194304 Kbytes of main memory\n\n\n\nno valid BOOT image found\nFinal autoboot attempt from default boot device...\nLocated isr4300-universalk9.16.06.04.SPA.bin\n##########################################################################################################################\nPackage header rev 1 structure detected\nIsoSize = 550114467\nCalculating SHA-1 hash...Validate package: SHA-1 hash:\n        calculated 444F4D02:44C58887:D9C8942B:C557D3CF:2A14247E\n        expected   444F4D02:44C58887:D9C8942B:C557D3CF:2A14247E\n\nRSA Signed RELEASE Image Signature Verification Successful.\nImage validated\n\n\n              Restricted Rights Legend\n\nUse, duplication, or disclosure by the Government is\nsubject to restrictions as set forth in subparagraph\n(c) of the Commercial Computer Software - Restricted\nRights clause at FAR sec. 52.227-19 and subparagraph\n(c) (1) (ii) of the Rights in Technical Data and Computer\nSoftware clause at DFARS sec. 252.227-7013.\n\n           cisco Systems, Inc.\n           170 West Tasman Drive\n           San Jose, California 95134-1706\n\nCisco IOS Software[Everest], ISR Software(X86_64_LINUX_IOSD - UNIVERSALK9 - M), Version 16.6.4, RELEASE SOFTWARE(fc3)\nTechnical Support : http://www.cisco.com/techsupport\nCopyright(c) 1986 - 2018 by Cisco Systems, Inc.\nCompiled Sun 08 - Jul - 18 04:33 by mcpre\n\n\n\nCisco IOS - XE software, Copyright(c) 2005 - 2018 by cisco Systems, Inc.\nAll rights reserved.Certain components of Cisco IOS - XE software are\nlicensed under the GNU General Public License(\"GPL\") Version 2.0.The\nsoftware code licensed under GPL Version 2.0 is free software that comes\nwith ABSOLUTELY NO WARRANTY.You can redistribute and / or modify such\nGPL code under the terms of GPL Version 2.0.For more details, see the\ndocumentation or \"License Notice\" file accompanying the IOS - XE software,\nor the applicable URL provided on the flyer accompanying the IOS - XE\nsoftware.\n\n\n\nThis product contains cryptographic features and is subject to United\nStates and local country laws governing import, export, transfer and\nuse. Delivery of Cisco cryptographic products does not imply\nthird-party authority to import, export, distribute or use encryption.\nImporters, exporters, distributors and users are responsible for\ncompliance with U.S. and local country laws. By using this product you\nagree to comply with applicable laws and regulations. If you are unable\nto comply with U.S. and local laws, return this product immediately.\n\nA summary of U.S. laws governing Cisco cryptographic products may be found at:\nhttp://www.cisco.com/wwl/export/crypto/tool/stqrg.html\n\nIf you require further assistance please contact us by sending email to\nexport@cisco.com.\n\ncisco ISR4331/K9 (1RU) processor with 1795999K/6147K bytes of memory.\nProcessor board ID FLM232010G0\n3 Gigabit Ethernet interfaces\n32768K bytes of non-volatile configuration memory.\n4194304K bytes of physical memory.\n3207167K bytes of flash memory at bootflash:.\n0K bytes of WebUI ODM Files at webui:.\n\n\n\n         --- System Configuration Dialog ---\n\nWould you like to enter the initial configuration dialog? [yes/no]: \n\nPress RETURN to get started!\n\n\n\nRouter>enable\nRouter#\nRouter#configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nRouter(config)#\nRouter(config)#\nRouter(config)#router rip\nRouter(config-router)#\nRouter(config-router)#end\nRouter#vlan database\n% Warning: It is recommended to configure VLAN from config mode,\n  as VLAN database mode is being deprecated. Please consult user\n  documentation for configuring VTP/VLAN in config mode.\n\nRouter(vlan)#\n%SYS-5-CONFIG_I: Configured from console by console\n\nRouter(vlan)#exit\nAPPLY completed.\nExiting....\nRouter#configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nRouter(config)#interface GigabitEthernet0/0/1\nRouter(config-if)#\nRouter(config-if)#exit\nRouter(config)#interface GigabitEthernet0/0/0\nRouter(config-if)#\n\n\n\n\n\n\n\n\nRouter con0 is now available\n\n\n\n\n\n\nPress RETURN to get started.\n\n\n\n\n\n\n\n\n\n\n\n\n\nRouter>enable\nRouter#\nRouter#configure terminal\nEnter configuration commands, one per line.  End with CNTL/Z.\nRouter(config)#\nRouter(config)#",
+            "children": [
+              {
+                "description": "",
+                "enabled": true,
+                "identifier": "PtApp.CBaseDeviceWidgetClass.mainScrollArea.qt_scrollarea_viewport.scrollAreaWidgetContents_5.c_physicalTab.qt_tabwidget_stackedwidget.m_menuCfgTab.CCommandLine.qt_scrollarea_vcontainer.QScrollBar",
+                "name": "",
+                "position": [
+                  1453,
+                  620
+                ],
+                "role": "AXScrollBar",
+                "size": [
+                  15,
+                  188
+                ],
+                "title": "",
+                "value": "1396"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "description": "",
+        "enabled": true,
+        "name": "",
+        "position": [
+          1131,
+          95.689453125
+        ],
+        "role": "AXStaticText",
+        "size": [
+          54,
+          17.310546875
+        ],
+        "title": "",
+        "value": "Router1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,316 @@
+{
+  "window": "Router1",
+  "groups": [
+    {
+      "name": "GLOBAL",
+      "pages": [
+        {
+          "name": "Settings",
+          "identifier": "Settings",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Global Settings",
+              "NVRAM",
+              "Startup Config",
+              "Running Config",
+              "Display Name",
+              "Hostname"
+            ],
+            "fields": [
+              {
+                "label": "Hostname",
+                "value": "Router"
+              },
+              {
+                "label": "Display Name",
+                "value": "Router1"
+              },
+              {
+                "label": "Device Clock:",
+                "value": "00:47:52 Tue Mar 2 1993 UTC"
+              }
+            ],
+            "buttons": [
+              "Merge file to running config",
+              "Erase NVRAM",
+              "Export running config to file",
+              "Save Running config to NVRAM",
+              "Load file to startup config",
+              "Export startup config to file"
+            ],
+            "tables": []
+          }
+        },
+        {
+          "name": "Algorithm Settings",
+          "identifier": "Algorithm Settings",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Algorithm Settings",
+              "Half-Open Session Multiplier:",
+              "Maximum Number of Connections:",
+              "Maximum Number of Opened Sessions:",
+              "Maximum Retransmission Timeout in Milliseconds:"
+            ],
+            "fields": [
+              {
+                "label": "Half Open Session Multiplier",
+                "value": "1"
+              },
+              {
+                "label": "Maximum Number of TCP connections",
+                "value": "100"
+              },
+              {
+                "label": "Maximum number of opened TCP Sessions",
+                "value": "1000"
+              },
+              {
+                "label": "Maximum retransmission timeout in milliseconds",
+                "value": "1000"
+              }
+            ],
+            "buttons": [],
+            "tables": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ROUTING",
+      "pages": [
+        {
+          "name": "Static",
+          "identifier": "Static",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Static Routes",
+              "Network",
+              "Next Hop",
+              "Mask"
+            ],
+            "fields": [
+              {
+                "label": "Mask",
+                "value": ""
+              },
+              {
+                "label": "Next Hop",
+                "value": ""
+              },
+              {
+                "label": "Network",
+                "value": ""
+              }
+            ],
+            "buttons": [
+              "Add",
+              "Remove"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  ""
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "RIP",
+          "identifier": "RIP",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "RIP Routing",
+              "Network"
+            ],
+            "fields": [
+              {
+                "label": "Network",
+                "value": ""
+              }
+            ],
+            "buttons": [
+              "Add",
+              "Remove"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  ""
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SWITCHING",
+      "pages": [
+        {
+          "name": "VLAN Database",
+          "identifier": "VLAN Database",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "VLAN Configuration",
+              "VLAN Number",
+              "VLAN Name"
+            ],
+            "fields": [
+              {
+                "label": "VLAN Number",
+                "value": ""
+              },
+              {
+                "label": "VLAN Number",
+                "value": ""
+              }
+            ],
+            "buttons": [
+              "Add",
+              "Remove"
+            ],
+            "tables": [
+              {
+                "columns": [
+                  "",
+                  ""
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "INTERFACE",
+      "pages": [
+        {
+          "name": "GigabitEthernet0/0/0",
+          "identifier": "GigabitEthernet0/0/0",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Interface Slot/Port",
+              "Port Status",
+              "Link Speed",
+              "Duplex",
+              "MAC Address",
+              "Subnet Mask",
+              "IP Address",
+              "Tx Ring Limit"
+            ],
+            "fields": [
+              {
+                "label": "MAC Address",
+                "value": "0001.C9C7.7701"
+              },
+              {
+                "label": "Subnet Mask",
+                "value": ""
+              },
+              {
+                "label": "IP Address",
+                "value": ""
+              },
+              {
+                "label": "Tx Ring Limit",
+                "value": "10"
+              }
+            ],
+            "buttons": [],
+            "tables": []
+          }
+        },
+        {
+          "name": "GigabitEthernet0/0/1",
+          "identifier": "GigabitEthernet0/0/1",
+          "selected": false,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Interface Slot/Port",
+              "Port Status",
+              "Link Speed",
+              "Duplex",
+              "MAC Address",
+              "Subnet Mask",
+              "IP Address",
+              "Tx Ring Limit"
+            ],
+            "fields": [
+              {
+                "label": "MAC Address",
+                "value": "0001.C9C7.7702"
+              },
+              {
+                "label": "Subnet Mask",
+                "value": ""
+              },
+              {
+                "label": "IP Address",
+                "value": ""
+              },
+              {
+                "label": "Tx Ring Limit",
+                "value": "10"
+              }
+            ],
+            "buttons": [],
+            "tables": []
+          }
+        },
+        {
+          "name": "GigabitEthernet0/0/2",
+          "identifier": "GigabitEthernet0/0/2",
+          "selected": true,
+          "content": {
+            "labels": [
+              "Equivalent IOS Commands",
+              "Interface Slot/Port",
+              "Port Status",
+              "Link Speed",
+              "Duplex",
+              "MAC Address",
+              "Subnet Mask",
+              "IP Address",
+              "Tx Ring Limit"
+            ],
+            "fields": [
+              {
+                "label": "MAC Address",
+                "value": "0001.C9C7.7703"
+              },
+              {
+                "label": "Subnet Mask",
+                "value": ""
+              },
+              {
+                "label": "IP Address",
+                "value": ""
+              },
+              {
+                "label": "Tx Ring Limit",
+                "value": "10"
+              }
+            ],
+            "buttons": [],
+            "tables": []
+          }
+        }
+      ]
+    }
+  ]
+}
