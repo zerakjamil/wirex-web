@@ -28,6 +28,7 @@ function runCli(device: NetworkDevice, command: string) {
     return mod ? { ...port, ...mod } : port
   })
   if (result.newMode) device.currentCliMode = result.newMode
+  if (result.newActiveInterface) device.activeInterface = result.newActiveInterface
   return result
 }
 
@@ -217,4 +218,93 @@ test('show spanning-tree views report the configured mode and live forwarding st
   const summary = formatStpSummary(devices.find(device => device.id === 'campus-sw-a')!)
   assert.match(summary, /Switch is in rapid-pvst mode/)
   assert.match(summary, /VLAN0010/)
+})
+
+test('MST reads the per-instance port cost, so instances can block different links', () => {
+  const makeSwitch = (id: string, name: string, priority?: number) => {
+    const device = createDevice('switch', 0, 0)
+    device.id = id
+    device.name = name
+    device.config.hostname = name
+    device.config.stpMode = 'mst'
+    device.config.mstInstances = [{ instance: 1, vlans: [10] }, { instance: 2, vlans: [20] }]
+    if (priority !== undefined) device.config.mstPriorities = { '1': priority, '2': priority }
+    device.ports = device.ports.map(port => ['Fa0/1', 'Fa0/2'].includes(port.shortName ?? '')
+      ? { ...port, status: 'up' as const, adminStatus: 'up' as const, portMode: 'trunk' as const, allowedVlans: [10, 20] }
+      : port)
+    return device
+  }
+  const a = makeSwitch('mst-a', 'MST-A', 4096)
+  const b = makeSwitch('mst-b', 'MST-B')
+  const a1 = a.ports.find(port => port.shortName === 'Fa0/1')!
+  const a2 = a.ports.find(port => port.shortName === 'Fa0/2')!
+  const b1 = b.ports.find(port => port.shortName === 'Fa0/1')!
+  const b2 = b.ports.find(port => port.shortName === 'Fa0/2')!
+  const withCosts = (device: NetworkDevice, first: string, second: string) => ({
+    ...device,
+    ports: device.ports.map(port => port.id === first
+      ? { ...port, mstCost: { '1': 1, '2': 100 } }
+      : port.id === second ? { ...port, mstCost: { '1': 100, '2': 1 } } : port),
+  })
+  const root = withCosts(a, a1.id, a2.id)
+  const leaf = withCosts(b, b1.id, b2.id)
+  const links: NetworkLink[] = [
+    { id: 'mst-l1', type: 'straight', status: 'up', fromDeviceId: root.id, fromPortId: a1.id, toDeviceId: leaf.id, toPortId: b1.id },
+    { id: 'mst-l2', type: 'straight', status: 'up', fromDeviceId: root.id, fromPortId: a2.id, toDeviceId: leaf.id, toPortId: b2.id },
+  ]
+  const wired = (device: NetworkDevice): NetworkDevice => ({
+    ...device,
+    ports: device.ports.map(port => {
+      const link = links.find(candidate => candidate.fromPortId === port.id || candidate.toPortId === port.id)
+      if (!link) return port
+      const peerId = link.fromDeviceId === device.id ? link.toDeviceId : link.fromDeviceId
+      const peerPortId = link.fromDeviceId === device.id ? link.toPortId : link.fromPortId
+      const peer = [root, leaf].find(candidate => candidate.id === peerId)!
+      return {
+        ...port,
+        connectedLinkId: link.id,
+        connectedDeviceId: peerId,
+        connectedPortId: peer.ports.find(candidate => candidate.id === peerPortId)!.id,
+      }
+    }),
+  })
+  const converged = converge([wired(root), wired(leaf)], links, 40)
+
+  const vlan10 = getStpTopology(converged, links, 10)
+  assert.equal(vlan10.ports.get(`${leaf.id}|${b1.id}`)?.role, 'Root')
+  assert.equal(vlan10.ports.get(`${leaf.id}|${b1.id}`)?.cost, 1)
+  assert.equal(vlan10.ports.get(`${leaf.id}|${b2.id}`)?.role, 'Altn')
+
+  const vlan20 = getStpTopology(converged, links, 20)
+  assert.equal(vlan20.ports.get(`${leaf.id}|${b2.id}`)?.role, 'Root')
+  assert.equal(vlan20.ports.get(`${leaf.id}|${b2.id}`)?.cost, 1)
+  assert.equal(vlan20.ports.get(`${leaf.id}|${b1.id}`)?.role, 'Altn')
+
+  const view = formatStpInstanceView(converged, links, leaf.id, 1)
+  assert.match(view, /Fa0\/1\s+Root\s+FWD\s+1/)
+  assert.match(view, /Fa0\/2\s+Altn\s+BLK\s+100/)
+})
+
+test('spanning-tree mst <instance> cost is configured per interface and shown in the running config', () => {
+  const sw = createDevice('switch', 0, 0)
+  sw.id = 'mst-cost-sw'
+  sw.name = 'MST-COST'
+  sw.config.hostname = 'MST-COST'
+  sw.config.stpMode = 'mst'
+  sw.currentCliMode = 'config'
+  const port = sw.ports.find(candidate => candidate.shortName === 'Fa0/1')!
+  runCli(sw, 'interface FastEthernet0/1')
+  assert.equal(sw.currentCliMode, 'config-if')
+  assert.equal(runCli(sw, 'spanning-tree mst 1 cost 100').output, '')
+  assert.deepEqual(sw.ports.find(candidate => candidate.id === port.id)?.mstCost, { '1': 100 })
+  runCli(sw, 'spanning-tree mst 2 cost 50')
+  assert.deepEqual(sw.ports.find(candidate => candidate.id === port.id)?.mstCost, { '1': 100, '2': 50 })
+  sw.currentCliMode = 'priv'
+  assert.match(runCli(sw, 'show running-config').output, /spanning-tree mst 1 cost 100/)
+  assert.match(runCli(sw, 'show running-config').output, /spanning-tree mst 2 cost 50/)
+  sw.currentCliMode = 'config'
+  runCli(sw, 'interface FastEthernet0/1')
+  runCli(sw, 'no spanning-tree mst 1 cost')
+  assert.deepEqual(sw.ports.find(candidate => candidate.id === port.id)?.mstCost, { '2': 50 })
+  assert.match(runCli(sw, 'spanning-tree mst 1 cost 0').output, /cost <1-200000000>/)
 })

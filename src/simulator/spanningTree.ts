@@ -40,6 +40,15 @@ const sameVlanStates=(a:NetworkPort['stpVlanStates'],b:NetworkPort['stpVlanState
 }
 const bridgeId=(device:NetworkDevice,vlan:number)=>`${String(stpPriorityForVlan(device,vlan)).padStart(5,'0')}:${(device.macAddress||device.ports[0]?.macAddress||device.id).replace(/[:.]/g,'').toLowerCase()}:${device.id}`
 const portCost=(port:NetworkPort)=>port.stpCost??(port.type==='gigabitethernet'?4:19)
+/** Path cost for a VLAN: MST reads the instance-specific cost first, PVST modes read the port cost. */
+const vlanPortCost=(device:NetworkDevice,vlan:number,port:NetworkPort)=>{
+ if(stpModeOf(device)==='mst'){
+  const instance=String(mstInstanceForVlan(device,vlan))
+  const cost=port.mstCost?.[instance]
+  if(cost!==undefined)return cost
+ }
+ return portCost(port)
+}
 
 export type StpMode='pvst'|'rapid-pvst'|'mst'
 export const stpModeOf=(device:NetworkDevice):StpMode=>device.config.stpMode??'pvst'
@@ -196,7 +205,7 @@ export function prepareStpTick(devices:NetworkDevice[],links:NetworkLink[],tick:
     const port=original.ports.find(candidate=>candidate.id===neighbor.portId)!
     const link=links.find(candidate=>candidate.id===neighbor.linkId)
     const senderPortId=link?(link.fromDeviceId===neighbor.senderDeviceId?link.fromPortId:link.toPortId):''
-    return {...neighbor,cost:neighbor.rootPathCost+portCost(port),senderPortId}
+    return {...neighbor,cost:neighbor.rootPathCost+vlanPortCost(original,vlan,port),senderPortId}
    }).filter(candidate=>Number.isFinite(candidate.cost))
    choices.sort((a,b)=>a.rootBridgeId.localeCompare(b.rootBridgeId)||a.cost-b.cost||a.bridgeId.localeCompare(b.bridgeId)||a.senderPortId.localeCompare(b.senderPortId,undefined,{numeric:true})||a.portId.localeCompare(b.portId,undefined,{numeric:true}))
    const best=choices[0]
@@ -257,7 +266,7 @@ export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:
  const roots=new Map<string,string>(),ports=new Map<string,{role:'Root'|'Desg'|'Altn';state:'FWD'|'BLK'|'LIS'|'LRN';cost:number}>(),forwardingLinks=new Set<string>()
  const bridges=devices.filter(isBridge),byId=new Map(devices.map(d=>[d.id,d])),linksById=new Map(links.map(link=>[link.id,link]))
  const bid=(d:NetworkDevice)=>`${String(stpPriorityForVlan(d,vlan)).padStart(5,'0')}:${(d.macAddress||d.ports[0]?.macAddress||d.id).replace(/[:.]/g,'').toLowerCase()}:${d.id}`
- const cost=(p:NetworkPort)=>p.stpCost??(p.type==='gigabitethernet'?4:19)
+ const cost=(device:NetworkDevice,p:NetworkPort)=>vlanPortCost(device,vlan,p)
  const compareVector=(a:{root:string;cost:number;bridge:string;port:string},b:{root:string;cost:number;bridge:string;port:string})=>a.root.localeCompare(b.root)||a.cost-b.cost||a.bridge.localeCompare(b.bridge)||a.port.localeCompare(b.port,undefined,{numeric:true})
  const portLabel=(device:NetworkDevice,portId:string)=>device.ports.find(port=>port.id===portId)?.name??portId
  const live=links.filter(l=>{
@@ -278,7 +287,7 @@ export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:
   while(unsettled.size){
    const current=[...unsettled].sort((a,b)=>costs.get(a)!-costs.get(b)!||bid(byId.get(a)!).localeCompare(bid(byId.get(b)!)))[0];unsettled.delete(current)
    for(const [edge,ls] of bridgeEdges){const l=ls[0],peer=l.fromDeviceId===current?l.toDeviceId:l.toDeviceId===current?l.fromDeviceId:null;if(!peer||!unsettled.has(peer))continue
-    const local=byId.get(peer)!.ports.find(p=>p.id===(l.fromDeviceId===peer?l.fromPortId:l.toPortId))!,candidate=costs.get(current)!+cost(local)
+    const local=byId.get(peer)!.ports.find(p=>p.id===(l.fromDeviceId===peer?l.fromPortId:l.toPortId))!,candidate=costs.get(current)!+cost(byId.get(peer)!,local)
     const old=rootEdges.get(peer),oldLink=old?edges.get(old)![0]:null,oldSender=oldLink?(oldLink.fromDeviceId===peer?oldLink.toDeviceId:oldLink.fromDeviceId):null
     if(candidate<costs.get(peer)!||candidate===costs.get(peer)!&&(!oldSender||bid(byId.get(current)!)<bid(byId.get(oldSender)!)||bid(byId.get(current)!)===bid(byId.get(oldSender)!)&&edge<old!)){costs.set(peer,candidate);rootEdges.set(peer,edge)}
    }
@@ -304,7 +313,7 @@ export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:
    if(localPortId!==neighbor.portId||peerId!==peer.id||!Number.isFinite(neighbor.rootPathCost)||neighbor.rootPathCost<0)return []
    return [{
     rootBridgeId:neighbor.rootBridgeId,rootDeviceId:neighbor.rootDeviceId,
-    rootPathCost:neighbor.rootPathCost+cost(localPort),rootPortId:neighbor.portId,
+    rootPathCost:neighbor.rootPathCost+cost(device,localPort),rootPortId:neighbor.portId,
     bridgeId:neighbor.bridgeId,senderPortId:link.fromDeviceId===peer.id?link.fromPortId:link.toPortId,
     senderPortLabel:portLabel(peer,link.fromDeviceId===peer.id?link.fromPortId:link.toPortId),localPortLabel:portLabel(device,neighbor.portId),
    }]
@@ -363,7 +372,7 @@ export function formatStpVlanView(devices:NetworkDevice[],links:NetworkLink[],de
  const device=devices.find(candidate=>candidate.id===deviceId)
  const tree=getStpTopology(devices,links,vlan),root=devices.find(d=>d.id===tree.roots.get(deviceId))
  if(!device||!root)return '% Spanning tree is available on bridge devices only.'
- const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${p.stpCost??(p.type==='gigabitethernet'?4:19)}`]:[]})
+ const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${vlanPortCost(device,vlan,p)}`]:[]})
  return `VLAN${String(vlan).padStart(4,'0')}\n  Spanning tree enabled protocol ${stpProtocolLabel(device)}\n  Root ID Priority ${formatPriorityWithSysId(stpPriorityForVlan(root,vlan),vlan)}\n          Address ${root.macAddress||root.ports[0]?.macAddress}\n  ${root.id===deviceId?'This bridge is the root':`Root path cost ${tree.costs.get(deviceId)}`}\n  Bridge ID Priority ${formatPriorityWithSysId(stpPriorityForVlan(device,vlan),vlan)}\n\nInterface        Role Sts Cost\n${rows.join('\n')}`
 }
 
@@ -375,7 +384,7 @@ export function formatStpInstanceView(devices:NetworkDevice[],links:NetworkLink[
  const vlan=carried.find(candidate=>instanceVlans.includes(candidate))??instanceVlans[0]??1
  const tree=getStpTopology(devices,links,vlan),root=devices.find(d=>d.id===tree.roots.get(deviceId))
  if(!root)return '% Spanning tree is available on bridge devices only.'
- const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${p.stpCost??(p.type==='gigabitethernet'?4:19)}`]:[]})
+ const rows=device.ports.flatMap(p=>{const s=tree.ports.get(`${device.id}|${p.id}`);return s?[`${p.shortName.padEnd(17)}${s.role.padEnd(5)}${s.state}  ${vlanPortCost(device,vlan,p)}`]:[]})
  const rootEntry=device.ports.map(p=>({port:p,state:tree.ports.get(`${device.id}|${p.id}`)})).find(entry=>entry.state?.role==='Root')
  const rootCost=rootEntry?.state?.cost??0
  return `###### MST${instance}        vlans mapped:   ${compressVlanRanges(stpInstanceVlans(device,instance))}\nBridge        address ${root.macAddress||root.ports[0]?.macAddress||'-'}  priority ${formatPriorityWithSysId(stpPriorityForVlan(root,vlan),instance)}\nRoot          address ${device.macAddress||device.ports[0]?.macAddress||'-'}  priority ${formatPriorityWithSysId(stpPriorityForVlan(device,vlan),instance)}\n              cost ${rootCost}\n\nInterface        Role Sts Cost\n${rows.join('\n')}`

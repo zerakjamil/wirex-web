@@ -94,6 +94,8 @@ export interface NetworkPort {
   channelMode?: 'active' | 'passive' | 'desirable' | 'auto' | 'on'
   portfast?: boolean
   stpCost?: number
+  /** Per-MST-instance path cost, keyed by instance number. */
+  mstCost?: Record<string, number>
   stpLinkType?: 'point-to-point' | 'shared'
   virtualVlan?: number
   description?: string

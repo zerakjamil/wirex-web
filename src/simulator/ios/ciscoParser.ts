@@ -1638,6 +1638,17 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       const sub=body[0]?.toLowerCase()
       if(sub==='portfast')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,portfast:negated?undefined:true}))}
       if(sub==='cost'&&(negated||Number(body[1])>0))return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpCost:negated?undefined:Number(body[1])}))}
+      if(sub==='mst'){
+        const instance=Number(body[1]),value=Number(body[3])
+        if(body[2]!=='cost'||!Number.isInteger(instance)||instance<0||instance>4094||(negated?false:!(Number.isInteger(value)&&value>=1&&value<=200000000)))return {output:'% Specify spanning-tree mst <0-4094> cost <1-200000000>.'}
+        return {output:'',modifiedPorts:targetPortIds.map(portId=>{
+          const current=device.ports.find(candidate=>candidate.id===portId)
+          const next={...(current?.mstCost??{})}
+          if(negated)delete next[String(instance)]
+          else next[String(instance)]=value
+          return {portId,mstCost:Object.keys(next).length?next:undefined}
+        })}
+      }
       if(sub==='link-type'&&(negated||body[1]==='point-to-point'||body[1]==='shared'))return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpLinkType:negated?undefined:body[1] as 'point-to-point'|'shared'}))}
       return {output:'% This spanning-tree interface command is not implemented.'}
     }
@@ -2431,6 +2442,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       if(p.channelGroup)out+=` channel-group ${p.channelGroup} mode ${p.channelMode}\n`
       if(p.portfast)out+=' spanning-tree portfast\n'
       if(p.stpCost)out+=` spanning-tree cost ${p.stpCost}\n`
+      for(const [instance,cost] of Object.entries(p.mstCost??{}))out+=` spanning-tree mst ${instance} cost ${cost}\n`
       if(p.stpLinkType)out+=` spanning-tree link-type ${p.stpLinkType}\n`
       if (p.dot1qVlan !== undefined) out += ` encapsulation dot1Q ${p.dot1qVlan}${p.dot1qNative ? ' native' : ''}\n`
       for (const [option, value] of [['network', p.ospfNetworkType], ['cost', p.ospfCost], ['priority', p.ospfPriority], ['hello-interval', p.ospfHelloInterval], ['dead-interval', p.ospfDeadInterval]]) if (value !== undefined) out += ` ip ospf ${option} ${value}\n`
