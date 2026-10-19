@@ -60,11 +60,6 @@ function InnerTopologyCanvas() {
     connectingSource,
     setConnectingSource,
     tickSimulation,
-    simulationMode,
-    simulationPlaying,
-    setSimulationPlaying,
-    inFlightPackets,
-    stepSimulation,
     clusters,
   } = useNetworkStore(useShallow(state => ({
     devices: selectCanvasDevices(state.devices), links: state.links, annotations: state.annotations,
@@ -75,11 +70,6 @@ function InnerTopologyCanvas() {
     setActiveModal: state.setActiveModal,
     connectingSource: state.connectingSource, setConnectingSource: state.setConnectingSource,
     tickSimulation: state.tickSimulation,
-    simulationMode: state.simulationMode,
-    simulationPlaying: state.simulationPlaying,
-    setSimulationPlaying: state.setSimulationPlaying,
-    inFlightPackets: state.inFlightPackets,
-    stepSimulation: state.stepSimulation,
   })))
 
   const { screenToFlowPosition, zoomIn, zoomOut, setViewport, getViewport, fitView } = useReactFlow()
@@ -403,33 +393,7 @@ function InnerTopologyCanvas() {
         </button>
       )}
 
-      {/* Simulation Mode Floating Status Banner */}
-      {simulationMode === 'simulation' && inFlightPackets.length > 0 && !simulationPlaying && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-sky-950/95 dark:bg-slate-900/95 text-white px-4 py-1.5 rounded-full shadow-xl border border-sky-400 font-sans text-xs flex items-center gap-3 backdrop-blur-xs select-none">
-          <span className="font-semibold text-amber-300">⏸ {t('Simulation Paused')}</span>
-          <span className="text-slate-200">{inFlightPackets.length} {t('packet(s) waiting on wire')}</span>
-          <button
-            type="button"
-            onClick={() => {
-              for (let i = 0; i < 7; i++) {
-                stepSimulation()
-                if (useNetworkStore.getState().inFlightPackets.length === 0) break
-              }
-            }}
-            className="px-2.5 py-0.5 rounded bg-sky-500 hover:bg-sky-400 text-white font-bold text-[11px] shadow transition cursor-pointer"
-            title={t('Step 1 hop (next device)')}
-          >
-            ⏭ {t('Capture / Forward')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSimulationPlaying(true)}
-            className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow transition cursor-pointer"
-          >
-            ▶ {t('Auto Play')}
-          </button>
-        </div>
-      )}
+      <SimulationPausedBanner />
 
       {/* PDU Mode Floating Top Banner */}
       {['pdu', 'complex-pdu'].includes(workspace.tool) && (
@@ -489,6 +453,46 @@ function InnerTopologyCanvas() {
         </div>
       )}
       </>}
+    </div>
+  )
+}
+
+function SimulationPausedBanner() {
+  const { t } = useI18n()
+  const { simulationMode, simulationPlaying, inFlightPackets, stepSimulation, setSimulationPlaying } = useNetworkStore(useShallow(state => ({
+    simulationMode: state.simulationMode,
+    simulationPlaying: state.simulationPlaying,
+    inFlightPackets: state.inFlightPackets,
+    stepSimulation: state.stepSimulation,
+    setSimulationPlaying: state.setSimulationPlaying,
+  })))
+
+  if (simulationMode !== 'simulation' || simulationPlaying || inFlightPackets.length === 0) return null
+
+  return (
+    <div className="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-sky-950/95 dark:bg-slate-900/95 text-white px-4 py-1.5 rounded-full shadow-xl border border-sky-400 font-sans text-xs flex items-center gap-3 backdrop-blur-xs select-none">
+      <span className="font-semibold text-amber-300">⏸ {t('Simulation Paused')}</span>
+      <span className="text-slate-200">{inFlightPackets.length} {t('packet(s) waiting on wire')}</span>
+      <button
+        type="button"
+        onClick={() => {
+          for (let i = 0; i < 7; i++) {
+            stepSimulation()
+            if (useNetworkStore.getState().inFlightPackets.length === 0) break
+          }
+        }}
+        className="px-2.5 py-0.5 rounded bg-sky-500 hover:bg-sky-400 text-white font-bold text-[11px] shadow transition cursor-pointer"
+        title={t('Step 1 hop (next device)')}
+      >
+        ⏭ {t('Capture / Forward')}
+      </button>
+      <button
+        type="button"
+        onClick={() => setSimulationPlaying(true)}
+        className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow transition cursor-pointer"
+      >
+        ▶ {t('Auto Play')}
+      </button>
     </div>
   )
 }

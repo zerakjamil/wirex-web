@@ -143,6 +143,7 @@ test('renders a 4,096-frame campus packet overlay within a bounded browser updat
     return packets.length
   })
   expect(packetCount).toBe(4096)
+  await expect(page.getByText('4096 packet(s) waiting on wire', { exact: true })).toBeVisible()
 
   await expect(page.getByRole('button', { name: /more packets on this cable/i })).toHaveCount(300, { timeout: 30_000 })
   await expect(page.locator('[data-testid="in-flight-packet"]')).toHaveCount(300)
@@ -210,4 +211,11 @@ test('renders a 4,096-frame campus packet overlay within a bounded browser updat
   expect(sustained.updates).toBe(8)
   expect(sustained.p95UpdateMs).toBeLessThan(250)
   expect(sustained.longestTaskMs).toBeLessThan(1000)
+
+  await page.evaluate(() => {
+    const store = (window as unknown as { __NET_STORE__?: { getState: () => { inFlightPackets: unknown[] }; setState: (state: Record<string, unknown>) => void } }).__NET_STORE__
+    if (!store) throw new Error('Loopback network store is unavailable')
+    store.setState({ inFlightPackets: store.getState().inFlightPackets.slice(0, 2048) })
+  })
+  await expect(page.getByText('2048 packet(s) waiting on wire', { exact: true })).toBeVisible()
 })
