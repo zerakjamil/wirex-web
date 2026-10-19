@@ -48,6 +48,7 @@ export interface NetworkPort {
   ipv6OspfArea?: number
   ipv6OspfCost?: number
   ipv6OspfPriority?: number
+  ipv6EigrpAs?: number
   isGreTunnel?: boolean
   greSourceInterface?: string
   greDestinationIp?: string
@@ -141,7 +142,7 @@ export interface Ipv6RouteEntry {
   nextHop: string
   interfaceName: string
   metric: number
-  type: 'C' | 'S' | 'O'
+  type: 'C' | 'S' | 'O' | 'D'
 }
 
 export interface MacTableEntry {
@@ -294,6 +295,12 @@ export interface DeviceConfig {
   ospfActiveInterfaces?: string[]
   ipv6OspfProcessId?: number
   ipv6OspfRouterId?: string
+  ipv6EigrpAs?: number
+  ipv6EigrpRouterId?: string
+  ipv6EigrpShutdown?: boolean
+  ipv6EigrpPassiveDefault?: boolean
+  ipv6EigrpPassiveInterfaces?: string[]
+  ipv6EigrpActiveInterfaces?: string[]
   dhcpPools?: Array<{ name: string; network: string; mask: string; defaultRouter?: string; dnsServer?: string; tftpServer?: string; leaseDurationSeconds?: number; hostIp?: string; hostMask?: string; hardwareAddress?: string; clientIdentifier?: string }>
   dhcpv6Pools?: Array<{ name: string; prefix: string; prefixLength: number; startAddress?: string }>
   dhcpv6Bindings?: Array<{ address: string; clientDeviceId: string; clientMac: string; acquiredAtMs?: number }>
@@ -491,6 +498,7 @@ export interface NetworkDevice {
   stpRuntime?: StpRuntime
   ospf?: OspfRuntime
   ospfv3?: Ospfv3Runtime
+  ipv6Eigrp?: EigrpV6Runtime
   rip?: RipRuntime
   eigrp?: EigrpRuntime
   bgp?: BgpRuntime
@@ -516,7 +524,7 @@ export interface NetworkDevice {
   ipv6RoutingTable?: Ipv6RouteEntry[]
   macTable: MacTableEntry[]
   cliHistory: string[]
-  currentCliMode: 'user' | 'priv' | 'config' | 'config-if' | 'config-subif' | 'config-vlan' | 'config-line' | 'config-router' | 'config-ipv6-router' | 'config-dhcp' | 'config-dhcpv6' | 'config-telephony' | 'config-ephone' | 'config-ephone-dn' | 'config-mst'
+  currentCliMode: 'user' | 'priv' | 'config' | 'config-if' | 'config-subif' | 'config-vlan' | 'config-line' | 'config-router' | 'config-ipv6-router' | 'config-ipv6-eigrp' | 'config-dhcp' | 'config-dhcpv6' | 'config-telephony' | 'config-ephone' | 'config-ephone-dn' | 'config-mst'
   activeVoiceId?: number
   activeDhcpPool?: string
   activeRoutingProtocol?: 'rip' | 'ospf' | 'eigrp' | 'bgp'
@@ -637,7 +645,7 @@ export interface RipRuntime {
 
 export interface EigrpEntry { network: string; netmask: string; bandwidthKbps: number; delayMicroseconds: number; hopCount: number; metric: number }
 export interface EigrpPacket {
-  type: 'hello' | 'update'
+  type: 'hello' | 'update' | 'query' | 'reply'
   asNumber: number
   holdTimeSeconds: number
   entries?: EigrpEntry[]
@@ -645,10 +653,41 @@ export interface EigrpPacket {
 }
 export interface EigrpNeighbor { address: string; portId: string; macAddress: string; lastHello: number; holdTimeMs: number; since: number }
 export interface EigrpCandidate { network: string; netmask: string; portId: string; nextHop: string; bandwidthKbps: number; delayMicroseconds: number; hopCount: number; reportedMetric: number; metric: number; updatedAt: number }
+export interface EigrpTopologyEntry {
+  network: string
+  netmask: string
+  state: 'Active'
+  since: number
+  pending: string[]
+  origins: Array<{ address: string; portId: string }>
+}
 export interface EigrpRuntime {
   clock: number
   neighbors: EigrpNeighbor[]
   candidates: EigrpCandidate[]
+  lastHelloAt: Record<string, number>
+  signature: string
+  lastError?: string
+  topology?: EigrpTopologyEntry[]
+  siaNotice?: string
+}
+
+export interface EigrpV6Entry { prefix: string; prefixLength: number; bandwidthKbps: number; delayMicroseconds: number; hopCount: number; metric: number }
+export interface EigrpV6Packet {
+  type: 'hello' | 'update'
+  asNumber: number
+  holdTimeSeconds: number
+  routerId: string
+  entries?: EigrpV6Entry[]
+  complete?: boolean
+}
+export interface EigrpV6Neighbor { address: string; portId: string; macAddress: string; routerId: string; lastHello: number; holdTimeMs: number; since: number }
+export interface EigrpV6Candidate { prefix: string; prefixLength: number; portId: string; nextHop: string; bandwidthKbps: number; delayMicroseconds: number; hopCount: number; reportedMetric: number; metric: number; updatedAt: number }
+export interface EigrpV6Runtime {
+  clock: number
+  routerId: string
+  neighbors: EigrpV6Neighbor[]
+  candidates: EigrpV6Candidate[]
   lastHelloAt: Record<string, number>
   signature: string
   lastError?: string
@@ -827,6 +866,7 @@ export interface PacketPdu {
     ospfv3?: Ospfv3Packet
     rip?: RipPacket
     eigrp?: EigrpPacket
+    eigrpV6?: EigrpV6Packet
     bgp?: BgpPacket
     /** TCP control frames on port 179 before a BGP session is established. */
     bgpTcp?: { flags: 'syn' | 'synack' | 'ack' | 'rst' }

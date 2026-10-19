@@ -7,6 +7,7 @@ import { evaluateAcl } from './acl'
 import { allocateDhcpLease } from './dhcp'
 import { prepareOspfTick, receiveOspfPacket, hasOspf, ospfArea } from './ospf'
 import { prepareIpv6OspfTick, receiveOspfv3Packet } from './ospfv3'
+import { prepareIpv6EigrpTick, receiveIpv6EigrpPacket } from './eigrpv6'
 import type { OspfOutbound } from './ospf'
 import { prepareRipTick, receiveRipPacket, hasRip, ripEnabled } from './rip'
 import type { RipOutbound } from './rip'
@@ -980,10 +981,11 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
   const ospfv3Control = prepareIpv6OspfTick(ospfControl.devices)
   const ripControl = prepareRipTick(ospfv3Control.devices)
   const eigrpControl = prepareEigrpTick(ripControl.devices)
-  const bgpControl = prepareBgpTick(eigrpControl.devices)
+  const eigrpV6Control = prepareIpv6EigrpTick(eigrpControl.devices)
+  const bgpControl = prepareBgpTick(eigrpV6Control.devices)
   const capwapControl = prepareCapwapTick(bgpControl.devices, links, simulationTick)
   const iotControl = prepareIotTick(capwapControl.devices, links, simulationTick)
-  const control = { devices: iotControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound] }
+  const control = { devices: iotControl.devices, outbound: [...ospfControl.outbound, ...ripControl.outbound, ...ospfv3Control.outbound, ...eigrpControl.outbound, ...eigrpV6Control.outbound] }
   const stpControl=prepareStpTick(control.devices,links,simulationTick)
   let updatedDevices = ageLearnedMacTables(advanceStpPortStates(stpControl.devices,links,simulationTick),simulationTick)
   const byId = new Map(updatedDevices.map(d => [d.id, d]))
@@ -1715,6 +1717,15 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     }
     const ingressStpState=isBridge(receiver)?stpTopology(vlan).ports.get(`${receiver.id}|${receivingPort.id}`)?.state:undefined
     if (isBridge(receiver) && !forwardingLinks(vlan).has(link.id) && ingressStpState!=='LRN') { drop(packet, 'Spanning tree or VLAN membership blocks this path.'); continue }
+    if (packet.pdu.protocol === 'EIGRP' && packet.pdu.etherType === '0x86DD' && !isBridge(receiver)) {
+      const received = receiveIpv6EigrpPacket(byId.get(receiver.id)!, receivingPort, packet.pdu)
+      updatedDevices[deviceIndices.get(receiver.id)!] = received.device
+      byId.set(receiver.id, received.device); mutable.add(receiver.id)
+      if (received.reason) { drop(packet, received.reason); continue }
+      received.outbound.forEach(sendControl)
+      packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} processed EIGRPv6 ${packet.pdu.payload.eigrpV6?.type}.` })
+      continue
+    }
     if (packet.pdu.protocol === 'OSPF' && packet.pdu.etherType === '0x86DD' && !isBridge(receiver)) {
       const received = receiveOspfv3Packet(byId.get(receiver.id)!, receivingPort, packet.pdu)
       updatedDevices[deviceIndices.get(receiver.id)!] = received.device
@@ -1864,7 +1875,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     }
 
     const serial = receivingPort.type === 'serial'
-    const ospfMulticast = pdu.protocol === 'OSPF' && pdu.destMac === '01:00:5e:00:00:05' || pdu.protocol === 'RIP' && pdu.destMac === '01:00:5e:00:00:09' || pdu.protocol === 'EIGRP' && pdu.destMac === '01:00:5e:00:00:0a'
+    const ospfMulticast = pdu.protocol === 'OSPF' && pdu.destMac === '01:00:5e:00:00:05' || pdu.protocol === 'RIP' && pdu.destMac === '01:00:5e:00:00:09' || pdu.protocol === 'EIGRP' && (pdu.destMac === '01:00:5e:00:00:0a' || pdu.destMac === '33:33:00:00:00:0a')
     if(standbyHsrpMac&&pdu.protocol!=='ARP'){
       packetDeliveries.push({packetId:packet.id,status:'delivered',receiverDeviceId:receiver.id,reason:`${receiver.name} is not active for this HSRP virtual MAC and ignores the frame.`})
       continue

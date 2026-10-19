@@ -416,4 +416,43 @@ test.describe('wireX Network Simulator E2E Flow Verification', () => {
     await expect(modal).toContainText(/neighbor 10\.0\.0\.3 remote-as 65001/)
     await expect(modal).toContainText(/network 10\.0\.0\.0 mask 255\.255\.0\.0/)
   })
+
+  test('F14: EIGRPv6 process, router-id and interface from the router CLI appear in show ipv6 eigrp and show running-config', async ({ page }) => {
+    await page.goto('/')
+
+    const routerBtn = page.getByRole('button', { name: /Office-Router/i }).first()
+    await expect(routerBtn).toBeVisible({ timeout: 10000 })
+    await routerBtn.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10000 })
+
+    const cliTab = modal.locator('button', { hasText: /^CLI$/i })
+    if (await cliTab.isVisible()) {
+      await cliTab.click()
+    }
+    const cliInput = modal.locator('input[type="text"]').last()
+    await expect(cliInput).toBeVisible()
+    for (const command of [
+      'enable',
+      'configure terminal',
+      'ipv6 unicast-routing',
+      'ipv6 router eigrp 1',
+      'eigrp router-id 1.1.1.1',
+      'no shutdown',
+      'end',
+      'show ipv6 eigrp neighbors',
+      'show ipv6 eigrp topology',
+      'show ipv6 eigrp interfaces',
+      'show running-config',
+    ]) {
+      await cliInput.fill(command)
+      await cliInput.press('Enter')
+    }
+    await expect(modal).toContainText(/EIGRP-IPv6 Neighbors for AS\(1\)/)
+    await expect(modal).toContainText(/EIGRP-IPv6 Topology Table for AS\(1\)\/ID\(1\.1\.1\.1\)/)
+    await expect(modal).toContainText(/EIGRP-IPv6 Interfaces for AS\(1\)/)
+    await expect(modal).toContainText(/ipv6 router eigrp 1/)
+    await expect(modal).toContainText(/eigrp router-id 1\.1\.1\.1/)
+  })
 })

@@ -1317,6 +1317,9 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         if (res.resetOspfv3) {
           ipv6RoutingTable = ipv6RoutingTable.filter((r) => r.type !== 'O')
         }
+        if (res.resetIpv6Eigrp) {
+          ipv6RoutingTable = ipv6RoutingTable.filter((r) => r.type !== 'D')
+        }
 
         return {
           ...d,
@@ -1326,6 +1329,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
           ipv6OspfSequence: res.resetOspfv3 ? undefined : d.ipv6OspfSequence,
           rip: res.resetRip ? undefined : d.rip,
           eigrp: res.resetEigrp ? undefined : d.eigrp,
+          ipv6Eigrp: res.resetIpv6Eigrp ? undefined : d.ipv6Eigrp,
           bgp: res.resetBgp ? undefined : bgpRuntime,
           activeInterface: nextActiveInt,
           activeSubInterface: nextActiveSubInt,
@@ -1614,7 +1618,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   tickSimulation: () => {
     const { devices, links, inFlightPackets, simulationMode, simulationPlaying, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
     if (simulationMode === 'simulation' && !simulationPlaying) return
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||hasBgp(d)||d.bgp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ipv6Eigrp||hasBgp(d)||d.bgp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     const hasGeneratorActivity=get().trafficGenerators.length>0
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity&&!hasGeneratorActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)
@@ -1654,7 +1658,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   stepSimulation: () => {
     const { devices, links, inFlightPackets, simulationMode, simulationTick, tcpReceiveBuffers, tcpOutstandingSegments } = get()
-    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||hasBgp(d)||d.bgp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
+    const hasRoutingActivity=devices.some(d=>hasOspf(d)||d.ospf||hasIpv6Ospf(d)||d.ospfv3||hasRip(d)||d.rip||hasEigrp(d)||d.eigrp||d.ipv6Eigrp||hasBgp(d)||d.bgp||d.ports.some(port=>port.isGreTunnel&&port.greKeepalivePeriodSeconds))||hasStpActivity(devices,links)||hasHsrpActivity(devices)||hasMacAgingActivity(devices)||hasCapwapActivity(devices)||hasIotActivity(devices)
     const hasGeneratorActivity=get().trafficGenerators.length>0
     if(inFlightPackets.length===0&&tcpOutstandingSegments.length===0&&!hasRoutingActivity&&!hasGeneratorActivity){
       const timers=advanceDhcpLeaseTimers(devices,links,inFlightPackets,get().dhcpTransactions)

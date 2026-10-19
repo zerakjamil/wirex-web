@@ -5,6 +5,7 @@ import { parseVoiceIos } from './voiceIos'
 import { parseAclRule, formatAccessLists, formatAclRunningConfig } from '../acl'
 import { ospfArea, ospfCost, ospfDead, ospfHello, ospfNetwork, ospfPassive, ospfConfigLines } from '../ospf'
 import { ipv6OspfConfigLines, ipv6OspfHello, ipv6OspfDead, ipv6OspfNetwork, ipv6OspfCost } from '../ospfv3'
+import { ipv6EigrpConfigLines } from '../eigrpv6'
 import { ripMajorNetwork, ripConfigLines } from '../rip'
 import { eigrpConfigLines, eigrpEnabled, eigrpPassive, eigrpRouterId, classfulWildcard } from '../eigrp'
 import { bgpConfigLines, bgpRouterId, classfulMask } from '../bgp'
@@ -44,6 +45,7 @@ export interface IosExecutionResult {
   resetOspfv3?: boolean
   resetRip?: boolean
   resetEigrp?: boolean
+  resetIpv6Eigrp?: boolean
   resetBgp?: boolean
   clearBgpSessions?: boolean
   newMode?:
@@ -56,6 +58,7 @@ export interface IosExecutionResult {
     | 'config-line'
     | 'config-router'
     | 'config-ipv6-router'
+    | 'config-ipv6-eigrp'
     | 'config-dhcp'
     | 'config-dhcpv6'
     | 'config-telephony'
@@ -136,6 +139,7 @@ export function getPrompt(device: NetworkDevice): string {
     case 'config-router':
       return `${host}(config-router)#`
     case 'config-ipv6-router':
+    case 'config-ipv6-eigrp':
       return `${host}(config-rtr)#`
     case 'config-dhcp':
       return `${host}(config-dhcp)#`
@@ -325,6 +329,7 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       device.currentCliMode === 'config-line' ||
       device.currentCliMode === 'config-router' ||
       device.currentCliMode === 'config-ipv6-router' ||
+      device.currentCliMode === 'config-ipv6-eigrp' ||
       device.currentCliMode === 'config-dhcp' ||
       device.currentCliMode === 'config-dhcpv6' ||
       device.currentCliMode === 'config-telephony' ||
@@ -762,6 +767,37 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     return { output: `% Invalid input detected at '^' marker.` }
   }
 
+  // 5c. Config-Router IPv6 EIGRP Mode: Router(config-rtr)# (ipv6 router eigrp <as>)
+  if (device.currentCliMode === 'config-ipv6-eigrp') {
+    if (cmd === 'eigrp' && parts[1]?.toLowerCase() === 'router-id') {
+      if (parts.length !== 3 || !isValidIpv4(parts[2]) || parts[2] === '0.0.0.0') return { output: '% Use eigrp router-id <A.B.C.D>.' }
+      return { output: '', newDeviceConfig: { ipv6EigrpRouterId: parts[2] }, resetIpv6Eigrp: true }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'eigrp' && parts[2]?.toLowerCase() === 'router-id' && parts.length === 3) {
+      return { output: '', newDeviceConfig: { ipv6EigrpRouterId: undefined }, resetIpv6Eigrp: true }
+    }
+    if (cmd === 'shutdown' && parts.length === 1) return { output: '', newDeviceConfig: { ipv6EigrpShutdown: true }, resetIpv6Eigrp: true }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'shutdown' && parts.length === 2) return { output: '', newDeviceConfig: { ipv6EigrpShutdown: false } }
+    if (cmd === 'passive-interface') {
+      const name = parts[1]?.toLowerCase() === 'default' ? 'default' : normalizeInterfaceName(parts[1] ?? '', device.ports)
+      if (parts.length !== 2 || !name) return { output: '% Use passive-interface <interface> | default.' }
+      if (name === 'default') return { output: '', newDeviceConfig: { ipv6EigrpPassiveDefault: true, ipv6EigrpPassiveInterfaces: [], ipv6EigrpActiveInterfaces: [] } }
+      const port = device.ports.find(candidate => candidate.id === name)!
+      return { output: '', newDeviceConfig: { ipv6EigrpPassiveInterfaces: [...(device.config.ipv6EigrpPassiveInterfaces ?? []).filter(entry => entry !== port.name), port.name], ipv6EigrpActiveInterfaces: (device.config.ipv6EigrpActiveInterfaces ?? []).filter(entry => entry !== port.name) } }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'passive-interface') {
+      if (parts.length !== 3) return { output: '% Use no passive-interface <interface> | default.' }
+      if (parts[2]?.toLowerCase() === 'default') return { output: '', newDeviceConfig: { ipv6EigrpPassiveDefault: false, ipv6EigrpPassiveInterfaces: [], ipv6EigrpActiveInterfaces: [] } }
+      const id = normalizeInterfaceName(parts[2] ?? '', device.ports), port = device.ports.find(candidate => candidate.id === id)
+      if (!port) return { output: '% Invalid passive interface.' }
+      return { output: '', newDeviceConfig: { ipv6EigrpPassiveInterfaces: (device.config.ipv6EigrpPassiveInterfaces ?? []).filter(entry => entry !== port.name), ipv6EigrpActiveInterfaces: [...(device.config.ipv6EigrpActiveInterfaces ?? []).filter(entry => entry !== port.name), port.name] } }
+    }
+    if (cmd === 'do') {
+      return handleDoCommand(device, parts.slice(1))
+    }
+    return { output: `% Invalid input detected at '^' marker.` }
+  }
+
   // 6. Config-DHCP Mode: Router(config-dhcp)#
   if (device.currentCliMode === 'config-dhcp') {
     if (cmd === 'network' || cmd === 'net') {
@@ -881,6 +917,18 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'router' && parts[3]?.toLowerCase() === 'ospf') {
       if (parts.length !== 5 || Number(parts[4]) !== (device.config.ipv6OspfProcessId ?? 1)) return { output: '% OSPFv3 process not found.' }
       return { output: '', newDeviceConfig: { ipv6OspfProcessId: undefined, ipv6OspfRouterId: undefined }, resetOspfv3: true }
+    }
+    if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'router' && parts[2]?.toLowerCase() === 'eigrp') {
+      const asNumber = Number(parts[3])
+      if (parts.length !== 4 || !/^\d+$/.test(parts[3]) || asNumber < 1 || asNumber > 65535) return { output: '% Use ipv6 router eigrp <1-65535>.' }
+      if (device.config.ipv6EigrpAs !== undefined && device.config.ipv6EigrpAs !== asNumber) {
+        return { output: '% Multiple EIGRPv6 processes are not implemented. Existing configuration was left unchanged.' }
+      }
+      return { output: '', newMode: 'config-ipv6-eigrp', newDeviceConfig: { ipv6EigrpAs: asNumber, ...(device.config.ipv6EigrpAs === undefined ? { ipv6EigrpShutdown: true } : {}) } }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'router' && parts[3]?.toLowerCase() === 'eigrp') {
+      if (parts.length !== 5 || Number(parts[4]) !== (device.config.ipv6EigrpAs ?? 1)) return { output: '% EIGRPv6 process not found.' }
+      return { output: '', newDeviceConfig: { ipv6EigrpAs: undefined, ipv6EigrpRouterId: undefined, ipv6EigrpShutdown: undefined, ipv6EigrpPassiveDefault: undefined, ipv6EigrpPassiveInterfaces: [], ipv6EigrpActiveInterfaces: [] }, resetIpv6Eigrp: true }
     }
     if(cmd==='ipv6'&&parts[1]?.toLowerCase()==='route'&&parts.length===4){
       const parsed=parseIpv6WithPrefix(parts[2]??'')
@@ -1525,6 +1573,18 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'ospf' && (parts.length === 3 || (parts.length === 6 && parts[4]?.toLowerCase() === 'area'))) {
       return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6OspfProcess: undefined, ipv6OspfArea: undefined }] }
     }
+    if (cmd === 'ipv6' && parts[1]?.toLowerCase() === 'eigrp') {
+      if (device.type !== 'router' && !(device.type === 'switch' && device.config.ipRouting === true)) return { output: '% EIGRPv6 requires a router or Layer 3 switch.' }
+      const asNumber = Number(parts[2])
+      if (parts.length !== 3 || !/^\d+$/.test(parts[2]) || asNumber < 1 || asNumber > 65535) return { output: '% Use ipv6 eigrp <1-65535>.' }
+      if (device.config.ipv6EigrpAs !== undefined && device.config.ipv6EigrpAs !== asNumber) {
+        return { output: `% EIGRPv6 AS ${device.config.ipv6EigrpAs} is already configured; multiple EIGRPv6 processes are not implemented.` }
+      }
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6EigrpAs: asNumber }], newDeviceConfig: { ipv6EigrpAs: asNumber, ...(device.config.ipv6EigrpAs === undefined ? { ipv6EigrpShutdown: true } : {}) } }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'ipv6' && parts[2]?.toLowerCase() === 'eigrp' && parts.length === 3) {
+      return { output: '', modifiedPorts: [{ portId: activePort.id, ipv6EigrpAs: undefined }] }
+    }
 
     // Description
     if (cmd === 'description' || cmd === 'desc') {
@@ -1904,12 +1964,21 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       return { output: out.trimEnd() }
     }
     if (sub3 === 'topology' || sub3 === 'top' || sub3 === undefined) {
+      const onlyActive = parts[3]?.toLowerCase() === 'active'
       let out = `EIGRP-IPv4 Topology Table for AS(${as})/ID(${eigrpRouterId(device) ?? 'unset'})\n\nCodes: P - Passive, A - Active, U - Update, Q - Query, R - Reply,\n       r - reply Status, s - sia Status\n`
-      for (const route of device.routingTable.filter(r => r.type === 'D')) {
+      if (!onlyActive) for (const route of device.routingTable.filter(r => r.type === 'D')) {
         const candidates = (device.eigrp?.candidates ?? []).filter(c => c.network === route.network && c.netmask === route.netmask).sort((a, b) => a.metric - b.metric)
         out += `\nP ${route.network}/${maskLength(route.netmask)}, ${candidates.length || 1} successors, FD is ${route.metric}\n`
         for (const c of candidates) out += `        via ${c.nextHop} (${c.metric}/${c.reportedMetric}), ${device.ports.find(p => p.id === c.portId)?.name ?? c.portId}\n`
       }
+      for (const entry of device.eigrp?.topology ?? []) {
+        const candidates = (device.eigrp?.candidates ?? []).filter(c => c.network === entry.network && c.netmask === entry.netmask).sort((a, b) => a.metric - b.metric)
+        out += `\nA ${entry.network}/${maskLength(entry.netmask)}, ${candidates.length} successors, FD is Inaccessible\n`
+        for (const c of candidates) out += `        via ${c.nextHop} (${c.metric}/${c.reportedMetric}), ${device.ports.find(p => p.id === c.portId)?.name ?? c.portId}\n`
+        if (entry.pending.length) out += `        Pending replies: ${entry.pending.join(', ')}\n`
+        if (entry.origins.length) out += `        Queried by: ${entry.origins.map(origin => origin.address).join(', ')}\n`
+      }
+      if (device.eigrp?.siaNotice) out += `\n% SIA: ${device.eigrp.siaNotice}`
       return { output: out.trimEnd() }
     }
     if (sub3 === 'interfaces' || sub3 === 'int') {
@@ -1920,6 +1989,42 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       }
       return { output: out.trimEnd() }
     }
+  }
+
+  // show ipv6 eigrp neighbors | topology | interfaces
+  if (sub1 === 'ipv6' && sub2 === 'eigrp') {
+    const as = device.config.ipv6EigrpAs
+    if (as === undefined) return { output: '% EIGRPv6 is not configured on this device.' }
+    const runtime = device.ipv6Eigrp
+    if (sub3 === 'neighbors' || sub3 === 'nei') {
+      let out = `EIGRP-IPv6 Neighbors for AS(${as})\nH   Address                                   Interface              Hold Uptime   SRTT   RTO  Q  Seq\n                                                                         (sec)         (ms)       Cnt Num\n`
+      ;[...(runtime?.neighbors ?? [])].sort((a, b) => a.address.localeCompare(b.address)).forEach((neighbor, index) => {
+        const port = device.ports.find(candidate => candidate.id === neighbor.portId)
+        const hold = Math.max(0, Math.ceil((neighbor.holdTimeMs - ((runtime?.clock ?? 0) - neighbor.lastHello)) / 1000))
+        const uptime = Math.floor(((runtime?.clock ?? 0) - neighbor.since) / 1000)
+        const stamp = [Math.floor(uptime / 3600), Math.floor(uptime % 3600 / 60), uptime % 60].map(value => String(value).padStart(2, '0')).join(':')
+        out += `${index}   ${neighbor.address.padEnd(41)}${(port?.name ?? neighbor.portId).padEnd(23)}${String(hold).padEnd(5)}${stamp.padEnd(9)}1      100      0  0\n`
+      })
+      return { output: out.trimEnd() }
+    }
+    if (sub3 === 'topology' || sub3 === 'top' || sub3 === undefined) {
+      let out = `EIGRP-IPv6 Topology Table for AS(${as})/ID(${device.config.ipv6EigrpRouterId ?? runtime?.routerId ?? 'unset'})\n\nCodes: P - Passive, A - Active, U - Update, Q - Query, R - Reply\n`
+      for (const route of (device.ipv6RoutingTable ?? []).filter(entry => entry.type === 'D')) {
+        const candidates = (runtime?.candidates ?? []).filter(candidate => candidate.prefix === route.network && candidate.prefixLength === route.prefixLength).sort((a, b) => a.metric - b.metric)
+        out += `\nP ${route.network.toUpperCase()}/${route.prefixLength}, ${candidates.length || 1} successors, FD is ${route.metric}\n`
+        for (const candidate of candidates) out += `        via ${candidate.nextHop.toUpperCase()} (${candidate.metric}/${candidate.reportedMetric}), ${device.ports.find(port => port.id === candidate.portId)?.name ?? candidate.portId}\n`
+      }
+      return { output: out.trimEnd() }
+    }
+    if (sub3 === 'interfaces' || sub3 === 'int') {
+      let out = `EIGRP-IPv6 Interfaces for AS(${as})\n\nInterface        Peers  Xmit Queue   Mean   Pacing Time   Multicast    Pending\n                       Un/Reliable  SRTT   Un/Reliable   Flow Timer   Routes\n`
+      for (const port of device.ports.filter(candidate => candidate.ipv6EigrpAs === as)) {
+        const peers = (runtime?.neighbors ?? []).filter(neighbor => neighbor.portId === port.id).length
+        out += `${port.name.padEnd(20)}${String(peers).padEnd(7)}0/0          0      0/1           0            0\n`
+      }
+      return { output: out.trimEnd() }
+    }
+    return { output: '% Unsupported command. Try show ipv6 eigrp neighbors, topology, or interfaces.' }
   }
 
   // show ip interface brief (sh ip int br) vs show ip interface [name]
@@ -2038,15 +2143,15 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
         if (seen.has(key)) continue
         seen.add(key)
         entries.push({
-          code: route.type === 'O' ? 'O' : 'S',
+          code: route.type === 'O' ? 'O' : route.type === 'D' ? 'D' : 'S',
           network,
           prefixLength: route.prefixLength,
-          distance: route.type === 'O' ? 110 : 1,
+          distance: route.type === 'O' ? 110 : route.type === 'D' ? 90 : 1,
           metric: route.metric,
           detail: `via ${route.nextHop.toUpperCase()}${route.interfaceName ? `, ${route.interfaceName}` : ''}`,
         })
       }
-      const header = `IPv6 Routing Table - default - ${entries.length} entries\nCodes: C - Connected, S - Static, O - OSPF`
+      const header = `IPv6 Routing Table - default - ${entries.length} entries\nCodes: C - Connected, S - Static, O - OSPF, D - EIGRP`
       return { output: entries.length ? `${header}\n${entries.map((e) => `${e.code}   ${e.network.toUpperCase()}/${e.prefixLength} [${e.distance}/${e.metric}]\n     ${e.detail}`).join('\n')}` : `${header}\nNo IPv6 routes.` }
     }
     if (sub2 === 'neighbors' || sub2 === 'nei') {
@@ -2305,6 +2410,7 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       if (p.ipv6OspfArea !== undefined) out += ` ipv6 ospf ${p.ipv6OspfProcess ?? device.config.ipv6OspfProcessId ?? 1} area ${p.ipv6OspfArea}\n`
       if (p.ipv6OspfCost !== undefined) out += ` ipv6 ospf cost ${p.ipv6OspfCost}\n`
       if (p.ipv6OspfPriority !== undefined) out += ` ipv6 ospf priority ${p.ipv6OspfPriority}\n`
+      if (p.ipv6EigrpAs !== undefined) out += ` ipv6 eigrp ${p.ipv6EigrpAs}\n`
       if (p.inboundAcl) out += ` ip access-group ${p.inboundAcl} in\n`
       if (p.outboundAcl) out += ` ip access-group ${p.outboundAcl} out\n`
       if (p.helperAddress) out += ` ip helper-address ${p.helperAddress}\n`
@@ -2352,6 +2458,10 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     const ospfv3Lines = ipv6OspfConfigLines(device)
     const ospfv3Start = ospfv3Lines.findIndex(line => line.startsWith('ipv6 router ospf '))
     if (ospfv3Start >= 0) out += `${ospfv3Lines.slice(ospfv3Start).join('\n')}\n`
+
+    const eigrpV6Lines = ipv6EigrpConfigLines(device)
+    const eigrpV6Start = eigrpV6Lines.findIndex(line => line.startsWith('ipv6 router eigrp '))
+    if (eigrpV6Start >= 0) out += `${eigrpV6Lines.slice(eigrpV6Start).join('\n')}\n`
 
     for (const r of device.routingTable) {
       if (r.type === 'S') {
