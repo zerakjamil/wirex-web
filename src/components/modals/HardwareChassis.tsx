@@ -445,35 +445,88 @@ function DesktopChassis(props: ChassisProps) {
 }
 
 function LaptopChassis(props: ChassisProps) {
-  const { device, ports, power } = props
+  const { device, ports, power, face } = props
+  const top = face === 'front'
+  const builtIn = ports.filter(port => port.moduleSlot === undefined)
+  const bay = props.profile.slots > 0 ? (
+    <div className="hw-laptop-bay">
+      <span className="hw-laptop-bay-rail" aria-hidden="true" />
+      <ModuleBay {...props} slot={0} compact />
+    </div>
+  ) : null
+  const powerButton = (
+    <button
+      type="button"
+      className="hw-laptop-power"
+      data-on={power}
+      onClick={props.onTogglePower}
+      aria-label="Power"
+      title="Power"
+    >
+      <span className="hw-laptop-power-dot" aria-hidden="true" />
+      <small>PWR</small>
+    </button>
+  )
+  const builtInRow = builtIn.length ? (
+    <div className="hw-laptop-io">
+      <span className="hw-panel-label">I/O</span>
+      <div className="hw-port-row">
+        {builtIn.map(port => (
+          <PortJack
+            key={port.id}
+            port={port}
+            power={power}
+            compact
+            selected={props.selectedPortId === port.id}
+            onSelect={props.onSelectPort}
+          />
+        ))}
+      </div>
+    </div>
+  ) : null
   return (
-    <div className="hw-laptop" data-face={props.face}>
-      <div className="hw-laptop-lid">
-        <div className="hw-laptop-screen" data-on={power}>
-          <span>wireX</span>
-        </div>
-      </div>
-      <div className="hw-laptop-base">
-        <div className="hw-laptop-keyboard" aria-hidden="true" />
-        <div className="hw-laptop-ports">
-          <span className="hw-panel-label">SIDE I/O</span>
-          <div className="hw-port-row">
-            {ports.filter(port => port.moduleSlot === undefined).map(port => (
-              <PortJack
-                key={port.id}
-                port={port}
-                power={power}
-                selected={props.selectedPortId === port.id}
-                onSelect={props.onSelectPort}
-              />
-            ))}
+    <div className={`hw-laptop ${top ? 'is-top' : 'is-rear'}`} data-face={face}>
+      {top ? (
+        <div className="hw-laptop-top">
+          <div className="hw-laptop-screen-top">
+            <div className="hw-laptop-screen-panel" data-on={power}><span>wireX</span></div>
           </div>
-          {props.profile.slots > 0 && Array.from({ length: props.profile.slots }, (_, slot) => (
-            <ModuleBay key={slot} {...props} slot={slot} compact />
-          ))}
+          <div className="hw-laptop-deck">
+            <span className="hw-laptop-hinge-strip" aria-hidden="true" />
+            <div className="hw-laptop-keys" aria-hidden="true">
+              {Array.from({ length: 5 }, (_, row) => (
+                <span key={row} className="hw-laptop-keyrow">
+                  {Array.from({ length: row === 0 ? 13 : 14 }, (_, col) => <i key={col} />)}
+                </span>
+              ))}
+            </div>
+            <div className="hw-laptop-trackpad" aria-hidden="true" />
+            <span className="hw-laptop-model" dir="ltr">{device.model}</span>
+            {powerButton}
+          </div>
+          {bay}
+          {builtInRow}
         </div>
-        <span className="hw-laptop-model" dir="ltr">{device.model}</span>
-      </div>
+      ) : (
+        <div className="hw-laptop-rear">
+          <span className="hw-laptop-shadow" aria-hidden="true" />
+          <div className="hw-laptop-lid-back">
+            <span className="hw-laptop-logo" dir="ltr">wireX</span>
+          </div>
+          <div className="hw-laptop-hinge" aria-hidden="true"><i /><i /></div>
+          <div className="hw-laptop-base-rear">
+            <span className="hw-laptop-base-side" aria-hidden="true" />
+            <span className="hw-laptop-base-lip" aria-hidden="true" />
+            {builtInRow}
+            <div className="hw-laptop-foot">
+              {powerButton}
+              <span className="hw-laptop-model" dir="ltr">{device.model}</span>
+              <span className="hw-laptop-badge" dir="ltr">LAPTOP</span>
+            </div>
+          </div>
+          {bay}
+        </div>
+      )}
     </div>
   )
 }
