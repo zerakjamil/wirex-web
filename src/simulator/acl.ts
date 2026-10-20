@@ -280,20 +280,24 @@ export function formatAccessLists(accessLists: AccessList[] = [], filterId?: str
   return lines.join('\n')
 }
 
-export function formatAclRunningConfig(accessLists: AccessList[] = []): string[] {
+export function formatAclRunningConfig(
+  accessLists: AccessList[] = [],
+  options: { includeAclType?: boolean } = {}
+): string[] {
   const lines: string[] = []
   for (const acl of accessLists) {
+    const typeKeyword = options.includeAclType ? ` ${acl.type}` : ''
     for (const rule of acl.rules) {
       if (rule.remark) {
         lines.push(`access-list ${acl.id} remark ${rule.remark}`)
       } else if (rule.type === 'standard') {
         const src = rule.sourceIp === 'any' ? 'any' : rule.wildcard === '0.0.0.0' ? `host ${rule.sourceIp}` : `${rule.sourceIp} ${rule.wildcard}`
-        lines.push(`access-list ${acl.id} ${rule.action} ${src}`)
+        lines.push(`access-list ${acl.id}${typeKeyword} ${rule.action} ${src}`)
       } else {
         const src = rule.sourceIp === 'any' ? 'any' : rule.sourceWildcard === '0.0.0.0' ? `host ${rule.sourceIp}` : `${rule.sourceIp} ${rule.sourceWildcard}`
         const dst = rule.destIp === 'any' ? 'any' : rule.destWildcard === '0.0.0.0' ? `host ${rule.destIp}` : `${rule.destIp} ${rule.destWildcard}`
         const portStr = rule.destPort !== undefined ? ` eq ${rule.destPort}` : ''
-        lines.push(`access-list ${acl.id} ${rule.action} ${rule.protocol} ${src} ${dst}${portStr}`)
+        lines.push(`access-list ${acl.id}${typeKeyword} ${rule.action} ${rule.protocol} ${src} ${dst}${portStr}`)
       }
     }
   }

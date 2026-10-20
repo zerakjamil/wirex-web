@@ -4,6 +4,7 @@ import type { DragEvent } from 'react'
 import type { NetworkDevice, NetworkPort } from '@/types/network'
 import type { getHardwareProfile } from '@/simulator/physicalHardware'
 import { useI18n } from '@/i18n/useI18n'
+import { isIsa3000 } from '@/simulator/isa'
 
 export type HardwareProfile = ReturnType<typeof getHardwareProfile>
 export type ChassisFace = 'front' | 'rear'
@@ -221,11 +222,13 @@ function RackChassis(props: ChassisProps) {
   const kind = device.type === 'switch' ? 'switch'
     : device.type === 'router' ? 'router'
     : device.type === 'wlc' ? 'wlc'
+    : isIsa3000(device) ? 'isa'
     : device.type === 'security' ? 'security'
     : 'hub'
   const series = kind === 'switch' ? 'Catalyst Switch'
     : kind === 'router' ? 'Integrated Services Router'
     : kind === 'wlc' ? 'Wireless LAN Controller'
+    : kind === 'isa' ? 'Industrial Security Appliance'
     : kind === 'security' ? 'Adaptive Security Appliance'
     : 'Ethernet Hub'
   const portFace = face === profile.portFace
@@ -253,6 +256,12 @@ function RackChassis(props: ChassisProps) {
                 <StatusLed label="DUPLX" on={false} />
                 <StatusLed label="SPEED" on={false} />
               </>
+            ) : kind === 'isa' ? (
+              <>
+                <StatusLed label="PWR" on={power} />
+                <StatusLed label="SYS" on={power} />
+                <StatusLed label="ALM" on={false} />
+              </>
             ) : (
               <>
                 <StatusLed label="PWR" on={power} />
@@ -268,6 +277,8 @@ function RackChassis(props: ChassisProps) {
           {portFace ? (
             kind === 'switch' ? (
               <SwitchFace {...props} builtIn={builtIn} bays={bays} />
+            ) : kind === 'isa' ? (
+              <IsaFace {...props} builtIn={builtIn} />
             ) : (
               <PortFace {...props} builtIn={builtIn} bays={bays} />
             )
@@ -347,6 +358,50 @@ function SwitchFace(props: ChassisProps & { builtIn: NetworkPort[]; bays: number
   )
 }
 
+function IsaFace(props: ChassisProps & { builtIn: NetworkPort[] }) {
+  const { t } = useI18n()
+  const sfp = props.builtIn.filter(port => port.media === 'fiber')
+  const copper = props.builtIn.filter(port => port.media !== 'fiber' && port.nameif !== 'management')
+  const management = props.builtIn.find(port => port.nameif === 'management')
+  const renderPorts = (ports: NetworkPort[]) => ports.map(port => (
+    <PortJack
+      key={port.id}
+      port={port}
+      power={props.power}
+      selected={props.selectedPortId === port.id}
+      onSelect={props.onSelectPort}
+    />
+  ))
+  return (
+    <div className="hw-isa-face">
+      <div className="hw-isa-group">
+        <span className="hw-panel-label">{t('SFP Uplinks')}</span>
+        <div className="hw-port-row">{renderPorts(sfp)}</div>
+        <span className="hw-isa-group-note">1000BASE-X</span>
+      </div>
+      <div className="hw-isa-group">
+        <span className="hw-panel-label">{t('Copper Ports')}</span>
+        <div className="hw-port-row">{renderPorts(copper)}</div>
+        <span className="hw-isa-group-note">10/100/1000BASE-T</span>
+      </div>
+      {management && (
+        <div className="hw-isa-group hw-isa-management">
+          <span className="hw-panel-label">{t('Management')}</span>
+          <div className="hw-port-row">{renderPorts([management])}</div>
+          <span className="hw-isa-group-note">192.168.1.1/24</span>
+        </div>
+      )}
+      <div className="hw-isa-io">
+        <span className="hw-panel-label">{t('Local Console')}</span>
+        <div className="hw-aux" title={t('Console is not cabled in this simulator; use the CLI tab.')}>
+          <span><i className="hw-aux-console" />CONSOLE</span>
+          <span><i className="hw-aux-usb" />USB</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PortFace(props: ChassisProps & { builtIn: NetworkPort[]; bays: number[] }) {
   const manyBays = props.bays.length > 4
   return (
@@ -420,6 +475,19 @@ function OtherFace({ kind, model, power }: { kind: string; model: string; power:
           <span className="hw-router-psu-fan" aria-hidden="true"><i /></span>
         </div>
         <div className="hw-router-blank" aria-hidden="true"><i /><i /></div>
+      </div>
+    )
+  }
+  if (kind === 'isa') {
+    return (
+      <div className="hw-other-face hw-other-isa">
+        <div className="hw-fan" aria-hidden="true"><i /><i /><i /></div>
+        <div className="hw-other-plate">
+          <strong dir="ltr">{model}</strong>
+          <span>12-48V DC</span>
+        </div>
+        <div className="hw-isa-terminal" aria-hidden="true"><i /><i /><i /><i /></div>
+        <div className="hw-power-inlet" aria-hidden="true"><i /><i /><i /></div>
       </div>
     )
   }

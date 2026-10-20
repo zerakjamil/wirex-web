@@ -2,6 +2,7 @@ import { NetworkDevice, DeviceType, NetworkPort } from '@/types/network'
 import { generateMacAddress } from './protocols/ip'
 import { defaultIotState, iotThingSpec } from './iot'
 import { isGenericEndDeviceModel } from './endDevice'
+import { ISA_MODEL, isaDefaultAclRules } from './isa'
 
 const deviceCounters: Record<DeviceType, number> = {
   router: 0,
@@ -257,6 +258,37 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     case 'security': {
       model = customModel || '5505'
       name = `ASA${index}`
+      if (model === ISA_MODEL) {
+        name = `ISA${index}`
+        const makeIsaPort = (
+          id: string,
+          shortName: string,
+          media: 'copper' | 'fiber',
+          nameif: string,
+          securityLevel: number,
+          adminStatus: 'up' | 'down',
+          inboundAcl?: string
+        ) => {
+          const port = createPort(id, shortName, 'gigabitethernet', adminStatus)
+          port.media = media
+          port.nameif = nameif
+          port.securityLevel = securityLevel
+          if (inboundAcl) port.inboundAcl = inboundAcl
+          delete port.vlan
+          return port
+        }
+        const management = makeIsaPort('Management1/1', 'Mgmt1/1', 'copper', 'management', 100, 'down')
+        management.ipAddress = '192.168.1.1'
+        management.subnetMask = '255.255.255.0'
+        ports = [
+          makeIsaPort('GigabitEthernet1/1', 'Gi1/1', 'fiber', 'outside1', 0, 'up', 'outside1_access_in'),
+          makeIsaPort('GigabitEthernet1/2', 'Gi1/2', 'fiber', 'inside1', 50, 'up', 'inside1_access_in'),
+          makeIsaPort('GigabitEthernet1/3', 'Gi1/3', 'copper', 'outside2', 0, 'down', 'outside2_access_in'),
+          makeIsaPort('GigabitEthernet1/4', 'Gi1/4', 'copper', 'inside2', 100, 'up', 'inside2_access_in'),
+          management,
+        ]
+        break
+      }
       const p0 = createPort('Ethernet0/0', 'Eth0/0', 'fastethernet', 'up')
       p0.nameif = 'outside'
       p0.securityLevel = 0
@@ -392,6 +424,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     }
   }
 
+  const isaSecurity = type === 'security' && model === ISA_MODEL
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
     pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
@@ -434,7 +467,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       hostname: type === 'security' ? 'ciscoasa' : name,
       banner: 'Unauthorized access is prohibited!',
       vlans: type === 'security'
-        ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
+        ? isaSecurity ? [] : [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
       ...(model === 'Sniffer' ? { snifferServiceEnabled: true, snifferPorts: {}, snifferBufferSize: 100 } : {}),
@@ -457,19 +490,30 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       ...(type === 'security'
         ? {
             asaInspection: { icmp: true, http: true, tcp: true, dns: true, udp: true, tftp: true },
-            asaNatRules: [
-              {
-                id: 'nat-inside-pat',
-                sourceInterface: 'inside',
-                destInterface: 'outside',
-                type: 'dynamic-pat' as const,
-                sourceNet: '192.168.1.0/24',
-              },
-            ],
+            ...(isaSecurity
+              ? {
+                  accessLists: [
+                    { id: 'outside1_access_in', type: 'extended' as const, rules: isaDefaultAclRules() },
+                    { id: 'inside1_access_in', type: 'extended' as const, rules: isaDefaultAclRules() },
+                    { id: 'outside2_access_in', type: 'extended' as const, rules: isaDefaultAclRules() },
+                    { id: 'inside2_access_in', type: 'extended' as const, rules: isaDefaultAclRules() },
+                  ],
+                }
+              : {
+                  asaNatRules: [
+                    {
+                      id: 'nat-inside-pat',
+                      sourceInterface: 'inside',
+                      destInterface: 'outside',
+                      type: 'dynamic-pat' as const,
+                      sourceNet: '192.168.1.0/24',
+                    },
+                  ],
+                }),
           }
         : {}),
     },
-    routingTable: type === 'security'
+    routingTable: type === 'security' && !isaSecurity
       ? [
           {
             network: '192.168.1.0',

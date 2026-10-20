@@ -401,3 +401,31 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-generic-enddevice[data-power=off] .hw-generic-body::before {background:#66757d;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
 .hw-generic-enddevice .hw-generic-model {color:#233037;background:rgba(255,255,255,.58);text-shadow:none}
 .hw-generic-enddevice .hw-generic-ports {background:linear-gradient(#d7dfe2,#b6c2c8);border-color:#89979d}
+
+/* ---------- ISA-3000 industrial appliance ---------- */
+.hw-rack-isa .hw-rack-ear {background:linear-gradient(90deg,#1c261f,#354238 42%,#1c261f);border-color:#08100b}
+.hw-rack-isa .hw-rack-ear:last-child {background:linear-gradient(270deg,#1c261f,#354238 42%,#1c261f)}
+.hw-rack-isa .hw-rack-body {background:linear-gradient(#3e4c40,#28352b 8%,#1a251d 92%,#111a14);border-color:#08100b}
+.hw-rack-isa .hw-rack-head {background:linear-gradient(90deg,rgba(82,112,88,.25),rgba(20,32,24,.1));border-bottom-color:#08100b}
+.hw-rack-isa .hw-rack-title strong {color:#eff6ef}
+.hw-rack-isa .hw-rack-title span {color:#9eb7a3}
+.hw-rack-isa .hw-mark {color:#a9d5b2}
+.hw-rack-isa .hw-rack-face {background:
+  linear-gradient(180deg,rgba(255,255,255,.045),transparent 22%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px),
+  linear-gradient(#253229,#17211a)}
+.hw-rack-isa .hw-rack-foot {color:#8ea493;border-top-color:#08100b}
+.hw-rack-isa .hw-rack-foot-note,.hw-rack-isa .hw-rack-serial {color:#6f8374}
+.hw-isa-face {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 188px;grid-template-rows:auto auto;gap:9px;align-items:stretch;min-height:126px}
+.hw-isa-group {display:flex;flex-direction:column;gap:6px;min-width:0;padding:7px 8px;border:1px solid #3b4b3f;border-radius:2px;background:linear-gradient(#26332a,#18221b)}
+.hw-isa-management {grid-column:1 / 3}
+.hw-isa-group .hw-port-row {gap:10px}
+.hw-isa-group-note {margin-top:auto;color:#81978a;font:700 6px/1 "Arial Narrow",Arial,sans-serif;letter-spacing:.1em}
+.hw-isa-io {grid-column:3;grid-row:1 / 3;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0;padding:7px 8px;border:1px solid #3b4b3f;border-radius:2px;background:linear-gradient(#202b23,#131c16)}
+.hw-isa-io .hw-aux {margin:0;padding:0;border-top:0;gap:13px}
+.hw-isa-io .hw-aux span {color:#8ba392}
+.hw-other-isa {background:radial-gradient(120% 150% at 30% 0%,#2c3a2f,#1a241c 62%,#111a14);border-color:#08100b}
+.hw-other-isa .hw-other-plate {color:#a7baaa}
+.hw-other-isa .hw-other-plate strong {color:#d5e4d7}
+.hw-isa-terminal {display:grid;grid-template-columns:repeat(2,14px);grid-auto-rows:14px;gap:4px;padding:7px;border:1px solid #536259;border-radius:2px;background:linear-gradient(#2c3a2f,#17211a);box-shadow:inset 0 1px 2px #000}
+.hw-isa-terminal i {border-radius:1px;border:1px solid #202b23;background:linear-gradient(#a7b3a9,#4c594f)}

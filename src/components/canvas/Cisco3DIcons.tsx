@@ -38,7 +38,7 @@ export function Cisco3DIcon({
       {type === 'server' && <Server3DIcon size={size} />}
       {type === 'cloud' && <Cloud3DIcon size={size} />}
       {type === 'hub' && (model === 'Sniffer' ? <Sniffer3DIcon /> : <Hub3DIcon size={size} />)}
-      {type === 'security' && <Security3DIcon size={size} />}
+      {type === 'security' && (model === 'ISA-3000' ? <Isa3DIcon size={size} /> : <Security3DIcon size={size} />)}
       {type === 'printer' && <Printer3DIcon size={size} />}
       {type === 'phone' && <Phone3DIcon size={size} />}
       {type === 'tv' && <Tv3DIcon size={size} />}
@@ -750,6 +750,50 @@ function Sniffer3DIcon() {
         <path d="M4 5 L10 3 L16 5 L10 7 Z" fill="#7ac3e8" />
       </g>
       <text x="14" y="53" fill="#b7d7e8" fontSize="4.2" fontFamily="Arial, sans-serif" letterSpacing="0.6">SNIFFER</text>
+    </svg>
+  )
+}
+
+/**
+ * 11b. 3D Industrial Security Appliance (ISA-3000)
+ * DIN-rail chassis with SFP uplinks, copper ports and alarm LEDs.
+ */
+function Isa3DIcon({ size }: { size: number }) {
+  return (
+    <svg viewBox="0 0 100 80" width={size} height={size} className="overflow-visible">
+      <defs>
+        <linearGradient id="isa-top" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7e9181" />
+          <stop offset="0.45" stopColor="#5d705f" />
+          <stop offset="1" stopColor="#3e5043" />
+        </linearGradient>
+        <linearGradient id="isa-left" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#34453a" />
+          <stop offset="1" stopColor="#202c24" />
+        </linearGradient>
+        <linearGradient id="isa-right" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#4e6252" />
+          <stop offset="1" stopColor="#2a372d" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="68" rx="38" ry="9" fill="#0f172a" opacity="0.3" />
+      <polygon points="8,26 50,12 92,26 50,40" fill="url(#isa-top)" stroke="#2d3a31" strokeWidth="1" />
+      <polygon points="8,26 50,40 50,64 8,50" fill="url(#isa-left)" stroke="#1b251e" strokeWidth="1" />
+      <polygon points="50,40 92,26 92,50 50,64" fill="url(#isa-right)" stroke="#1b251e" strokeWidth="1" />
+      <path d="M14 29 L45 18" stroke="#a9b8ac" strokeWidth="2.2" strokeLinecap="round" opacity="0.65" />
+      <path d="M18 33 L42 24" stroke="#2f3d33" strokeWidth="1" opacity="0.8" />
+      <rect x="55" y="33" width="30" height="3" rx="1" fill="#1a241d" stroke="#718174" strokeWidth="0.6" transform="rotate(-18 70 34)" />
+      <g fill="#111a14" stroke="#819385" strokeWidth="0.7">
+        <rect x="18" y="38" width="8" height="6" rx="1" transform="skewY(18)" />
+        <rect x="29" y="41" width="8" height="6" rx="1" transform="skewY(18)" />
+        <rect x="18" y="48" width="8" height="6" rx="1" transform="skewY(18)" />
+        <rect x="29" y="51" width="8" height="6" rx="1" transform="skewY(18)" />
+      </g>
+      <circle cx="67" cy="37" r="1.8" fill="#69d98b" />
+      <circle cx="73" cy="35" r="1.8" fill="#69d98b" />
+      <circle cx="79" cy="33" r="1.8" fill="#e0b84a" />
+      <path d="M63 56 L85 49" stroke="#819385" strokeWidth="1" strokeLinecap="round" />
+      <rect x="12" y="54" width="34" height="5" rx="1.5" fill="#1b251e" opacity="0.8" />
     </svg>
   )
 }

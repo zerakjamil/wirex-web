@@ -31,7 +31,7 @@ Live capture lists **181** stock/custom models across 7 categories.
 | Network Devices | Switches | 11 | 11 | — |
 | Network Devices | Hubs | 3 | 3 | — |
 | Network Devices | Wireless Devices | 15 | 12 | DLC100, Central-Office-Server, Meraki-MX65W |
-| Network Devices | Security | 4 | 2 | ISA-3000, CyberObserver |
+| Network Devices | Security | 4 | 3 | CyberObserver |
 | Network Devices | WAN Emulation | 4 | 4 | — |
 | End Devices | End Devices | 15 | 12 | Meraki-Server, NetworkController, Analog-Phone-PT |
 | End Devices | Smart Home | 21 | 21 | — |
@@ -46,7 +46,7 @@ Live capture lists **181** stock/custom models across 7 categories.
 | Miscellaneous | Miscellaneous | 8 | 4 | 1841 WIC-2T, 2621XM NM-2FE2W (2) WIC-2T, 2811 NM-ESW-161 (2) WIC-2T, PT8000 Activated |
 | Multiuser Connection | Multiuser Connection | 1 | 0 | Multiuser Connection |
 
-**Catalog coverage: 111/181 models recognized (61.3%).**
+**Catalog coverage: 112/181 models recognized (61.9%).**
 
 ### Palette labels mapped to an existing model
 
@@ -58,7 +58,7 @@ Live capture lists **181** stock/custom models across 7 categories.
 ### Missing models, grouped by category
 
 - **Network Devices / Wireless Devices**: DLC100, Central-Office-Server, Meraki-MX65W
-- **Network Devices / Security**: ISA-3000, CyberObserver
+- **Network Devices / Security**: CyberObserver
 - **End Devices / End Devices**: Meraki-Server, NetworkController, Analog-Phone-PT
 - **End Devices / Smart City**: RFID Card, RFID Reader
 - **End Devices / Industrial - OT**: PLC-PT, DataHistorianServer, HMI

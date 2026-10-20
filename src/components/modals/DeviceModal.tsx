@@ -13,8 +13,10 @@ import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
 import { usePingFeedback } from './usePingFeedback'
 import { isGenericEndDevice } from '@/simulator/endDevice'
 import { isSniffer } from '@/simulator/sniffer'
+import { isIsa3000 } from '@/simulator/isa'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
+import { IsaFirewallTab } from './IsaFirewallTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
 import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, isWifiAccessPoint, isWifiRadioPort, wirelessKeyAccepted } from '@/simulator/capwap'
 import { algorithmFields, algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
@@ -30,7 +32,7 @@ import { EndDeviceGui, EndDeviceHtmlTab } from './EndDeviceGui'
 import { SnifferApp } from './SnifferApp'
 import { IotTab, IotServiceSection } from './IotTabs'
 
-type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
+type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'isa' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
 
 function usesDesktop(device: NetworkDevice): boolean {
   if (isGenericEndDevice(device)) return false
@@ -69,7 +71,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   else if (usesCli(device.type)) tabs.push({ id: 'cli', label: t('CLI') })
   if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
   if (device.type === 'iot') tabs.push({ id: 'iot', label: t('IoT') })
-  if (device.type === 'security') tabs.push({ id: 'asdm', label: t('ASDM') })
+  if (device.type === 'security' && !isIsa3000(device)) tabs.push({ id: 'asdm', label: t('ASDM') })
+  if (isIsa3000(device)) tabs.push({ id: 'isa', label: t('Firewall') })
   if (device.type === 'wlc') tabs.push({ id: 'webadmin', label: t('GUI') })
   tabs.push({ id: 'attributes', label: t('Attributes') })
   if (device.importedRunningConfig?.length) tabs.push({ id: 'imported', label: t('Imported Config') })
@@ -132,6 +135,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           {currentTab === 'html' && isGenericEndDevice(device) && <EndDeviceHtmlTab deviceId={device.id} />}
           {currentTab === 'physical' && <PhysicalTab deviceId={device.id} />}
           {currentTab === 'asdm' && <AsdmTab deviceId={device.id} />}
+          {currentTab === 'isa' && isIsa3000(device) && <IsaFirewallTab deviceId={device.id} />}
           {currentTab === 'attributes' && <AttributesTab deviceId={device.id} />}
           {currentTab === 'imported' && <div className="flex-1 min-h-0 overflow-auto bg-white text-slate-900 p-4">
             <p className="text-sm mb-3">Original configuration from the imported file. Preserved commands may include features this simulator does not execute.</p>
