@@ -1201,7 +1201,7 @@ function ConfigStaticRoutesPage({ device, t, executeIosCommand }: {
   return (
     <div>
       <ConfigPageHeader title={t('Static Routes')} />
-      <div className="mt-4 grid grid-cols-1 items-end gap-3 @sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="mt-2 grid grid-cols-1 items-end gap-2 @sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <label htmlFor={`config-static-network-${device.id}`} className={configFieldLabel}>{t('Network')}</label>
           <input id={`config-static-network-${device.id}`} type="text" value={network} placeholder="e.g. 10.0.0.0" onChange={(event) => setNetwork(event.target.value)} className={configFieldInput} />
@@ -1214,30 +1214,30 @@ function ConfigStaticRoutesPage({ device, t, executeIosCommand }: {
           <label htmlFor={`config-static-hop-${device.id}`} className={configFieldLabel}>{t('Next Hop')}</label>
           <input id={`config-static-hop-${device.id}`} type="text" value={nextHop} placeholder="e.g. 192.168.1.2" onChange={(event) => setNextHop(event.target.value)} className={configFieldInput} />
         </div>
-        <button type="button" onClick={addRoute} className={`${configPrimaryButton} h-9`}>{t('Add')}</button>
+        <button type="button" onClick={addRoute} className={configPrimaryButton}>{t('Add')}</button>
       </div>
-      {error && <p role="alert" className="mt-3 text-xs font-semibold text-rose-700">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-[11px] font-semibold text-[#a40000]">{error}</p>}
       {routes.length === 0 ? (
-        <p className="mt-4 text-xs text-slate-500">{t('No static routes configured.')}</p>
+        <p className="mt-2 text-[11px] text-[#555]">{t('No static routes configured.')}</p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full min-w-[420px] text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500">
+        <div className="mt-2 overflow-x-auto border border-[#c8c8c8]">
+          <table className="w-full min-w-[420px] border-collapse text-left text-[11px]">
+            <thead className="bg-[#f0f0f0] text-[#333]">
               <tr>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('Network')}</th>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('Mask')}</th>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('Next Hop')}</th>
+                <th scope="col" className="border border-[#c8c8c8] px-2 py-1 font-semibold">{t('Network')}</th>
+                <th scope="col" className="border border-[#c8c8c8] px-2 py-1 font-semibold">{t('Mask')}</th>
+                <th scope="col" className="border border-[#c8c8c8] px-2 py-1 font-semibold">{t('Next Hop')}</th>
                 <th scope="col" className="px-3 py-2"><span className="sr-only">{t('Remove')}</span></th>
               </tr>
             </thead>
             <tbody>
               {routes.map((route) => (
-                <tr key={`${route.network}-${route.netmask}-${route.nextHop}`} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-mono text-slate-700">{route.network}</td>
-                  <td className="px-3 py-2 font-mono text-slate-700">{route.netmask}</td>
-                  <td className="px-3 py-2 font-mono text-slate-700">{route.nextHop}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button type="button" onClick={() => removeRoute(route)} className="text-xs font-semibold text-rose-700 hover:underline">{t('Remove')}</button>
+                <tr key={`${route.network}-${route.netmask}-${route.nextHop}`} className="border-t border-[#d8d8d8]">
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 font-mono text-[#222]">{route.network}</td>
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 font-mono text-[#222]">{route.netmask}</td>
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 font-mono text-[#222]">{route.nextHop}</td>
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 text-right">
+                    <button type="button" onClick={() => removeRoute(route)} className="text-[11px] font-semibold text-[#a40000] hover:underline">{t('Remove')}</button>
                   </td>
                 </tr>
               ))}
@@ -1272,20 +1272,20 @@ function ConfigRipPage({ device, t, updateDeviceConfig }: {
   return (
     <div>
       <ConfigPageHeader title={t('RIP')} />
-      <div className="mt-4 flex flex-wrap items-end gap-3">
+      <div className="mt-2 flex flex-wrap items-end gap-2">
         <div className="min-w-0 flex-1">
           <label htmlFor={`config-rip-network-${device.id}`} className={configFieldLabel}>{t('Network')}</label>
           <input id={`config-rip-network-${device.id}`} type="text" value={network} placeholder="e.g. 10.0.0.0" onChange={(event) => setNetwork(event.target.value)} className={configFieldInput} />
         </div>
-        <button type="button" onClick={addNetwork} className={`${configPrimaryButton} h-9`}>{t('Add')}</button>
+        <button type="button" onClick={addNetwork} className={configPrimaryButton}>{t('Add')}</button>
       </div>
-      {error && <p role="alert" className="mt-3 text-xs font-semibold text-rose-700">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-[11px] font-semibold text-[#a40000]">{error}</p>}
       {networks.length === 0 ? (
-        <p className="mt-4 text-xs text-slate-500">{t('No RIP networks configured.')}</p>
+        <p className="mt-2 text-[11px] text-[#555]">{t('No RIP networks configured.')}</p>
       ) : (
-        <ul className="mt-4 flex flex-wrap gap-2">
+        <ul className="mt-2 flex flex-wrap gap-1.5">
           {networks.map((value) => (
-            <li key={value} className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-2 py-1 font-mono text-xs text-slate-700">
+            <li key={value} className="inline-flex items-center gap-1.5 border border-[#c8c8c8] bg-white px-1.5 py-0.5 font-mono text-[11px] text-[#222]">
               {value}
               <button type="button" aria-label={`${t('Remove')} ${value}`} onClick={() => updateDeviceConfig(device.id, { ripNetworks: networks.filter((item) => item !== value) })} className="font-sans font-bold text-rose-700">×</button>
             </li>
@@ -1331,7 +1331,7 @@ function ConfigVlanDatabasePage({ device, t, executeIosCommand }: {
   return (
     <div>
       <ConfigPageHeader title={t('VLAN Database')} />
-      <div className="mt-4 grid grid-cols-1 items-end gap-3 @sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto]">
+      <div className="mt-2 grid grid-cols-1 items-end gap-2 @sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <label htmlFor={`config-vlan-number-${device.id}`} className={configFieldLabel}>{t('VLAN Number')}</label>
           <input id={`config-vlan-number-${device.id}`} type="number" min={2} max={4094} value={vlanNumber} onChange={(event) => setVlanNumber(event.target.value)} className={configFieldInput} />
@@ -1340,31 +1340,31 @@ function ConfigVlanDatabasePage({ device, t, executeIosCommand }: {
           <label htmlFor={`config-vlan-name-${device.id}`} className={configFieldLabel}>{t('VLAN Name')}</label>
           <input id={`config-vlan-name-${device.id}`} type="text" value={vlanName} placeholder="e.g. faculty" onChange={(event) => setVlanName(event.target.value)} className={configFieldInput} />
         </div>
-        <button type="button" onClick={addVlan} className={`${configPrimaryButton} h-9`}>{t('Add')}</button>
+        <button type="button" onClick={addVlan} className={configPrimaryButton}>{t('Add')}</button>
       </div>
-      {error && <p role="alert" className="mt-3 text-xs font-semibold text-rose-700">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-[11px] font-semibold text-[#a40000]">{error}</p>}
       {vlans.length === 0 ? (
-        <p className="mt-4 text-xs text-slate-500">{t('No VLANs configured.')}</p>
+        <p className="mt-2 text-[11px] text-[#555]">{t('No VLANs configured.')}</p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full min-w-[360px] text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500">
+        <div className="mt-2 overflow-x-auto border border-[#c8c8c8]">
+          <table className="w-full min-w-[360px] border-collapse text-left text-[11px]">
+            <thead className="bg-[#f0f0f0] text-[#333]">
               <tr>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('VLAN Number')}</th>
-                <th scope="col" className="px-3 py-2 font-semibold">{t('VLAN Name')}</th>
+                <th scope="col" className="border border-[#c8c8c8] px-2 py-1 font-semibold">{t('VLAN Number')}</th>
+                <th scope="col" className="border border-[#c8c8c8] px-2 py-1 font-semibold">{t('VLAN Name')}</th>
                 <th scope="col" className="px-3 py-2"><span className="sr-only">{t('Remove')}</span></th>
               </tr>
             </thead>
             <tbody>
               {vlans.map((vlan) => (
-                <tr key={vlan.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-mono text-slate-700">{vlan.id}</td>
-                  <td className="px-3 py-2 text-slate-700">{vlan.name}</td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={vlan.id} className="border-t border-[#d8d8d8]">
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 font-mono text-[#222]">{vlan.id}</td>
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 text-[#222]">{vlan.name}</td>
+                  <td className="border border-[#d8d8d8] px-2 py-0.5 text-right">
                     {vlan.id === 1 ? (
-                      <span className="text-xs text-slate-400">—</span>
+                      <span className="text-[11px] text-[#777]">—</span>
                     ) : (
-                      <button type="button" onClick={() => removeVlan(vlan.id)} className="text-xs font-semibold text-rose-700 hover:underline">{t('Remove')}</button>
+                      <button type="button" onClick={() => removeVlan(vlan.id)} className="text-[11px] font-semibold text-[#a40000] hover:underline">{t('Remove')}</button>
                     )}
                   </td>
                 </tr>
