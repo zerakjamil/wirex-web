@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test'
-import { loadEnterpriseLab } from './start'
+import { loadEnterpriseLab, loadWirelessLab } from './start'
+
+interface BrowserNetworkStore {
+  getState: () => {
+    devices: Array<{ id: string; name: string; config: Record<string, unknown> }>
+    toggleDevicePower: (id: string) => void
+    removeDeviceModule: (id: string, slot: number) => { success: boolean }
+    installDeviceModule: (id: string, slot: number, module: string) => { success: boolean }
+  }
+}
 
 test.describe('Packet Tracer config tab parity', () => {
   async function openRouterConfig(page: import('@playwright/test').Page) {
@@ -197,6 +206,73 @@ test.describe('Packet Tracer config tab parity', () => {
     const poolRow = modal.locator('div', { hasText: 'PARITY' }).filter({ hasText: '192.168.77.100' }).last()
     await expect(poolRow).toBeVisible()
     await expect(poolRow).toContainText('255.255.255.0')
+  })
+
+  test('access point config drives the site survey, key rejection and association', async ({ page }) => {
+    await loadWirelessLab(page)
+    const apButton = page.getByRole('button', { name: /Access Point1/i }).first()
+    await expect(apButton).toBeVisible({ timeout: 10_000 })
+    await apButton.click()
+
+    const modal = page.locator('.pt-device-window').first()
+    await expect(modal).toBeVisible({ timeout: 10_000 })
+    await modal.getByRole('tab', { name: 'Config', exact: true }).click()
+    await modal.getByRole('button', { name: 'Port 1', exact: true }).click()
+
+    const ssid = modal.getByLabel('SSID')
+    const channel = modal.getByLabel('Channel')
+    const authentication = modal.getByLabel('Authentication')
+    await expect(ssid).toHaveValue('Default')
+    await expect(channel).toHaveValue('6')
+    await expect(authentication).toHaveValue('open')
+
+    await ssid.fill('CORP-AP')
+    await channel.selectOption('11')
+    await authentication.selectOption('wpa2-psk')
+    await modal.getByLabel('Passphrase').fill('wireXwifi1')
+
+    const config = await page.evaluate(() => {
+      const store = (window as unknown as { __wireforgeNetworkStore?: BrowserNetworkStore }).__wireforgeNetworkStore
+      return store?.getState().devices.find((device) => device.name === 'Access Point1')?.config
+    })
+    expect(config).toMatchObject({
+      wirelessSsid: 'CORP-AP',
+      wirelessChannel: 11,
+      wirelessAuthentication: 'wpa2-psk',
+      wirelessPassphrase: 'wireXwifi1',
+    })
+
+    const swap = await page.evaluate(() => {
+      const store = (window as unknown as { __wireforgeNetworkStore?: BrowserNetworkStore }).__wireforgeNetworkStore
+      const laptop = store?.getState().devices.find((device) => device.name === 'Laptop1')
+      if (!store || !laptop) return null
+      store.getState().toggleDevicePower(laptop.id)
+      const removed = store.getState().removeDeviceModule(laptop.id, 0)
+      const installed = store.getState().installDeviceModule(laptop.id, 0, 'WPC300N')
+      store.getState().toggleDevicePower(laptop.id)
+      return { removed, installed }
+    })
+    expect(swap?.removed.success).toBe(true)
+    expect(swap?.installed.success).toBe(true)
+
+    await modal.getByRole('button', { name: 'Close Access Point1', exact: true }).click()
+    await page.getByRole('button', { name: /Laptop1/i }).first().click()
+
+    const laptopWindow = page.locator('.pt-device-window').first()
+    await expect(laptopWindow).toBeVisible({ timeout: 10_000 })
+    await laptopWindow.getByRole('tab', { name: 'Desktop', exact: true }).click()
+    await laptopWindow.getByRole('button', { name: /PC Wireless/ }).click()
+    await laptopWindow.getByRole('button', { name: 'Connect (Site Survey)' }).click()
+
+    const row = laptopWindow.locator('tr', { hasText: 'CORP-AP' })
+    await expect(row).toBeVisible()
+    await laptopWindow.getByLabel('Security key').fill('wrongpass1')
+    await row.getByRole('button', { name: 'Connect', exact: true }).click()
+    await expect(laptopWindow.getByRole('alert')).toContainText('Incorrect wireless security key.')
+
+    await laptopWindow.getByLabel('Security key').fill('wireXwifi1')
+    await row.getByRole('button', { name: 'Connect', exact: true }).click()
+    await expect(row.getByRole('button', { name: 'Disconnect', exact: true })).toBeVisible()
   })
 
   test('server NTP service enables the master and sets its stratum', async ({ page }) => {

@@ -282,6 +282,12 @@ export interface DeviceConfig {
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]
+  wirelessSsid?: string
+  wirelessChannel?: number
+  wirelessAuthentication?: WirelessAuthentication
+  wirelessPassphrase?: string
+  wirelessWepKey?: string
+  wirelessEncryption?: WirelessEncryption
   iotKind?: IotThingKind
   iotState?: IotThingState
   iotServerAddress?: string
@@ -396,6 +402,9 @@ export interface EmailAccountConfig {
   inbox: EmailMessage[]
   sent: EmailMessage[]
 }
+
+export type WirelessAuthentication = 'open' | 'wep' | 'wpa-psk' | 'wpa2-psk'
+export type WirelessEncryption = 'aes' | 'tkip'
 
 export interface WlanProfile {
   id: number

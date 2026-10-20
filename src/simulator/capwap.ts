@@ -62,14 +62,54 @@ export const apRuntimeOf = (device: NetworkDevice): ApRuntime =>
 export const wlcRuntimeOf = (device: NetworkDevice): WlcRuntime =>
   device.wlcRuntime ?? { aps: [], clientTunnels: [], configSeq: 0, pendingConfig: [], seq: 0 }
 
+export const AP_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const
+
+/** Radio settings exposed by an autonomous access point's wireless interface. */
+export function apWirelessSettings(device: NetworkDevice) {
+  const rawChannel = device.config.wirelessChannel
+  const channel = typeof rawChannel === 'number' && AP_CHANNELS.includes(rawChannel as (typeof AP_CHANNELS)[number])
+    ? rawChannel
+    : 6
+  return {
+    ssid: device.config.wirelessSsid?.trim() || device.name,
+    channel,
+    authentication: device.config.wirelessAuthentication ?? 'open',
+    passphrase: device.config.wirelessPassphrase ?? '',
+    wepKey: device.config.wirelessWepKey ?? '',
+    encryption: device.config.wirelessEncryption ?? 'aes',
+  }
+}
+
+/** True when a client's security key matches the advertised wireless LAN. */
+export function wirelessKeyAccepted(profile: WlanProfile, key: string): boolean {
+  const candidate = key.trim()
+  if (profile.security === 'none') return true
+  if (profile.security === 'wep') {
+    return /^[0-9a-f]{10}$/i.test(candidate) && candidate.toLowerCase() === (profile.wepKey ?? '').toLowerCase()
+  }
+  return candidate.length >= 8 && candidate.length <= 63 && candidate === (profile.passphrase ?? '')
+}
+
 /** Wireless LANs a client can see through this access point. Autonomous access
- *  points advertise their own name; lightweight access points advertise the
+ *  points advertise their configured SSID; lightweight access points advertise the
  *  wireless LANs pushed by their controller while they are in the CAPWAP Run state. */
 export function apAdvertisedWlans(device: NetworkDevice): WlanProfile[] {
   if (!isLightweightAp(device)) {
-    return device.type === 'wireless'
-      ? [{ id: 0, name: device.name, ssid: device.name, enabled: true, vlan: 0, security: 'none' }]
-      : []
+    if (device.type !== 'wireless') return []
+    const settings = apWirelessSettings(device)
+    const security: WlanProfile['security'] = settings.authentication === 'open'
+      ? 'none'
+      : settings.authentication === 'wep' ? 'wep' : 'wpa2-psk'
+    return [{
+      id: 0,
+      name: settings.ssid,
+      ssid: settings.ssid,
+      enabled: true,
+      vlan: 0,
+      security,
+      ...(security === 'wep' ? { wepKey: settings.wepKey } : {}),
+      ...(security === 'wpa2-psk' ? { passphrase: settings.passphrase } : {}),
+    }]
   }
   const runtime = apRuntimeOf(device)
   return runtime.state === 'run' ? (runtime.wlans ?? []).filter(wlan => wlan.enabled) : []

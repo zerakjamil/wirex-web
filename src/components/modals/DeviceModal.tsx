@@ -14,7 +14,7 @@ import { usePingFeedback } from './usePingFeedback'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
-import { apAdvertisedWlans, apRuntimeOf, isLightweightAp } from '@/simulator/capwap'
+import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, wirelessKeyAccepted } from '@/simulator/capwap'
 import { algorithmFields, algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
 import { deviceAttributes } from '@/simulator/deviceAttributes'
 import { getTerminalSuggestions } from './terminalSuggestions'
@@ -739,6 +739,34 @@ function ConfigPageHeader({ title }: { title: string }) {
   return <div className="mb-3 border border-[#a0a0a0] bg-[#ececec] px-3 py-1 text-center text-[11px] font-bold text-[#222]">{title}</div>
 }
 
+function PortStatusToggle({ deviceId, port, t, updatePortConfig }: {
+  deviceId: string
+  port: NetworkDevice['ports'][number]
+  t: ConfigTranslate
+  updatePortConfig: ConfigUpdatePort
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span className="text-[11px] text-[#222]">{t('Port Status')}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={port.adminStatus === 'up'}
+        aria-label={t('Port Status')}
+        onClick={() => updatePortConfig(deviceId, port.id, { adminStatus: port.adminStatus === 'up' ? 'down' : 'up' })}
+        className="inline-flex items-center gap-1.5 py-0.5 text-[11px] transition-colors"
+      >
+        <span className={`relative h-4 w-8 rounded-full transition-colors ${port.adminStatus === 'up' ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true">
+          <span className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-[0_1px_2px_rgba(15,23,42,0.18)] transition-transform ${port.adminStatus === 'up' ? 'translate-x-4' : 'translate-x-0'}`} />
+        </span>
+        <span className={port.adminStatus === 'up' ? 'text-emerald-700' : 'text-slate-500'}>
+          {port.adminStatus === 'up' ? t('Port On') : t('Port Off')}
+        </span>
+      </button>
+    </div>
+  )
+}
+
 function AlgorithmRow({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-2">
@@ -833,6 +861,7 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
                 device={device}
                 t={t}
                 portId={pageId.slice('interface:'.length)}
+                updateDeviceConfig={updateDeviceConfig}
                 updatePortConfig={updatePortConfig}
               />
             )}
@@ -1377,15 +1406,164 @@ function ConfigVlanDatabasePage({ device, t, executeIosCommand }: {
   )
 }
 
-function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
+const AP_CHANNEL_FREQUENCY: Record<number, string> = {
+  1: '2.412', 2: '2.417', 3: '2.422', 4: '2.427', 5: '2.432', 6: '2.437',
+  7: '2.442', 8: '2.447', 9: '2.452', 10: '2.457', 11: '2.462',
+}
+
+function ConfigWirelessPage({ device, t, port, updateDeviceConfig, updatePortConfig }: {
+  device: NetworkDevice
+  t: ConfigTranslate
+  port: NetworkDevice['ports'][number]
+  updateDeviceConfig: ConfigUpdateDevice
+  updatePortConfig: ConfigUpdatePort
+}) {
+  const settings = apWirelessSettings(device)
+  if (isLightweightAp(device)) {
+    return (
+      <div>
+        <ConfigPageHeader title={port.name} />
+        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[#c0c0c0] pb-1">
+          <p className="truncate font-mono text-[11px] text-[#444]">MAC: {port.macAddress}</p>
+          <PortStatusToggle deviceId={device.id} port={port} t={t} updatePortConfig={updatePortConfig} />
+        </div>
+        <p className="mt-2 max-w-[520px] text-[11px] text-[#555]">
+          {t('SSID and security are managed by the wireless LAN controller.')}
+        </p>
+      </div>
+    )
+  }
+  const authentication = settings.authentication
+  const psk = authentication === 'wpa-psk' || authentication === 'wpa2-psk'
+  const wep = authentication === 'wep'
+  const passphraseValid = settings.passphrase.length >= 8 && settings.passphrase.length <= 63
+  const wepKeyValid = /^[0-9a-f]{10}$/i.test(settings.wepKey)
+
+  return (
+    <div>
+      <ConfigPageHeader title={port.name} />
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[#c0c0c0] pb-1">
+        <div className="min-w-0">
+          <p className="truncate font-mono text-[11px] text-[#444]">MAC: {port.macAddress}</p>
+        </div>
+        <PortStatusToggle deviceId={device.id} port={port} t={t} updatePortConfig={updatePortConfig} />
+      </div>
+
+      <p className="mt-2 text-[11px] font-bold text-[#222]">{t('Wireless Settings')}</p>
+      <div className="mt-1 max-w-[520px] space-y-2">
+        <div>
+          <label htmlFor={`config-wireless-ssid-${device.id}`} className={configFieldLabel}>{t('SSID')}</label>
+          <input
+            id={`config-wireless-ssid-${device.id}`}
+            type="text"
+            value={device.config.wirelessSsid ?? ''}
+            onChange={(event) => updateDeviceConfig(device.id, { wirelessSsid: event.target.value })}
+            className={configFieldInput}
+          />
+          {!settings.ssid && <p className="mt-0.5 text-[10px] text-[#a40000]">{t('SSID cannot be empty.')}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2">
+          <div>
+            <label htmlFor={`config-wireless-channel-${device.id}`} className={configFieldLabel}>{t('Channel')}</label>
+            <select
+              id={`config-wireless-channel-${device.id}`}
+              value={settings.channel}
+              onChange={(event) => updateDeviceConfig(device.id, { wirelessChannel: Number(event.target.value) })}
+              className={configFieldSelect}
+            >
+              {AP_CHANNELS.map((channel) => (
+                <option key={channel} value={channel}>{channel} - {AP_CHANNEL_FREQUENCY[channel]} GHz</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`config-wireless-auth-${device.id}`} className={configFieldLabel}>{t('Authentication')}</label>
+            <select
+              id={`config-wireless-auth-${device.id}`}
+              value={authentication}
+              onChange={(event) => updateDeviceConfig(device.id, {
+                wirelessAuthentication: event.target.value as NetworkDevice['config']['wirelessAuthentication'],
+              })}
+              className={configFieldSelect}
+            >
+              <option value="open">{t('Open')}</option>
+              <option value="wep">{t('WEP')}</option>
+              <option value="wpa-psk">{t('WPA-PSK')}</option>
+              <option value="wpa2-psk">{t('WPA2-PSK')}</option>
+            </select>
+          </div>
+        </div>
+
+        {wep && (
+          <div>
+            <label htmlFor={`config-wireless-wep-${device.id}`} className={configFieldLabel}>{t('Key')}</label>
+            <input
+              id={`config-wireless-wep-${device.id}`}
+              type="text"
+              value={device.config.wirelessWepKey ?? ''}
+              onChange={(event) => updateDeviceConfig(device.id, { wirelessWepKey: event.target.value })}
+              className={configFieldInput}
+            />
+            {settings.wepKey.length === 0
+              ? <p className="mt-0.5 text-[10px] text-[#555]">{t('10 hexadecimal characters.')}</p>
+              : !wepKeyValid && <p className="mt-0.5 text-[10px] text-[#a40000]">{t('WEP key must be 10 hexadecimal characters.')}</p>}
+          </div>
+        )}
+
+        {psk && (
+          <>
+            <div>
+              <label htmlFor={`config-wireless-passphrase-${device.id}`} className={configFieldLabel}>{t('Passphrase')}</label>
+              <input
+                id={`config-wireless-passphrase-${device.id}`}
+                type="text"
+                value={device.config.wirelessPassphrase ?? ''}
+                onChange={(event) => updateDeviceConfig(device.id, { wirelessPassphrase: event.target.value })}
+                className={configFieldInput}
+              />
+              {settings.passphrase.length === 0
+                ? <p className="mt-0.5 text-[10px] text-[#555]">{t('8 to 63 characters.')}</p>
+                : !passphraseValid && <p className="mt-0.5 text-[10px] text-[#a40000]">{t('Passphrase must be 8 to 63 characters.')}</p>}
+            </div>
+            <div className="max-w-[180px]">
+              <label htmlFor={`config-wireless-encryption-${device.id}`} className={configFieldLabel}>{t('Encryption')}</label>
+              <select
+                id={`config-wireless-encryption-${device.id}`}
+                value={settings.encryption}
+                onChange={(event) => updateDeviceConfig(device.id, {
+                  wirelessEncryption: event.target.value as NetworkDevice['config']['wirelessEncryption'],
+                })}
+                className={configFieldSelect}
+              >
+                <option value="aes">{t('AES')}</option>
+                <option value="tkip">{t('TKIP')}</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {authentication !== 'open' && (
+          <p className="text-[11px] text-[#555]">{t('Wireless clients must use the same SSID and security key.')}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ConfigInterfacePage({ device, t, portId, updateDeviceConfig, updatePortConfig }: {
   device: NetworkDevice
   t: ConfigTranslate
   portId: string
+  updateDeviceConfig: ConfigUpdateDevice
   updatePortConfig: ConfigUpdatePort
 }) {
   const [ipv6Draft, setIpv6Draft] = useState<{ portId: string; text: string } | null>(null)
   const port = device.ports.find((candidate) => candidate.id === portId)
   if (!port) return null
+  if (device.type === 'wireless' && port.type === 'wireless') {
+    return <ConfigWirelessPage device={device} t={t} port={port} updateDeviceConfig={updateDeviceConfig} updatePortConfig={updatePortConfig} />
+  }
 
   const selectedIpv6 = port.ipv6Addresses?.[0]
   const ipv6Value = ipv6Draft && ipv6Draft.portId === port.id ? ipv6Draft.text : selectedIpv6 ? `${selectedIpv6.address}/${selectedIpv6.prefixLength}` : ''
@@ -1398,24 +1576,7 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
           <p className="truncate font-mono text-[11px] text-[#444]">MAC: {port.macAddress}</p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="text-[11px] text-[#222]">{t('Port Status')}</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={port.adminStatus === 'up'}
-            aria-label={t('Port Status')}
-            onClick={() => updatePortConfig(device.id, port.id, { adminStatus: port.adminStatus === 'up' ? 'down' : 'up' })}
-            className="inline-flex items-center gap-1.5 py-0.5 text-[11px] transition-colors"
-          >
-            <span className={`relative h-4 w-8 rounded-full transition-colors ${port.adminStatus === 'up' ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true">
-              <span className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-[0_1px_2px_rgba(15,23,42,0.18)] transition-transform ${port.adminStatus === 'up' ? 'translate-x-4' : 'translate-x-0'}`} />
-            </span>
-            <span className={port.adminStatus === 'up' ? 'text-emerald-700' : 'text-slate-500'}>
-              {port.adminStatus === 'up' ? t('Port On') : t('Port Off')}
-            </span>
-          </button>
-        </div>
+        <PortStatusToggle deviceId={device.id} port={port} t={t} updatePortConfig={updatePortConfig} />
       </div>
 
       <div className="mt-2 grid grid-cols-1 gap-2 @sm:grid-cols-2">
@@ -1996,6 +2157,8 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
 
   // Wireless tab state
   const [wirelessSubTab, setWirelessSubTab] = useState<'info' | 'connect'>('info')
+  const [wirelessKeyDraft, setWirelessKeyDraft] = useState('')
+  const [wirelessConnectError, setWirelessConnectError] = useState('')
   const appendCommand = useCallback((text: string) => setCmdLines(lines => [...lines, { text }]), [])
   const appendTerminal = useCallback((text: string) => setTerminalLines(lines => [...lines, { text }]), [])
   const commandFeedback = usePingFeedback(appendCommand)
@@ -2005,8 +2168,9 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
   const activeWirelessLink = wirelessPort
     ? links.find(
         (l) =>
-          (l.fromPortId === wirelessPort.id || l.toPortId === wirelessPort.id) &&
-          l.type === 'wireless'
+          l.type === 'wireless' &&
+          ((l.fromDeviceId === device.id && l.fromPortId === wirelessPort.id) ||
+            (l.toDeviceId === device.id && l.toPortId === wirelessPort.id))
       )
     : null
 
@@ -2342,10 +2506,15 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
       )
     }
 
-    const availableAps = devices.filter((d) => d.type === 'wireless')
+    const availableAps = devices.filter((d) => d.type === 'wireless' && d.ports.some((p) => p.type === 'wireless'))
     const connectedAp = activeWirelessLink
       ? devices.find((d) => d.id === (activeWirelessLink.fromDeviceId === device.id ? activeWirelessLink.toDeviceId : activeWirelessLink.fromDeviceId))
       : null
+    const connectedProfile = connectedAp ? apAdvertisedWlans(connectedAp)[0] : undefined
+    const connectedSettings = connectedAp ? apWirelessSettings(connectedAp) : null
+    const connectedSecurity = !connectedProfile || connectedProfile.security === 'none'
+      ? t('Open')
+      : connectedProfile.security === 'wep' ? t('WEP') : t('WPA2-PSK')
 
     return (
       <div className="flex-1 bg-[#eff2f7] rounded-xl border border-[#94a3b8] flex flex-col overflow-hidden shadow-xs">
@@ -2410,16 +2579,18 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-700">Network Name (SSID):</span>
                   <span className="text-xs font-mono font-bold text-slate-900">
-                    {connectedAp?.name || 'None'}
+                    {connectedProfile?.ssid || 'None'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-700">Wireless Channel:</span>
-                  <span className="text-xs font-mono text-slate-800">Channel 6 (2.412 GHz)</span>
+                  <span className="text-xs font-mono text-slate-800">
+                    {connectedSettings ? `Channel ${connectedSettings.channel} (${AP_CHANNEL_FREQUENCY[connectedSettings.channel]} GHz)` : '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-700">Security Type:</span>
-                  <span className="text-xs text-slate-800">Open / WPA2-Personal</span>
+                  <span className="text-xs text-slate-800">{connectedSecurity}</span>
                 </div>
               </div>
 
@@ -2487,6 +2658,21 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                 </button>
               </div>
 
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-[11px] font-semibold text-slate-700">
+                  {t('Security key')}
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={wirelessKeyDraft}
+                    onChange={(event) => { setWirelessKeyDraft(event.target.value); setWirelessConnectError('') }}
+                    className="mt-0.5 block h-7 w-56 rounded border border-[#94a3b8] bg-white px-2 font-mono text-xs"
+                  />
+                </label>
+                <p className="pb-1 text-[11px] text-slate-500">{t('Required for WEP and WPA2-PSK networks.')}</p>
+              </div>
+              {wirelessConnectError && <p role="alert" className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] text-rose-800">{wirelessConnectError}</p>}
+
               <div className="border border-[#cbd5e1] rounded overflow-hidden">
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-100 border-b border-[#cbd5e1] text-slate-700 font-bold">
@@ -2504,7 +2690,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                       const apWlan = ap.ports.find((p) => p.type === 'wireless')
                       const surveyed = apAdvertisedWlans(ap)
                       const lapPending = isLightweightAp(ap) && apRuntimeOf(ap).state !== 'run'
-                      const securityText = surveyed.length === 0 || surveyed[0].security === 'none' ? 'None' : surveyed[0].security === 'wep' ? 'WEP' : 'WPA2'
+                      const securityText = surveyed.length === 0 || surveyed[0].security === 'none' ? t('Open') : surveyed[0].security === 'wep' ? t('WEP') : t('WPA2-PSK')
                       return (
                         <tr key={ap.id} className="border-b border-slate-100 hover:bg-slate-50">
                           <td className="p-2 font-bold text-slate-800">
@@ -2514,7 +2700,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                             )}
                           </td>
                           <td className="p-2 text-emerald-600 font-semibold">{surveyed.length > 0 ? '95% (Strong)' : '—'}</td>
-                          <td className="p-2">6</td>
+                          <td className="p-2">{apWirelessSettings(ap).channel}</td>
                           <td className="p-2 text-slate-600">{securityText}</td>
                           <td className="p-2 text-right">
                             {isThisConnected ? (
@@ -2530,6 +2716,11 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                                 type="button"
                                 disabled={lapPending}
                                 onClick={() => {
+                                  if (surveyed.length > 0 && !wirelessKeyAccepted(surveyed[0], wirelessKeyDraft)) {
+                                    setWirelessConnectError(t('Incorrect wireless security key.'))
+                                    return
+                                  }
+                                  setWirelessConnectError('')
                                   if (apWlan) {
                                     connectPorts(device.id, wirelessPort.id, ap.id, apWlan.id, 'wireless')
                                   }

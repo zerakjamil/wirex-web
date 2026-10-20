@@ -23,7 +23,7 @@ test('ASA manager shows configured PAT support and live translation state withou
   await page.getByRole('button', { name: 'ASA0 ASA 5505', exact: true }).click()
 
   const deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'ASA0' })
-  await deviceWindow.getByRole('button', { name: 'ASDM', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'ASDM', exact: true }).click()
   await deviceWindow.getByRole('button', { name: 'Inspection Engine', exact: true }).click()
   const udpInspection = deviceWindow.getByRole('checkbox', { name: /Inspect UDP/ })
   await expect(udpInspection).toBeChecked()

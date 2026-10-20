@@ -26,6 +26,7 @@ import {
   NetworkCluster,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
+import { apAdvertisedWlans } from '@/simulator/capwap'
 import {
   addContainer,
   addCluster,
@@ -227,6 +228,13 @@ const SIMULATION_EVENT_LIMIT = 300
 
 export function simulationHistoryLimitFor(deviceCount: number) {
   return deviceCount > 150 ? 8 : deviceCount > 60 ? 20 : 50
+}
+
+/** Auto-association is only safe for an access point that advertises an open network. */
+function isOpenAccessPoint(device: NetworkDevice): boolean {
+  if (device.type !== 'wireless') return false
+  const advertised = apAdvertisedWlans(device)[0]
+  return !advertised || advertised.security === 'none'
 }
 
 function dispatchTrafficGenerator(state: NetworkStore, deviceId: string, settings: TrafficGeneratorSettings): string | null {
@@ -644,7 +652,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
       // Automatic wireless association if AccessPoint is present
       if (type === 'smartphone' || type === 'tablet') {
-        const ap = state.devices.find((d) => d.type === 'wireless' && (d.power ?? true))
+        const ap = state.devices.find((d) => d.type === 'wireless' && (d.power ?? true) && isOpenAccessPoint(d))
         const apWlan = ap?.ports.find((p) => p.type === 'wireless')
         const clientWlan = updatedNewDev.ports.find((p) => p.type === 'wireless')
         if (ap && apWlan && clientWlan) {
@@ -667,7 +675,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       } else if (type === 'wireless') {
         // When Access Point is added, connect to any unlinked wireless clients (e.g. Smartphone or Tablet)
         const apWlan = updatedNewDev.ports.find((p) => p.type === 'wireless')
-        if (apWlan) {
+        if (apWlan && isOpenAccessPoint(updatedNewDev)) {
           const newLinks: NetworkLink[] = []
           updatedDevices = updatedDevices.map((d) => {
             const isClient = d.type === 'smartphone' || d.type === 'tablet' || (d.type === 'laptop' && d.modules?.includes('WPC300N'))
@@ -730,7 +738,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         const thisDev = updatedDevices.find((d) => d.id === id)
         const freeWlan = thisDev?.ports.find((p) => p.type === 'wireless' && !p.connectedLinkId)
         if (freeWlan && thisDev) {
-          const ap = updatedDevices.find((d) => d.type === 'wireless' && (d.power ?? true) && d.id !== id)
+          const ap = updatedDevices.find((d) => d.type === 'wireless' && (d.power ?? true) && d.id !== id && isOpenAccessPoint(d))
           const apWlan = ap?.ports.find((p) => p.type === 'wireless')
           if (ap && apWlan) {
             const newLink: NetworkLink = {
@@ -862,7 +870,21 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     if (!fromPort || !toPort) return false
     if(!canCableConnect(fromPort,toPort,cableType))return false
     if(fromPort.virtualVlan!==undefined||toPort.virtualVlan!==undefined||fromPort.parentPortId||toPort.parentPortId)return false
-    if (fromPort.connectedLinkId || toPort.connectedLinkId) return false // Already wired
+
+    // An access point radio serves many clients, so its wireless port may carry
+    // several associations. Other ports stay single-link.
+    const wirelessPair = fromPort.type === 'wireless' && toPort.type === 'wireless'
+    if (!wirelessPair && (fromPort.connectedLinkId || toPort.connectedLinkId)) return false // Already wired
+    if (wirelessPair) {
+      const clientPort = fromDev.type === 'wireless' ? toPort : fromPort
+      const bothAps = fromDev.type === 'wireless' && toDev.type === 'wireless'
+      if (!bothAps && clientPort.connectedLinkId) return false // The client radio holds one association
+      const alreadyLinked = links.some((l) =>
+        (l.fromDeviceId === fromDeviceId && l.fromPortId === fromPortId && l.toDeviceId === toDeviceId && l.toPortId === toPortId) ||
+        (l.fromDeviceId === toDeviceId && l.fromPortId === toPortId && l.toDeviceId === fromDeviceId && l.toPortId === fromPortId)
+      )
+      if (alreadyLinked) return false
+    }
 
     const isSwitchA = fromDev.type === 'switch'
     const isSwitchB = toDev.type === 'switch'
@@ -899,9 +921,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
                     status: newLink.status,
                     stpState: newLink.status==='up'&&isSwitchA ? (fastA ? 'forwarding' as const : 'listening' as const) : undefined,
                     stpSinceTick:newLink.status==='up'&&isSwitchA?simulationTick:undefined,
-                    connectedLinkId: linkId,
-                    connectedDeviceId: toDeviceId,
-                    connectedPortId: toPortId,
+                    ...(p.connectedLinkId ? {} : { connectedLinkId: linkId, connectedDeviceId: toDeviceId, connectedPortId: toPortId }),
                   }
                 : p
             ),
@@ -917,9 +937,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
                     status: newLink.status,
                     stpState: newLink.status==='up'&&isSwitchB ? (fastB ? 'forwarding' as const : 'listening' as const) : undefined,
                     stpSinceTick:newLink.status==='up'&&isSwitchB?simulationTick:undefined,
-                    connectedLinkId: linkId,
-                    connectedDeviceId: fromDeviceId,
-                    connectedPortId: fromPortId,
+                    ...(p.connectedLinkId ? {} : { connectedLinkId: linkId, connectedDeviceId: fromDeviceId, connectedPortId: fromPortId }),
                   }
                 : p
             ),

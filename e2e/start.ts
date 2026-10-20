@@ -17,6 +17,20 @@ export async function loadEnterpriseLab(page: Page) {
   await expect(page.getByRole('heading', { name: /Devices 14/i })).toBeVisible({ timeout: 10_000 })
 }
 
+/** Load the lab with an autonomous access point and two laptops. */
+export async function loadWirelessLab(page: Page) {
+  await page.goto('/')
+  const welcome = page.getByTestId('welcome-dialog')
+  await expect(welcome).toBeVisible({ timeout: 10_000 })
+  await welcome.getByRole('button', { name: /Practice Labs/i }).click()
+
+  const labs = page.locator('dialog.pt-training-catalog[open]')
+  await expect(labs).toBeVisible()
+  await labs.locator('li').filter({ hasText: 'Wireless LAN & Modular Hardware' }).getByRole('button', { name: 'Load Lab' }).click()
+  await expect(labs).toBeHidden()
+  await expect(page.getByRole('heading', { name: /Devices 6/i })).toBeVisible({ timeout: 10_000 })
+}
+
 /** Enter the empty workspace from the first-visit chooser. */
 export async function startNewWorkspace(page: Page) {
   await page.goto('/')

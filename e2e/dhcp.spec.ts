@@ -40,7 +40,7 @@ async function openIpConfiguration(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /Student-PC\s+PC-PT/ }).click()
   const window = page.locator('.pt-device-window[aria-label="Student-PC window"]')
   await expect(window).toBeVisible()
-  await window.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await window.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await window.getByRole('button', { name: 'IP Configuration', exact: true }).click()
   return window
 }

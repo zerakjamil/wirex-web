@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createPingPackets, stepSimulationTick } from './engine'
 import { createDevice } from './deviceFactory'
 import { deviceCatalog } from './deviceCatalog'
-import { apAdvertisedWlans, apRuntimeOf, wlcRegisteredAps, wlcWlans } from './capwap'
+import { apAdvertisedWlans, apRuntimeOf, apWirelessSettings, wirelessKeyAccepted, wlcRegisteredAps, wlcWlans } from './capwap'
 import { getWlcLab } from './starterLabs'
 import { synchronizeLinkState } from './linkState'
 import { useNetworkStore } from '../store/networkStore'
@@ -120,6 +120,66 @@ test('WLC and lightweight AP factory defaults and catalog entries', () => {
   assert.ok(wirelessModels.includes('LAP-PT'))
   assert.ok(wirelessModels.includes('AccessPoint-PT'))
   assert.ok((deviceCatalog.wireless ?? []).some(entry => entry.type === 'wlc' && entry.models.includes('WLC-PT')))
+})
+
+test('powering on a wireless client only auto-joins an open access point', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  const laptop = createDevice('laptop', 0, 0, 'Laptop-PT')
+  useNetworkStore.getState().loadLab([ap, laptop], [])
+
+  useNetworkStore.getState().toggleDevicePower(laptop.id)
+  assert.equal(useNetworkStore.getState().removeDeviceModule(laptop.id, 0).success, true)
+  assert.equal(useNetworkStore.getState().installDeviceModule(laptop.id, 0, 'WPC300N').success, true)
+  useNetworkStore.getState().toggleDevicePower(laptop.id)
+
+  const openLinks = useNetworkStore.getState().links.filter(link => link.type === 'wireless')
+  assert.equal(openLinks.length, 1)
+
+  useNetworkStore.getState().deleteLink(openLinks[0].id)
+  useNetworkStore.getState().updateDeviceConfig(ap.id, { wirelessAuthentication: 'wpa2-psk', wirelessPassphrase: 'wireXwifi1' })
+  useNetworkStore.getState().toggleDevicePower(laptop.id)
+  useNetworkStore.getState().toggleDevicePower(laptop.id)
+
+  assert.equal(useNetworkStore.getState().links.filter(link => link.type === 'wireless').length, 0)
+})
+
+test('autonomous access points advertise their configured SSID, channel and security', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  assert.equal(ap.config.wirelessSsid, 'Default')
+  assert.equal(ap.config.wirelessChannel, 6)
+  assert.equal(apAdvertisedWlans(ap)[0].security, 'none')
+
+  ap.config.wirelessSsid = 'CORP-AP'
+  ap.config.wirelessChannel = 11
+  ap.config.wirelessAuthentication = 'wpa2-psk'
+  ap.config.wirelessPassphrase = 'wireXwifi1'
+  const advertised = apAdvertisedWlans(ap)[0]
+  assert.equal(advertised.ssid, 'CORP-AP')
+  assert.equal(advertised.security, 'wpa2-psk')
+  assert.equal(advertised.passphrase, 'wireXwifi1')
+  assert.equal(apWirelessSettings(ap).channel, 11)
+  assert.equal(wirelessKeyAccepted(advertised, 'wireXwifi1'), true)
+  assert.equal(wirelessKeyAccepted(advertised, 'wrongpass'), false)
+  assert.equal(wirelessKeyAccepted({ ...advertised, security: 'none' }, ''), true)
+})
+
+test('WEP access points require the configured 10-digit hexadecimal key', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  ap.config.wirelessAuthentication = 'wep'
+  ap.config.wirelessWepKey = '0011223344'
+  const advertised = apAdvertisedWlans(ap)[0]
+  assert.equal(advertised.security, 'wep')
+  assert.equal(advertised.wepKey, '0011223344')
+  assert.equal(wirelessKeyAccepted(advertised, '0011223344'), true)
+  assert.equal(wirelessKeyAccepted(advertised, '0011'), false)
+  assert.equal(wirelessKeyAccepted(advertised, '00112233445'), false)
+})
+
+test('wireless defaults follow the device family and reject out-of-range channels', () => {
+  const homeRouter = createDevice('wireless', 0, 0, 'Linksys-WRT300N')
+  assert.equal(homeRouter.config.wirelessSsid, 'linksys')
+  homeRouter.config.wirelessChannel = 99
+  assert.equal(apWirelessSettings(homeRouter).channel, 6)
 })
 
 test('lightweight AP discovers the controller, joins, and receives its WLAN configuration', async () => {

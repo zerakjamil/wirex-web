@@ -68,6 +68,32 @@ models) with category fallbacks. It shows MTBF, cost, power source, rack units,
 wattage, PT_MODEL and PT_VERSION; the bottom row has PT's Top checkbox and
 Refresh action.
 
+## Wireless access points
+
+Autonomous access points and home routers expose PT's wireless interface fields
+under INTERFACE on the radio port: SSID, Channel (1-11 with the 2.4 GHz
+frequency shown), Authentication (Open, WEP, WPA-PSK, WPA2-PSK), the WEP key,
+the WPA passphrase and AES/TKIP encryption. The values live on `DeviceConfig`
+(`wirelessSsid`, `wirelessChannel`, `wirelessAuthentication`,
+`wirelessPassphrase`, `wirelessWepKey`, `wirelessEncryption`).
+
+`apAdvertisedWlans` turns that state into the profile a client sees. The
+PC/laptop PC Wireless site survey shows the configured SSID, channel and
+security, and requires a matching key before associating; a wrong key leaves the
+device unassociated and shows an inline error. WPA-PSK and WPA2-PSK share the
+simulator's reduced `wpa2-psk` profile (no four-way handshake or per-client
+PMK). WEP accepts a 10-digit hexadecimal key.
+
+Auto-association on power-up or device creation is limited to open access
+points. Secured access points require the site-survey key. An AP radio may carry
+several client associations; a client radio holds one. Wireless link lookup
+matches both the device and port ID because module-created ports reuse names
+such as `Wireless0`.
+
+Lightweight access points show a read-only note in place of the autonomous
+fields because their SSID and security come from the WLC. Channel values are
+advertised to clients but do not model RF interference.
+
 ## Server Services
 
 The server Services tab uses PT's left service list. Implemented services are
@@ -100,18 +126,24 @@ with no IOS rendering and shows the explanatory notice instead.
   attributes table, aliases and catalog coverage.
 - `src/simulator/dhcp.test.ts` — pool starting-IP coverage alongside the
   existing DHCP lifecycle tests.
-- `e2e/config-parity.spec.ts` — 13 browser tests: tree + Settings + pane,
+- `src/simulator/wlc.test.ts` — 3 wireless tests: advertised SSID/channel/security,
+  WEP key validation, and open-network-only auto-association.
+- `e2e/config-parity.spec.ts` — 14 browser tests: tree + Settings + pane,
   static-route round trip, algorithm override, Attributes, display name vs
   hostname, PC/CLI tab rules, PC Static/DHCP and IPv6 controls, server Services
-  list with HTTP/DHCP/NTP editing, server Desktop service tiles, and the interface
-  port-status switch.
+  list with HTTP/DHCP/NTP editing, server Desktop service tiles, the interface
+  port-status switch, and access-point config driving the site survey, wrong-key
+  rejection and association.
 - `e2e/flows.spec.ts` F08 navigates GLOBAL → Settings → INTERFACE before
   filling the IPv6 field, matching the new default page.
 
 ## Known deviations
 
-- Server NTP, AAA, Syslog and FTP are absent until the simulator implements
-  them; no placeholder controls are rendered.
+- AAA, Syslog and FTP are absent until the simulator implements them; no
+  placeholder controls are rendered.
+- Wireless security is a UI-level association gate, not an 802.11i exchange.
+  Smartphones and tablets have no key-entry surface yet, so a secured AP will
+  not auto-associate them; they remain usable on open networks.
 - The Services panes style the fields they expose, but PT's exact service
   dialogs (file tables, AAA client tables) are reduced to the state the engine
   actually uses.

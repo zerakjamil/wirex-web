@@ -41,7 +41,7 @@ test('SNMP manager reads IOS system objects and reports a rejected community in 
 
   await page.getByRole('button', { name: /SNMP Agent Router 2911/i }).click()
   let deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'SNMP Agent Router' })
-  await deviceWindow.getByRole('button', { name: 'CLI', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'CLI', exact: true }).click()
   const cliInput = deviceWindow.locator('input[type="text"]').last()
   for (const command of ['enable', 'configure terminal', 'snmp-server community classroom ro']) {
     await cliInput.fill(command)
@@ -52,7 +52,7 @@ test('SNMP manager reads IOS system objects and reports a rejected community in 
 
   await page.getByRole('button', { name: /SNMP Manager PC PC-PT/i }).click()
   deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'SNMP Manager PC' })
-  await deviceWindow.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await deviceWindow.getByRole('button', { name: 'SNMP Manager', exact: true }).click()
   await deviceWindow.getByLabel('SNMP Agent IPv4').fill('192.0.2.20')
   await deviceWindow.getByLabel('Numeric OID').fill('1.3.6.1.2.1.1.5.0')
@@ -82,7 +82,8 @@ test('Server-PT SNMP service exposes its read-only community and system location
   await page.goto(`${baseURL}/#lab=${lab}`)
   await page.getByRole('button', { name: /SNMP Agent Server Server-PT/i }).click()
   let deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'SNMP Agent Server' })
-  await deviceWindow.getByRole('button', { name: 'Services', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'Services', exact: true }).click()
+  await deviceWindow.locator('[data-service="snmp"]').click()
   await deviceWindow.getByLabel('Enable SNMP Service').check()
   await deviceWindow.getByLabel('Read-only community').fill('campus')
   await deviceWindow.getByRole('button', { name: 'Add community', exact: true }).click()
@@ -91,7 +92,7 @@ test('Server-PT SNMP service exposes its read-only community and system location
 
   await page.getByRole('button', { name: /SNMP Manager PC PC-PT/i }).click()
   deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'SNMP Manager PC' })
-  await deviceWindow.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await deviceWindow.getByRole('button', { name: 'SNMP Manager', exact: true }).click()
   await deviceWindow.getByLabel('SNMP Agent IPv4').fill('198.51.100.20')
   await deviceWindow.getByLabel('Community').fill('campus')

@@ -60,7 +60,7 @@ async function openTrafficGenerator(page: Page, baseURL: string | undefined) {
   await page.waitForFunction(() => (window as unknown as BrowserWindow).__wireforgeNetworkStore?.getState().devices.length === 3)
   await page.getByRole('button', { name: /PC1\s+PC-PT/i }).click()
   const deviceWindow = page.locator('.pt-device-window').filter({ hasText: 'PC1' })
-  await deviceWindow.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await deviceWindow.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await deviceWindow.getByRole('button', { name: 'Traffic Generator', exact: true }).click()
   const app = deviceWindow.locator('[data-testid="pt-traffic-generator"]')
   await expect(app).toBeVisible()

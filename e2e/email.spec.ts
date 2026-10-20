@@ -45,7 +45,8 @@ test('Server-PT SMTP delivery and POP3 inbox work from the Desktop email app', a
 
   await page.getByRole('button', { name: /Class Mail Server Server-PT/i }).click()
   let window = page.locator('.pt-device-window').filter({ hasText: 'Class Mail Server' })
-  await window.getByRole('button', { name: 'Services', exact: true }).click()
+  await window.getByRole('tab', { name: 'Services', exact: true }).click()
+  await window.locator('[data-service="email"]').click()
   await window.getByLabel('Mail domain').fill('classroom.test')
   await window.getByRole('button', { name: 'Save domain', exact: true }).click()
   await window.getByLabel('Enable SMTP (TCP 25)').check()
@@ -61,7 +62,7 @@ test('Server-PT SMTP delivery and POP3 inbox work from the Desktop email app', a
 
   await page.getByRole('button', { name: /Alice PC PC-PT/i }).click()
   window = page.locator('.pt-device-window').filter({ hasText: 'Alice PC' })
-  await window.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await window.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await window.getByRole('button', { name: 'Email', exact: true }).click()
   await window.getByLabel('Display name', { exact: true }).fill('Alice Student')
   await window.getByLabel('Email address', { exact: true }).fill('alice@classroom.test')
@@ -83,7 +84,7 @@ test('Server-PT SMTP delivery and POP3 inbox work from the Desktop email app', a
 
   await page.getByRole('button', { name: /Bob PC PC-PT/i }).click()
   window = page.locator('.pt-device-window').filter({ hasText: 'Bob PC' })
-  await window.getByRole('button', { name: 'Desktop', exact: true }).click()
+  await window.getByRole('tab', { name: 'Desktop', exact: true }).click()
   await window.getByRole('button', { name: 'Email', exact: true }).click()
   await window.getByLabel('Display name', { exact: true }).fill('Bob Student')
   await window.getByLabel('Email address', { exact: true }).fill('bob@classroom.test')
@@ -116,7 +117,8 @@ test('Server-PT SMTP delivery and POP3 inbox work from the Desktop email app', a
 
   await page.getByRole('button', { name: /Class Mail Server Server-PT/i }).click()
   window = page.locator('.pt-device-window').filter({ hasText: 'Class Mail Server' })
-  await window.getByRole('button', { name: 'Services', exact: true }).click()
+  await window.getByRole('tab', { name: 'Services', exact: true }).click()
+  await window.locator('[data-service="email"]').click()
   await expect(window.getByTestId('mailbox-count-bob')).toHaveText('1 messages')
   expect(browserErrors).toEqual([])
 })
