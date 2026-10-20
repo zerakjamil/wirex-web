@@ -1725,7 +1725,7 @@ function ServicesTab({ deviceId }: { deviceId: string }) {
   return device ? <ServicesSession key={device.id} device={device} /> : null
 }
 
-type ServerService = 'http' | 'dhcp' | 'dns' | 'tftp' | 'email' | 'ntp' | 'iot' | 'snmp' | 'udp-echo'
+type ServerService = 'http' | 'dhcp' | 'dns' | 'tftp' | 'email' | 'ntp' | 'syslog' | 'iot' | 'snmp' | 'udp-echo'
 
 const SERVER_SERVICES: Array<{ id: ServerService; label: string }> = [
   { id: 'http', label: 'HTTP' },
@@ -1734,6 +1734,7 @@ const SERVER_SERVICES: Array<{ id: ServerService; label: string }> = [
   { id: 'tftp', label: 'TFTP' },
   { id: 'email', label: 'Email' },
   { id: 'ntp', label: 'NTP' },
+  { id: 'syslog', label: 'Syslog' },
   { id: 'iot', label: 'IoT Server' },
   { id: 'snmp', label: 'SNMP' },
   { id: 'udp-echo', label: 'UDP Echo' },
@@ -1890,6 +1891,39 @@ function ServicesSession({ device, initialService, onBack }: { device: NetworkDe
                   className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5] disabled:bg-[#f4f4f4] disabled:text-[#777]"
                 />
               </label>
+            </section>
+          )}
+          {service === 'syslog' && (
+            <section className="max-w-[760px] space-y-2" aria-labelledby={`syslog-config-${device.id}`} data-syslog-service>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 id={`syslog-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('Syslog Service')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('Routers and switches send severity-filtered events to this server over UDP port 514.')}</p>
+                </div>
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                  <input type="checkbox" checked={device.config.syslogServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { syslogServiceEnabled: event.target.checked })} className="h-[13px] w-[13px] accent-[#316ac5]" />
+                  {t('Enable Syslog Service')}
+                </label>
+              </div>
+              <div className="flex items-center justify-between border-b border-[#c0c0c0] pb-1">
+                <span className="text-[11px] font-bold text-[#222]">{t('Received messages')} ({(device.config.syslogMessages ?? []).length})</span>
+                <button type="button" disabled={(device.config.syslogMessages ?? []).length === 0} onClick={() => updateDeviceConfig(device.id, { syslogMessages: [] })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2] disabled:cursor-not-allowed disabled:text-[#999]">{t('Clear')}</button>
+              </div>
+              <div className="max-h-[300px] overflow-y-auto border border-[#c8c8c8] bg-white">
+                {(device.config.syslogMessages ?? []).length === 0 ? (
+                  <p className="p-2 text-[11px] text-[#555]">{t('No syslog messages received.')}</p>
+                ) : (
+                  [...(device.config.syslogMessages ?? [])].reverse().map(message => (
+                    <div key={message.id} className="border-b border-[#e0e0e0] px-2 py-1 font-mono text-[10px] last:border-b-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[#555]">
+                        <span>{new Date(message.receivedAtMs).toLocaleTimeString()} · {message.sourceName} ({message.sourceIp})</span>
+                        <span className="border border-[#c8c8c8] px-1">sev {message.severity}</span>
+                      </div>
+                      <div className="mt-0.5 break-words text-[#111]">{message.message}</div>
+                    </div>
+                  ))
+                )}
+              </div>
             </section>
           )}
           {service === 'snmp' && (

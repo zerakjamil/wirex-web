@@ -77,6 +77,16 @@ test('PKT import applies IOS NTP master and server commands to the live model', 
   assert.deepEqual(router.importedRunningConfig, lines)
 })
 
+test('PKT import applies IOS logging host and trap commands to the live model', () => {
+  const lines = ['hostname LogRouter', 'logging 192.0.2.20', 'logging trap 4', 'end']
+  const running = `<RUNNINGCONFIG>${lines.map(line => `<LINE>${line}</LINE>`).join('')}</RUNNINGCONFIG>`
+  const imported = parsePktXml(project(device('32', 'LogRouter', 'Router', '2811', port('FastEthernet0/0', '00:11:22:33:44:06', '192.0.2.1'), running)))
+  const router = imported.devices[0]
+  assert.equal(router.config.loggingHost, '192.0.2.20')
+  assert.equal(router.config.loggingTrap, 4)
+  assert.deepEqual(router.importedRunningConfig, lines)
+})
+
 test('PKT import applies HSRP interface configuration to the live gateway model',()=>{
   const lines=['interface FastEthernet0/0','ip address 192.0.2.2 255.255.255.0','standby 10 ip 192.0.2.1','standby 10 priority 120','standby 10 preempt','!','end']
   const running=`<RUNNINGCONFIG>${lines.map(line=>`<LINE>${line}</LINE>`).join('')}</RUNNINGCONFIG>`

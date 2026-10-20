@@ -111,6 +111,24 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     }
     for (const field of ['snmpSystemContact', 'snmpSystemLocation']) if (config[field] !== undefined && String(config[field]).length > 255) throw new Error(`SNMP ${field === 'snmpSystemContact' ? 'contact' : 'location'} exceeds 255 characters.`)
     if (config.tftpServiceEnabled !== undefined && typeof config.tftpServiceEnabled !== 'boolean') throw new Error('Invalid TFTP service setting.')
+    if (config.loggingHost !== undefined && (typeof config.loggingHost !== 'string' || !isValidIpv4(config.loggingHost))) throw new Error('Invalid Syslog host address.')
+    if (config.loggingTrap !== undefined && (!Number.isInteger(config.loggingTrap) || Number(config.loggingTrap) < 0 || Number(config.loggingTrap) > 7)) throw new Error('Invalid Syslog severity threshold.')
+    if (config.syslogServiceEnabled !== undefined && typeof config.syslogServiceEnabled !== 'boolean') throw new Error('Invalid Syslog service setting.')
+    if (config.syslogMessages !== undefined) {
+      const messages = array(config.syslogMessages, 200).map(object)
+      const messageIds = new Set<string>()
+      for (const message of messages) {
+        textFields(message, ['id', 'sourceIp', 'sourceName', 'message'])
+        const id = String(message.id)
+        if (!id || id.length > 128 || messageIds.has(id)) throw new Error('Invalid or duplicate Syslog message ID.')
+        messageIds.add(id)
+        if (!isValidIpv4(String(message.sourceIp))) throw new Error('Invalid Syslog source address.')
+        if (!Number.isFinite(message.receivedAtMs) || Number(message.receivedAtMs) < 0) throw new Error('Invalid Syslog receive time.')
+        if (!Number.isInteger(message.severity) || Number(message.severity) < 0 || Number(message.severity) > 7) throw new Error('Invalid Syslog severity.')
+        if (!String(message.message).trim() || String(message.message).length > 1024) throw new Error('Invalid Syslog message text.')
+        if (String(message.sourceName).length > 255) throw new Error('Invalid Syslog source name.')
+      }
+    }
     if (config.emailService !== undefined) {
       if (device.type !== 'server') throw new Error('Email service configuration requires a server.')
       const service = object(config.emailService)

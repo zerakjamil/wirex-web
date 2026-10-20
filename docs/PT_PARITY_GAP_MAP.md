@@ -13,7 +13,7 @@ Classification legend:
 
 | Area | PT 9 behavior | wireX now | Evidence |
 | --- | --- | --- | --- |
-| Server window tabs | Physical · Config · **Services** · Attributes (+CLI/Desktop subsets per device) | Servers expose **Services** tab after Config; DNS, TFTP, UDP Echo, SNMP and Mail (SMTP/POP3) service settings live there — mirrors the PT "click Server → Services" workflow | `DeviceModal.tsx` (`ServicesTab`/`ServicesSession`); e2e `tftp.spec.ts`, `snmp.spec.ts`, `email.spec.ts` exercise the tab |
+| Server window tabs | Physical · Config · **Services** · Attributes (+CLI/Desktop subsets per device) | Servers expose **Services** tab after Config; DNS, TFTP, UDP Echo, SNMP, Syslog and Mail (SMTP/POP3) service settings live there — mirrors the PT "click Server → Services" workflow | `DeviceModal.tsx` (`ServicesTab`/`ServicesSession`); e2e `tftp.spec.ts`, `snmp.spec.ts`, `email.spec.ts`, `syslog.spec.ts` exercise the tab |
 | Simulation bar | Event List toggle in Realtime/Simulation bar (Alt+I) | `Event List` toggle added to the Simulation controls row; toggles the user-created packet window | `CiscoBottomBar.tsx`; screenshot region 6 of `interfaceOverview_1.jpg` |
 | Shortcut muscle memory | Power Cycle Alt+S · Fast Forward Alt+D · Auto Capture/Play Alt+P · Capture/Forward Alt+C · Back Alt+B · Event List Alt+I | All six wired (layout-independent `event.code`), skipped while typing in inputs | `CiscoBottomBar.tsx` keydown handler |
 | Tooltip hints | Tooltips document shortcut keys | Button titles now append the shortcut (`… (Alt+S)`) | `CiscoBottomBar.tsx` |

@@ -214,6 +214,19 @@ export interface AccessList {
   rules: AclRule[]
 }
 
+export interface SyslogMessage {
+  id: string
+  receivedAtMs: number
+  sourceIp: string
+  sourceName: string
+  severity: number
+  message: string
+}
+
+export interface SyslogDeliveryResult extends Omit<SyslogMessage, 'id'> {
+  serverDeviceId: string
+}
+
 export interface DeviceConfig {
   ipRouting?: boolean
   ipv6Routing?: boolean
@@ -278,6 +291,10 @@ export interface DeviceConfig {
   tftpServiceEnabled?: boolean
   tftpFiles?: Array<{ name: string; contents: string }>
   tftpClientFiles?: Array<{ serverIp: string; name: string; contents: string; receivedAtMs: number }>
+  loggingHost?: string
+  loggingTrap?: number
+  syslogServiceEnabled?: boolean
+  syslogMessages?: SyslogMessage[]
   htmlContent?: string
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
@@ -993,9 +1010,12 @@ export interface PacketPdu {
     udpRequestId?: string
     udpSourceDeviceId?: string
     udpData?: string
-    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'raw'
+    udpService?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'syslog' | 'raw'
     udpSourcePort?: number
     udpDestinationPort?: number
+    syslogMessage?: string
+    syslogSeverity?: number
+    syslogSourceName?: string
     tftpMessageType?: 'rrq' | 'data' | 'ack'
     tftpFileName?: string
     tftpBlockNumber?: number
@@ -1105,7 +1125,7 @@ export interface UdpTransactionResult {
   sourceDeviceId: string
   targetIp: string
   port: number
-  service?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'raw'
+  service?: 'echo' | 'ntp' | 'tftp' | 'snmp' | 'iot' | 'syslog' | 'raw'
   status: 'successful' | 'failed'
   response?: string
   fileName?: string

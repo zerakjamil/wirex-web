@@ -1,4 +1,4 @@
-import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry, IotThingState } from '@/types/network'
+import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry, IotThingState, SyslogDeliveryResult } from '@/types/network'
 import { isInSameSubnet, ipToNumber, isValidIpv4 } from './protocols/ip'
 import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAddress, ipv6SolicitedNodeMulticastMac, isValidIpv6, parseIpv6, formatIpv6, ipv6PrefixMask, ipv6AddressFromPrefixAndInterfaceId, ipv6InterfaceIdFromMac, isIpv6LinkLocal, isIpv6Multicast } from './protocols/ipv6'
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates } from './spanningTree'
@@ -86,6 +86,7 @@ export interface SimulationStepResult {
   emailResults: EmailTransactionResult[]
   dnsResults: DnsTransactionResult[]
   udpResults: UdpTransactionResult[]
+  syslogResults: SyslogDeliveryResult[]
   dhcpResults: DhcpTransactionResult[]
   tcpReceiveBuffers: TcpReassemblyBuffer[]
   tcpOutstandingSegments: TcpOutstandingSegment[]
@@ -795,6 +796,24 @@ export function createSnmpQueryPackets(source: NetworkDevice, devices: NetworkDe
   return ipFrames(source, route, pdu, devices, links, 0)
 }
 
+export function createSyslogPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], targetIp: string, message: string, severity = 5): InFlightPacket[] {
+  const text = message.trim()
+  if (!isValidIpv4(targetIp) || !text || text.length > 1024 || !Number.isInteger(severity) || severity < 0 || severity > 7) return []
+  const route = outgoingRoute(source, targetIp)
+  if (!route || source.power === false || !isUp(source, route.port) || !route.port.ipAddress) return []
+  if (route.port.outboundAcl) {
+    const acl = source.config.accessLists?.find(item => item.id === route.port.outboundAcl)
+    if (acl && evaluateAcl(acl, { sourceIp: route.port.ipAddress, destIp: targetIp, protocol: 'UDP', port: 514 }).action === 'deny') return []
+  }
+  const pdu: PacketPdu = {
+    id: packetId('syslog'), protocol: 'UDP', summary: `Syslog severity ${severity} to ${targetIp}:514`,
+    sourceMac: route.port.macAddress, destMac: '00:00:00:00:00:00', etherType: '0x0800', sourceIp: route.port.ipAddress, destIp: targetIp, ttl: 64,
+    payload: { udpMessageType: 'request', udpService: 'syslog', udpSourcePort: 514, udpDestinationPort: 514, syslogMessage: text, syslogSeverity: severity, syslogSourceName: source.config.hostname || source.name },
+    explanation: { layer1: `Outbound interface: ${route.port.name}.`, layer2: `Ethernet II: ${route.port.macAddress} to the next hop.`, layer3: `IPv4: ${route.port.ipAddress} to syslog server ${targetIp}, TTL 64.`, layer4AndAbove: `UDP: source port 514 to destination port 514. Syslog severity ${severity}: ${text}`, deviceDecision: `${source.name} sends a syslog message to ${targetIp} through the active route.` },
+  }
+  return ipFrames(source, route, pdu, devices, links, 0)
+}
+
 export function createTftpReadPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], requestId: string, targetIp: string, fileName: string): InFlightPacket[] {
   if (!requestId || !isValidIpv4(targetIp) || !isValidTftpFileName(fileName)) return []
   const route = outgoingRoute(source, targetIp)
@@ -1011,6 +1030,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
   const emailResults: EmailTransactionResult[] = []
   const dnsResults: DnsTransactionResult[] = []
   const udpResults: UdpTransactionResult[] = []
+  const syslogResults: SyslogDeliveryResult[] = []
   const dhcpResults: DhcpTransactionResult[] = []
   let tcpReceiveBuffers = previousTcpReceiveBuffers.map(buffer => ({ ...buffer, segments: { ...buffer.segments }, segmentLengths: { ...buffer.segmentLengths }, ageTicks: buffer.ageTicks + 1 })).filter(buffer => buffer.ageTicks <= 512)
   let tcpOutstandingSegments = previousTcpOutstandingSegments.map(segment => ({ ...segment, ageTicks: segment.ageTicks + 1 }))
@@ -2932,6 +2952,31 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           const resolved = pdu.payload.dnsStatus === 'resolved' && pdu.payload.dnsResolvedIp
           const reason = pdu.payload.dnsStatus === 'not-found' ? `${pdu.payload.dnsQuery ?? 'Name'} does not exist in DNS records.` : pdu.payload.dnsStatus === 'server-failure' ? 'The configured DNS server does not provide DNS service.' : undefined
           if (!dnsResults.some(result => result.requestId === pdu.payload.dnsRequestId)) dnsResults.push({ requestId: pdu.payload.dnsRequestId, sourceDeviceId: receiver.id, domain: pdu.payload.dnsQuery ?? '', status: resolved ? 'successful' : 'failed', resolvedIp: resolved ? pdu.payload.dnsResolvedIp : undefined, reason })
+        } else if (pdu.protocol === 'UDP' && pdu.payload.udpMessageType === 'request' && pdu.payload.udpService === 'syslog') {
+          const destinationPort = pdu.payload.udpDestinationPort ?? 0
+          const severity = pdu.payload.syslogSeverity ?? 5
+          const message = (pdu.payload.syslogMessage ?? '').trim()
+          if (destinationPort !== 514) {
+            drop(packet, `${receiver.name} received a syslog message on UDP port ${destinationPort}, expected port 514.`)
+            continue
+          }
+          if (receiver.type !== 'server' || receiver.config.syslogServiceEnabled !== true) {
+            drop(packet, `Syslog service is disabled on ${receiver.name}.`)
+            continue
+          }
+          if (!message || message.length > 1024 || !Number.isInteger(severity) || severity < 0 || severity > 7) {
+            drop(packet, `Syslog message rejected by ${receiver.name}: invalid severity or payload length.`)
+            continue
+          }
+          syslogResults.push({
+            serverDeviceId: receiver.id,
+            receivedAtMs: Date.now(),
+            sourceIp: pdu.sourceIp,
+            sourceName: pdu.payload.syslogSourceName ?? pdu.sourceIp,
+            severity,
+            message,
+          })
+          continue
         } else if (pdu.protocol === 'UDP' && pdu.payload.udpMessageType === 'request' && pdu.payload.udpRequestId) {
           const destinationPort = pdu.payload.udpDestinationPort ?? 0
           const service = pdu.payload.udpService ?? 'echo'
@@ -3392,5 +3437,5 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       })
     }
   }
-  return { updatedDevices, newInFlightPackets: remaining, newEvents, packetDeliveries, applicationResults, emailResults, dnsResults, udpResults, dhcpResults, tcpReceiveBuffers, tcpOutstandingSegments, discardedPackets, queueLimitReached }
+  return { updatedDevices, newInFlightPackets: remaining, newEvents, packetDeliveries, applicationResults, emailResults, dnsResults, udpResults, syslogResults, dhcpResults, tcpReceiveBuffers, tcpOutstandingSegments, discardedPackets, queueLimitReached }
 }

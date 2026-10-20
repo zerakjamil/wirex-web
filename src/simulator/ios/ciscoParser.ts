@@ -1011,6 +1011,23 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       return { output: '', newDeviceConfig: { ntpServer: undefined, ntpSynchronizedAtMs: undefined, ntpOffsetMs: undefined, ntpSynchronizedStratum: undefined } }
     }
 
+    if (cmd === 'logging') {
+      if (parts[1]?.toLowerCase() === 'trap') {
+        const trap = Number(parts[2])
+        if (parts.length !== 3 || !Number.isInteger(trap) || trap < 0 || trap > 7) return { output: '% Use logging trap <0-7>.' }
+        return { output: '', newDeviceConfig: { loggingTrap: trap } }
+      }
+      const targetIp = parts[1]
+      if (parts.length !== 2 || !targetIp || !isValidIpv4(targetIp)) return { output: '% Use logging <IPv4-address> or logging trap <0-7>.' }
+      return { output: `Syslog host ${targetIp} configured.`, newDeviceConfig: { loggingHost: targetIp } }
+    }
+    if (cmd === 'no' && parts[1]?.toLowerCase() === 'logging') {
+      if (parts[2]?.toLowerCase() === 'trap' && parts.length === 3) return { output: '', newDeviceConfig: { loggingTrap: undefined } }
+      if (parts.length > 3 || parts.length === 3 && !isValidIpv4(parts[2])) return { output: '% Use no logging [<IPv4-address>].' }
+      if (parts[2] && parts[2] !== device.config.loggingHost) return { output: `% Syslog host ${parts[2]} is not configured.` }
+      return { output: '', newDeviceConfig: { loggingHost: undefined } }
+    }
+
     if (cmd === 'enable' && (parts[1]?.toLowerCase() === 'secret' || parts[1]?.toLowerCase() === 'password')) {
       if (!parts[2]) return { output: '% Incomplete command.' }
       return { output: '', newSecretPassword: parts[2] }
@@ -1779,6 +1796,11 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
   const sub2 = parts[1]?.toLowerCase()
   const sub3 = parts[2]?.toLowerCase()
 
+  if (sub1 === 'logging') {
+    const host = device.config.loggingHost
+    return { output: host ? `Syslog logging: enabled\n  Host: ${host}, severity threshold: ${device.config.loggingTrap ?? 6}\n  Messages are delivered over UDP port 514.` : 'Syslog logging: no host configured. Use logging <IPv4-address>.' }
+  }
+
   if (sub1 === 'snmp') {
     const communities = device.config.snmpCommunities ?? []
     return { output: communities.length ? `SNMP agent enabled.\nCommunities:\n${communities.map(value => `  ${value}  read-only`).join('\n')}\nSupported operations: SNMPv2c GET, GETNEXT\nSystem objects: sysDescr.0, sysContact.0, sysName.0, sysLocation.0` : 'SNMP agent is not configured. Use snmp-server community <community> ro.' }
@@ -2387,6 +2409,8 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if(device.config.ipv6Routing)out+='ipv6 unicast-routing\n'
     if(device.config.ntpMaster)out+=`ntp master${(device.config.ntpMasterStratum ?? 8) === 8 ? '' : ` ${device.config.ntpMasterStratum}`}\n`
     if(device.config.ntpServer)out+=`ntp server ${device.config.ntpServer}\n`
+    if(device.config.loggingHost)out+=`logging ${device.config.loggingHost}\n`
+    if(device.config.loggingTrap!==undefined)out+=`logging trap ${device.config.loggingTrap}\n`
     for (const community of device.config.snmpCommunities ?? []) out += `snmp-server community ${community} ro\n`
     if (device.config.snmpSystemContact) out += `snmp-server contact ${device.config.snmpSystemContact}\n`
     if (device.config.snmpSystemLocation) out += `snmp-server location ${device.config.snmpSystemLocation}\n`

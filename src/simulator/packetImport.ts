@@ -115,6 +115,13 @@ function applyConfig(device: NetworkDevice, lines: string[]) {
       device.config.ntpOffsetMs = undefined
       device.config.ntpSynchronizedStratum = undefined
     }
+    else if (parts[0] === 'logging' && parts[1] === 'trap' && parts.length === 3) {
+      const trap = Number(parts[2])
+      if (Number.isInteger(trap) && trap >= 0 && trap <= 7) device.config.loggingTrap = trap
+    }
+    else if (parts[0] === 'logging' && parts.length === 2 && isValidIpv4(parts[1])) device.config.loggingHost = parts[1]
+    else if (parts[0] === 'no' && parts[1] === 'logging' && parts[2] === 'trap' && parts.length === 3) device.config.loggingTrap = undefined
+    else if (parts[0] === 'no' && parts[1] === 'logging' && (!parts[2] || parts[2] === device.config.loggingHost)) device.config.loggingHost = undefined
     else if (port && parts[0] === 'ip' && parts[1] === 'address' && isValidIpv4(parts[2]) && isValidIpv4(parts[3])) {
       port.ipAddress = parts[2]; port.subnetMask = parts[3]
     } else if (port && line === 'no ip address') { port.ipAddress = undefined; port.subnetMask = undefined }

@@ -98,6 +98,24 @@ test('NTP master and client synchronization state survive workspace restore and 
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...router, config: { ...router.config, ntpMasterStratum: 16 } }], links: [] }))
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...router, config: { ...router.config, ntpServer: 'not-an-ip' } }], links: [] }))
 })
+test('Syslog host, threshold and received messages survive workspace restore and reject invalid values', () => {
+  const server = createDevice('server', 10, 20)
+  server.config.syslogServiceEnabled = true
+  server.config.syslogMessages = [{ id: 'm1', receivedAtMs: 1_800_000_000_000, sourceIp: '192.0.2.1', sourceName: 'R1', severity: 3, message: '%LINK-3-UPDOWN: Interface GigabitEthernet0/1, changed state to down' }]
+  const router = createDevice('router', 30, 20)
+  router.config.loggingHost = '192.0.2.20'
+  router.config.loggingTrap = 4
+  const restored = parseWorkspace({ version: 1, devices: [server, router], links: [] }).devices
+  assert.equal(restored[0].config.syslogServiceEnabled, true)
+  assert.deepEqual(restored[0].config.syslogMessages, server.config.syslogMessages)
+  assert.equal(restored[1].config.loggingHost, '192.0.2.20')
+  assert.equal(restored[1].config.loggingTrap, 4)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...router, config: { ...router.config, loggingHost: 'not-an-ip' } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...router, config: { ...router.config, loggingTrap: 8 } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...server, config: { ...server.config, syslogServiceEnabled: 'yes' } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...server, config: { ...server.config, syslogMessages: [{ ...server.config.syslogMessages![0], severity: 8 }] } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...server, config: { ...server.config, syslogMessages: [{ ...server.config.syslogMessages![0], message: '' }] } }], links: [] }))
+})
 test('SNMP read-only communities and system identity survive workspace restore and reject unsafe configuration', () => {
   const router = createDevice('router', 10, 20)
   router.config.snmpCommunities = ['classroom', 'campus-net']

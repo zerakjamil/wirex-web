@@ -19,6 +19,7 @@ import {
   TcpReassemblyBuffer,
   TcpOutstandingSegment,
   IotThingState,
+  SyslogDeliveryResult,
   SimulationEvent,
   PhysicalContainer,
   PhysicalContainerKind,
@@ -57,6 +58,7 @@ import {
   createNtpQueryPackets,
   createSnmpQueryPackets,
   createTftpReadPackets,
+  createSyslogPackets,
   createDhcpDiscoverPackets,
   createDhcpRenewalPackets,
   createRouterSolicitationPackets,
@@ -200,6 +202,7 @@ interface NetworkStore {
   requestNtp: (sourceDeviceId: string, targetIp: string) => string | null
   requestSnmpQuery: (sourceDeviceId: string, targetIp: string, operation: SnmpOperation, oid: string, community: string) => string | null
   requestTftpRead: (sourceDeviceId: string, targetIp: string, fileName: string) => string | null
+  sendSyslog: (sourceDeviceId: string, message: string, severity?: number) => string | null
   requestDhcp: (deviceId:string)=>string
   sendIotControl: (serverDeviceId: string, clientDeviceId: string, patch: IotThingState) => string | null
   setIotState: (deviceId: string, patch: IotThingState) => void
@@ -498,6 +501,28 @@ function applyNtpSynchronizations(devices: NetworkDevice[], results: ReturnType<
     const result = latestByDevice.get(device.id)
     return result ? { ...device, config: { ...device.config, ntpSynchronizedAtMs: synchronizedAtMs, ntpOffsetMs: result.offsetMs, ntpSynchronizedStratum: result.stratum } } : device
   })
+}
+
+function applySyslogMessages(devices: NetworkDevice[], results: SyslogDeliveryResult[]): NetworkDevice[] {
+  if (!results.length) return devices
+  const byServer = new Map<string, SyslogDeliveryResult[]>()
+  for (const result of results) byServer.set(result.serverDeviceId, [...(byServer.get(result.serverDeviceId) ?? []), result])
+  let changed = false
+  const updated = devices.map(device => {
+    const deliveries = byServer.get(device.id)
+    if (!deliveries) return device
+    changed = true
+    const messages = deliveries.map(delivery => ({
+      id: crypto.randomUUID(),
+      receivedAtMs: delivery.receivedAtMs,
+      sourceIp: delivery.sourceIp,
+      sourceName: delivery.sourceName,
+      severity: delivery.severity,
+      message: delivery.message,
+    }))
+    return { ...device, config: { ...device.config, syslogMessages: [...(device.config.syslogMessages ?? []), ...messages].slice(-200) } }
+  })
+  return changed ? updated : devices
 }
 
 function applyEmailTransactions(devices: NetworkDevice[], results: ReturnType<typeof stepSimulationTick>['emailResults']): NetworkDevice[] {
@@ -1142,6 +1167,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
   },
 
   updatePortConfig: (deviceId, portId, updates) => {
+    const beforePort = get().devices.find(device => device.id === deviceId)?.ports.find(port => port.id === portId)
     set((state) => {
       const dev = state.devices.find((d) => d.id === deviceId)
       if (!dev) return state
@@ -1159,6 +1185,10 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
       return synchronizeLinkState(updatedDevices, state.links,state.simulationTick)
     })
+    const afterPort = get().devices.find(device => device.id === deviceId)?.ports.find(port => port.id === portId)
+    if (beforePort && afterPort && beforePort.status !== afterPort.status) {
+      get().sendSyslog(deviceId, `%LINK-3-UPDOWN: Interface ${afterPort.name}, changed state to ${afterPort.status}`, 3)
+    }
   },
 
   updateDeviceConfig: (deviceId, updates) => {
@@ -1187,7 +1217,17 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const { devices } = get()
     const dev = devices.find((d) => d.id === deviceId)
     if (!dev) return 'Device not found'
-    const finish=(output:string)=>{const after=get().devices.find(d=>d.id===deviceId)||dev;set(state=>({commandEvents:[...state.commandEvents.slice(-39),observeCommand(dev,after,rawCmd,output)]}));return output}
+    const finish=(output:string)=>{
+      const after=get().devices.find(d=>d.id===deviceId)||dev
+      for (const [index, port] of after.ports.entries()) {
+        const before=dev.ports[index]
+        if (before?.id===port.id&&before.status!==port.status) {
+          get().sendSyslog(deviceId, `%LINK-3-UPDOWN: Interface ${port.name}, changed state to ${port.status}`, 3)
+        }
+      }
+      set(state=>({commandEvents:[...state.commandEvents.slice(-39),observeCommand(dev,after,rawCmd,output)]}))
+      return output
+    }
 
     if (dev.power === false) {
       return finish('% Device is powered off. Turn power on in Physical tab to access CLI.')
@@ -1657,7 +1697,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const emailTransactions = failDrainedTransactions(mergeEmailTransactions(get().emailTransactions, result.emailResults), inFlightPackets, result.newInFlightPackets, 'EMAIL', 'No SMTP or POP3 response arrived before this request left the simulated network.', retainedHttpRequests)
     const dhcpTransactions = failDrainedDhcpTransactions(mergeDhcpTransactions(get().dhcpTransactions, result.dhcpResults), inFlightPackets, result.newInFlightPackets, result.updatedDevices, links)
     const dhcpFailure = dhcpTransactions.find(transaction => transaction.status === 'failed' && get().dhcpTransactions.some(previous => previous.requestId === transaction.requestId && previous.status === 'pending'))
-    const dhcpTimers=advanceDhcpLeaseTimers(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults),links,result.newInFlightPackets,dhcpTransactions)
+    const dhcpTimers=advanceDhcpLeaseTimers(applySyslogMessages(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults), result.syslogResults),links,result.newInFlightPackets,dhcpTransactions)
     const simulationHistory = simulationMode === 'simulation' ? [...get().simulationHistory, captureSimulationSnapshot(get())].slice(-simulationHistoryLimitFor(devices.length)) : get().simulationHistory
     const simulationEvents = simulationMode === 'simulation' ? [...get().simulationEvents, ...result.newEvents].slice(-SIMULATION_EVENT_LIMIT) : get().simulationEvents
     internalSimulationSet = true
@@ -1696,7 +1736,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     const emailTransactions = failDrainedTransactions(mergeEmailTransactions(get().emailTransactions, result.emailResults), inFlightPackets, result.newInFlightPackets, 'EMAIL', 'No SMTP or POP3 response arrived before this request left the simulated network.', retainedHttpRequests)
     const dhcpTransactions = failDrainedDhcpTransactions(mergeDhcpTransactions(get().dhcpTransactions, result.dhcpResults), inFlightPackets, result.newInFlightPackets, result.updatedDevices, links)
     const dhcpFailure = dhcpTransactions.find(transaction => transaction.status === 'failed' && get().dhcpTransactions.some(previous => previous.requestId === transaction.requestId && previous.status === 'pending'))
-    const dhcpTimers=advanceDhcpLeaseTimers(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults),links,result.newInFlightPackets,dhcpTransactions)
+    const dhcpTimers=advanceDhcpLeaseTimers(applySyslogMessages(applyTftpDownloads(applyNtpSynchronizations(applyEmailTransactions(applyDhcpAcknowledgements(result.updatedDevices,result.dhcpResults), result.emailResults), result.udpResults), result.udpResults), result.syslogResults),links,result.newInFlightPackets,dhcpTransactions)
     const simulationHistory = simulationMode === 'simulation' ? [...get().simulationHistory, captureSimulationSnapshot(get())].slice(-simulationHistoryLimitFor(devices.length)) : get().simulationHistory
     const simulationEvents = simulationMode === 'simulation' ? [...get().simulationEvents, ...result.newEvents].slice(-SIMULATION_EVENT_LIMIT) : get().simulationEvents
     internalSimulationSet = true
@@ -2006,6 +2046,18 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       simulationWarning: null,
     }))
     return requestId
+  },
+
+  sendSyslog: (sourceDeviceId, message, severity = 5) => {
+    const { devices, links, inFlightPackets } = get()
+    const source = devices.find(device => device.id === sourceDeviceId)
+    const targetIp = source?.config.loggingHost
+    if (!source || !targetIp || severity > (source.config.loggingTrap ?? 6)) return null
+    const packets = createSyslogPackets(source, devices, links, targetIp, message, severity)
+    if (!packets.length) return null
+    if (inFlightPackets.length + packets.length > MAX_IN_FLIGHT_PACKETS) return null
+    set(state => ({ inFlightPackets: [...state.inFlightPackets, ...packets], simulationWarning: null }))
+    return packets[0].id
   },
 
   loadLab: (devices, links, annotations, physical) => {

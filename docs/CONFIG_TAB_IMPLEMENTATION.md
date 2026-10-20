@@ -100,10 +100,12 @@ WWAN model and is excluded from Wi-Fi configuration and site surveys.
 The server Services tab uses PT's left service list. Implemented services are
 HTTP (enable flag plus the HTML served at `/`), DHCP (address-pool editor writing
 `config.dhcpPools`, including a starting IP that seeds the first lease), DNS,
-TFTP, Email, NTP (master flag plus stratum, served over UDP 123), IoT Server,
-SNMP and UDP Echo. The same service panes open from the
-server Desktop tiles, with a Back to Desktop control. AAA, Syslog and FTP
-are not listed because the simulator does not implement them yet.
+TFTP, Email, NTP (master flag plus stratum, served over UDP 123), Syslog
+(received messages from routers and switches over UDP 514, with a severity
+threshold configured by `logging trap`), IoT Server, SNMP and UDP Echo. The
+same service panes open from the server Desktop tiles, with a Back to Desktop
+control. AAA and FTP are not listed because the simulator does not implement
+them yet.
 
 ## Command sequences
 
@@ -130,6 +132,10 @@ with no IOS rendering and shows the explanatory notice instead.
 - `src/simulator/wlc.test.ts` — 4 wireless tests: advertised SSID/channel/security,
   WEP key validation, open-network-only auto-association, and the Cell-Tower
   exclusion.
+- `src/simulator/syslog.test.ts` — 6 tests for UDP/514 packet fields, a disabled
+  receiver, an outbound ACL, IOS `logging` validation, link-state delivery and
+  `logging trap` filtering; `e2e/syslog.spec.ts` covers enable → CLI logging →
+  shutdown → delivery → reload.
 - `e2e/config-parity.spec.ts` — 14 browser tests: tree + Settings + pane,
   static-route round trip, algorithm override, Attributes, display name vs
   hostname, PC/CLI tab rules, PC Static/DHCP and IPv6 controls, server Services
@@ -141,11 +147,11 @@ with no IOS rendering and shows the explanatory notice instead.
 
 ## Known deviations
 
-- AAA, Syslog and FTP are absent until the simulator implements them; no
-  placeholder controls are rendered.
+- AAA and FTP are absent until the simulator implements them; no placeholder
+  controls are rendered.
 - Wireless security is a UI-level association gate, not an 802.11i exchange.
   Smartphones and tablets have no key-entry surface yet, so a secured AP will
   not auto-associate them; they remain usable on open networks.
 - The Services panes style the fields they expose, but PT's exact service
-  dialogs (file tables, AAA client tables) are reduced to the state the engine
-  actually uses.
+  dialogs (file tables, AAA client tables, Syslog filters) are reduced to the
+  state the engine actually uses.
