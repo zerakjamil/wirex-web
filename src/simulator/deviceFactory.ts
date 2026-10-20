@@ -1,6 +1,7 @@
 import { NetworkDevice, DeviceType, NetworkPort } from '@/types/network'
 import { generateMacAddress } from './protocols/ip'
 import { defaultIotState, iotThingSpec } from './iot'
+import { isGenericEndDeviceModel } from './endDevice'
 
 const deviceCounters: Record<DeviceType, number> = {
   router: 0,
@@ -282,10 +283,18 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
 
     case 'pc': {
       model = customModel || 'PC-PT'
-      name = `PC${index}`
-      ports = [model === 'Wireless PC'
-        ? createPort('Wireless0', 'Wlan0', 'wireless', 'up')
-        : createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
+      if (model === 'WirelessEndDevice-PT') {
+        name = `WirelessEndDevice${index}`
+        ports = [createPort('Wireless0', 'Wlan0', 'wireless', 'up')]
+      } else if (model === 'WiredEndDevice-PT') {
+        name = `WiredEndDevice${index}`
+        ports = [createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
+      } else {
+        name = `PC${index}`
+        ports = [model === 'Wireless PC'
+          ? createPort('Wireless0', 'Wlan0', 'wireless', 'up')
+          : createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
+      }
       break
     }
 
@@ -381,7 +390,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
 
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
-    pc: [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
+    pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
     router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
     switch: [],
     wireless: [],
@@ -405,7 +414,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   }
   ports = ports.map(port => ({
     ...port,
-    ...(['laptop', 'pc'].includes(type) || (type === 'server' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
+    ...((!isGenericEndDeviceModel(model) && ['laptop', 'pc'].includes(type)) || (type === 'server' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
   }))
   return {
     id,

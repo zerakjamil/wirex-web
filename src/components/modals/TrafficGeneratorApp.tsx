@@ -14,7 +14,7 @@ import {
   type TrafficGeneratorSettings,
 } from '@/simulator/trafficGenerator'
 
-export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; onBack: () => void }) {
+export function TrafficGeneratorApp({ deviceId, onBack, backLabel = 'Back to Desktop' }: { deviceId: string; onBack: () => void; backLabel?: string }) {
   const { t } = useI18n()
   const { device, run, startTrafficGenerator, stopTrafficGenerator, sendTrafficGeneratorOnce } = useNetworkStore(useShallow(state => ({
     device: state.devices.find(item => item.id === deviceId),
@@ -127,7 +127,7 @@ export function TrafficGeneratorApp({ deviceId, onBack }: { deviceId: string; on
           <span className="text-xs text-slate-600">
             {t('PDUs Sent')}: <span data-testid="pt-tg-count" className="font-mono font-semibold">{sentCount}</span>
           </span>
-          <button type="button" onClick={onBack} className="min-h-[38px] rounded border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100">{t('Back to Desktop')}</button>
+          <button type="button" onClick={onBack} className="min-h-[38px] rounded border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100">{t(backLabel)}</button>
         </div>
       </header>
 

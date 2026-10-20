@@ -1016,7 +1016,7 @@ function GenericChassis(props: ChassisProps) {
   const shape = profile.shape
   const portFace = face === profile.portFace
   return (
-    <div className={`hw-generic hw-generic-${shape}`} data-face={face}>
+    <div className={`hw-generic hw-generic-${shape}`} data-face={face} data-power={power ? 'on' : 'off'}>
       <div className="hw-generic-body">
         {shape === 'printer' && (
           <>

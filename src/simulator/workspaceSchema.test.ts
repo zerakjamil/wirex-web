@@ -10,6 +10,16 @@ test('workspace validation accepts real devices and an intentionally empty lab',
   assert.equal(parseWorkspace({ devices: [createDevice('phone', 10, 20)], links: [] }).devices.length, 1)
   assert.equal(parseWorkspace({ version: 1, devices: [], links: [] }).devices.length, 0)
 })
+test('generic end device GUI HTML and lock survive workspace validation', () => {
+  const device = createDevice('pc', 10, 20, 'WiredEndDevice-PT')
+  device.config.guiHtml = '<!doctype html><html><body><h1>Lab</h1></body></html>'
+  device.config.guiHtmlPasswordHash = '1a2b3c4d'
+  const restored = parseWorkspace({ version: 1, devices: [device], links: [] }).devices[0]
+  assert.equal(restored.config.guiHtml, device.config.guiHtml)
+  assert.equal(restored.config.guiHtmlPasswordHash, device.config.guiHtmlPasswordHash)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...device, config: { ...device.config, guiHtml: 42 } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...device, config: { ...device.config, guiHtmlPasswordHash: {} } }], links: [] }))
+})
 test('workspace validation rejects broken device types, coordinates, ports and nested config', () => {
   const device = createDevice('router', 10, 20)
   for (const change of [ { type: 'unknown' }, { x: Infinity }, { ports: [null] }, { config: { hostname: 'R1', dhcpPools: {} } }, { routingTable: [{network:42}] }, { config: {hostname:'R1',dhcpPools:[{network:42,mask:null}]} }, { config: {hostname:'R1',defaultGateway:42} } ]) {

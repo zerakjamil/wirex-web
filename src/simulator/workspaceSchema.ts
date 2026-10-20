@@ -82,7 +82,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     string(device.name); string(device.model); finite(device.x); finite(device.y)
     oneOf(device.type, ['router', 'switch', 'pc', 'laptop', 'server', 'printer', 'phone', 'tv', 'tablet', 'smartphone', 'wireless', 'wlc', 'iot', 'security', 'hub', 'cloud', 'modem'])
     const config = object(device.config); string(config.hostname)
-    textFields(config, [], ['defaultGateway', 'dnsServer', 'banner', 'htmlContent', 'secretPassword', 'snmpSystemContact', 'snmpSystemLocation'])
+    textFields(config, [], ['defaultGateway', 'dnsServer', 'banner', 'htmlContent', 'guiHtml', 'guiHtmlPasswordHash', 'secretPassword', 'snmpSystemContact', 'snmpSystemLocation'])
     textFields(config, [], ['ospfRouterId'])
     for (const list of ['ospfPassiveInterfaces', 'ospfActiveInterfaces', 'ripPassiveInterfaces', 'ripActiveInterfaces']) if (config[list] !== undefined) array(config[list], 512).forEach(string)
     if (config.ospfPassiveDefault !== undefined && typeof config.ospfPassiveDefault !== 'boolean') throw new Error('Invalid OSPF passive default.')

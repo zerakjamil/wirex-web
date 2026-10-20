@@ -377,3 +377,12 @@ html[data-theme=dark] .hardware-scroll {background:
   .hardware-port-details {font-size:11px}
   .hardware-chassis {width:830px;max-width:none}
 }
+
+/* Generic Packet Tracer end device: a compact fixed-function appliance with
+   one built-in Ethernet or wireless interface and no module bay. */
+.hw-generic-enddevice {width:360px}
+.hw-generic-enddevice .hw-generic-body {min-height:132px;border-radius:10px;background:linear-gradient(#f3f6f7,#cdd7db 46%,#a8b5bb);border-color:#7f8e95;box-shadow:0 12px 24px rgba(12,22,28,.24),inset 0 1px 0 rgba(255,255,255,.8)}
+.hw-generic-enddevice .hw-generic-body::before {content:'';position:absolute;top:14px;right:16px;width:8px;height:8px;border-radius:50%;background:#1f9d55;box-shadow:0 0 0 2px rgba(255,255,255,.45),0 0 8px rgba(31,157,85,.8)}
+.hw-generic-enddevice[data-power=off] .hw-generic-body::before {background:#66757d;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.hw-generic-enddevice .hw-generic-model {color:#233037;background:rgba(255,255,255,.58);text-shadow:none}
+.hw-generic-enddevice .hw-generic-ports {background:linear-gradient(#d7dfe2,#b6c2c8);border-color:#89979d}

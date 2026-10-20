@@ -1,15 +1,17 @@
 import type {DeviceType,NetworkDevice,NetworkPort,CableType} from '@/types/network'
 import {MODULE_CATALOG,createPort} from './deviceFactory'
+import {isGenericEndDevice} from './endDevice'
 
-export type HardwareShape='rack'|'tower'|'laptop'|'printer'|'phone'|'display'|'tablet'|'handheld'|'access-point'|'hub'|'cloud'|'modem'
+export type HardwareShape='rack'|'tower'|'laptop'|'printer'|'phone'|'display'|'tablet'|'handheld'|'access-point'|'hub'|'cloud'|'modem'|'enddevice'
 const shapes:Record<DeviceType,HardwareShape>={router:'rack',switch:'rack',wlc:'rack',security:'rack',pc:'tower',server:'tower',laptop:'laptop',printer:'printer',phone:'phone',tv:'display',tablet:'tablet',smartphone:'handheld',wireless:'access-point',hub:'hub',cloud:'cloud',modem:'modem',iot:'display'}
 
 export function getHardwareProfile(device:NetworkDevice){
   const compact=['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(device.model)
   const empty=['PT-Empty','Router-PT-Empty','Switch-PT-Empty','Cloud-Empty','Cloud-PT-Empty'].includes(device.model)
-  const slots=Math.max(device.modules?.length??0,empty||device.type==='cloud'?10:device.type==='router'&&!compact?2:device.type==='switch'&&(device.model.includes('PS')||device.model==='PT-Switch'||device.model==='Switch-PT')?2:['laptop','pc','server'].includes(device.type)?1:0)
-  const moduleIds=Object.values(MODULE_CATALOG).filter(m=>m.portType&&m.id!=='PT-LAPTOP-NM-3G/4G'&&m.applicableTypes.includes(device.type)&&slots>0).map(m=>m.id)
-  return {shape:shapes[device.type],slots,moduleIds,portFace:['router','pc','server','laptop','printer','phone','tv','modem'].includes(device.type)?'rear' as const:'front' as const}
+  const genericEndDevice=isGenericEndDevice(device)
+  const slots=genericEndDevice?0:Math.max(device.modules?.length??0,empty||device.type==='cloud'?10:device.type==='router'&&!compact?2:device.type==='switch'&&(device.model.includes('PS')||device.model==='PT-Switch'||device.model==='Switch-PT')?2:['laptop','pc','server'].includes(device.type)?1:0)
+  const moduleIds=genericEndDevice?[]:Object.values(MODULE_CATALOG).filter(m=>m.portType&&m.id!=='PT-LAPTOP-NM-3G/4G'&&m.applicableTypes.includes(device.type)&&slots>0).map(m=>m.id)
+  return {shape:genericEndDevice?'enddevice' as const:shapes[device.type],slots,moduleIds,portFace:genericEndDevice?'front' as const:['router','pc','server','laptop','printer','phone','tv','modem'].includes(device.type)?'rear' as const:'front' as const}
 }
 
 export function getPhysicalPorts(device:NetworkDevice){return device.ports.filter(port=>!port.isGreTunnel&&port.virtualVlan===undefined&&!port.parentPortId&&!port.name.includes('.'))}

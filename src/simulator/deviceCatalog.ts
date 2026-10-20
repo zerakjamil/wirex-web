@@ -9,7 +9,7 @@ export const deviceCatalog:Partial<Record<DeviceCategory,{type:DeviceType;models
   wireless:[{type:'wireless',models:['AccessPoint-PT','AccessPoint-PT-A','AccessPoint-PT-AC','AccessPoint-PT-N','3702i','LAP-PT','Linksys-WRT300N','HomeRouter-PT-AC','Cell-Tower']},{type:'wlc',models:['WLC-PT','WLC-2504','WLC-3504']}],
   security:[{type:'security',models:['5505','5506-X']}],
   wan:[{type:'cloud',models:['Cloud-PT','Cloud-PT-Empty']},{type:'modem',models:['DSL-Modem-PT','Cable-Modem-PT']}],
-  end:[{type:'pc',models:['PC-PT']},{type:'laptop',models:['Laptop-PT']},{type:'server',models:['Server-PT']},{type:'printer',models:['Printer-PT']},{type:'phone',models:['7960','Home-VoIP-PT']},{type:'tv',models:['TV-PT']},{type:'tablet',models:['TabletPC-PT']},{type:'smartphone',models:['SMARTPHONE-PT']}],
+  end:[{type:'pc',models:['PC-PT']},{type:'laptop',models:['Laptop-PT']},{type:'server',models:['Server-PT']},{type:'printer',models:['Printer-PT']},{type:'phone',models:['7960','Home-VoIP-PT']},{type:'tv',models:['TV-PT']},{type:'tablet',models:['TabletPC-PT']},{type:'smartphone',models:['SMARTPHONE-PT']},{type:'pc',models:['WirelessEndDevice-PT','WiredEndDevice-PT']}],
   misc:[{type:'pc',models:['Wireless PC']},{type:'laptop',models:['Wireless Laptop']}],
   iot:[{type:'iot',models:IOT_THINGS.map(spec=>spec.model)}],
 }

@@ -310,6 +310,10 @@ export interface DeviceConfig {
   syslogServiceEnabled?: boolean
   syslogMessages?: SyslogMessage[]
   htmlContent?: string
+  /** User-authored HTML shown by a generic end device's GUI tab. */
+  guiHtml?: string
+  /** Digest of the optional password that locks GUI HTML editing. */
+  guiHtmlPasswordHash?: string
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]

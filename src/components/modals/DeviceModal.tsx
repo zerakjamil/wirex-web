@@ -11,6 +11,7 @@ import { parseIpv6WithPrefix } from '@/simulator/protocols/ipv6'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from '@/simulator/tftp'
 import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
 import { usePingFeedback } from './usePingFeedback'
+import { isGenericEndDevice } from '@/simulator/endDevice'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
@@ -24,12 +25,14 @@ import {PhysicalDeviceView} from './PhysicalDeviceView'
 import { EmailServiceSettings } from './EmailServiceSettings'
 import { EmailClientApp } from './EmailClientApp'
 import { TrafficGeneratorApp } from './TrafficGeneratorApp'
+import { EndDeviceGui, EndDeviceHtmlTab } from './EndDeviceGui'
 import { IotTab, IotServiceSection } from './IotTabs'
 
-type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'webadmin' | 'attributes' | 'imported'
+type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
 
-function usesDesktop(type: NetworkDevice['type']): boolean {
-  return type === 'pc' || type === 'server' || type === 'laptop' || type === 'tablet' || type === 'smartphone'
+function usesDesktop(device: NetworkDevice): boolean {
+  if (isGenericEndDevice(device)) return false
+  return device.type === 'pc' || device.type === 'server' || device.type === 'laptop' || device.type === 'tablet' || device.type === 'smartphone'
 }
 
 function usesCli(type: NetworkDevice['type']): boolean {
@@ -42,7 +45,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   const [activeTab,setActiveTab] = useState<WindowTab>(()=>{
     const state=useNetworkStore.getState()
     const initial=state.devices.find(candidate=>candidate.id===deviceId)
-    if(initial && usesDesktop(initial.type) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
+    if(initial && isGenericEndDevice(initial) && (state.activeTab==='gui'||state.activeTab==='html'))return state.activeTab
+    if(initial && usesDesktop(initial) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
     if(initial && !usesCli(initial.type) && state.activeTab==='cli')return 'config'
     if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
     if(initial?.type==='iot'&&(state.activeTab==='cli'||state.activeTab==='config'||state.activeTab==='desktop'))return 'iot'
@@ -56,7 +60,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
     { id: 'physical', label: t('Physical') },
     { id: 'config', label: t('Config') },
   ]
-  if (usesDesktop(device.type)) tabs.push({ id: 'desktop', label: t('Desktop') })
+  if (isGenericEndDevice(device)) tabs.push({ id: 'gui', label: t('GUI') }, { id: 'html', label: t('HTML') })
+  else if (usesDesktop(device)) tabs.push({ id: 'desktop', label: t('Desktop') })
   else if (usesCli(device.type)) tabs.push({ id: 'cli', label: t('CLI') })
   if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
   if (device.type === 'iot') tabs.push({ id: 'iot', label: t('IoT') })
@@ -118,6 +123,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           {currentTab === 'services' && <ServicesTab deviceId={device.id} />}
           {currentTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
           {currentTab === 'desktop' && <DesktopTab deviceId={device.id} />}
+          {currentTab === 'gui' && isGenericEndDevice(device) && <EndDeviceGui deviceId={device.id} />}
+          {currentTab === 'html' && isGenericEndDevice(device) && <EndDeviceHtmlTab deviceId={device.id} />}
           {currentTab === 'physical' && <PhysicalTab deviceId={device.id} />}
           {currentTab === 'asdm' && <AsdmTab deviceId={device.id} />}
           {currentTab === 'attributes' && <AttributesTab deviceId={device.id} />}

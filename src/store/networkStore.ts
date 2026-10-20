@@ -140,7 +140,7 @@ interface NetworkStore {
   closeDeviceWindow: (deviceId: string) => void
   minimizeDeviceWindow: (deviceId: string) => void
   focusDeviceWindow: (deviceId: string) => void
-  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'attributes' | 'imported' | 'gui' | 'webadmin' | 'asdm' | 'iot'
+  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'attributes' | 'imported' | 'gui' | 'html' | 'webadmin' | 'asdm' | 'iot'
   connectingSource: { deviceId: string; portId?: string } | null
 
   // Actions
