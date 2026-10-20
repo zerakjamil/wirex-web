@@ -127,8 +127,9 @@ with no IOS rendering and shows the explanatory notice instead.
   attributes table, aliases and catalog coverage.
 - `src/simulator/dhcp.test.ts` — pool starting-IP coverage alongside the
   existing DHCP lifecycle tests.
-- `src/simulator/wlc.test.ts` — 3 wireless tests: advertised SSID/channel/security,
-  WEP key validation, and open-network-only auto-association.
+- `src/simulator/wlc.test.ts` — 4 wireless tests: advertised SSID/channel/security,
+  WEP key validation, open-network-only auto-association, and the Cell-Tower
+  exclusion.
 - `e2e/config-parity.spec.ts` — 14 browser tests: tree + Settings + pane,
   static-route round trip, algorithm override, Attributes, display name vs
   hostname, PC/CLI tab rules, PC Static/DHCP and IPv6 controls, server Services
