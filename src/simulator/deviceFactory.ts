@@ -283,7 +283,9 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     case 'pc': {
       model = customModel || 'PC-PT'
       name = `PC${index}`
-      ports = [createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
+      ports = [model === 'Wireless PC'
+        ? createPort('Wireless0', 'Wlan0', 'wireless', 'up')
+        : createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
       break
     }
 
@@ -291,10 +293,11 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       model = customModel || 'Laptop-PT'
       name = `Laptop${index}`
       // By default, laptops start with a wired FastEthernet NIC.
-      // Students swap it for a WPC300N wireless card in the Physical tab.
-      ports = [
-        createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
-      ]
+      // Students swap it for a WPC300N wireless card in the Physical tab;
+      // the preconfigured Wireless Laptop ships with that card installed.
+      ports = [model === 'Wireless Laptop'
+        ? createPort('Wireless0', 'Wlan0', 'wireless', 'up')
+        : createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
       break
     }
 
@@ -377,8 +380,8 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   }
 
   const defaultModules: Record<DeviceType, string[]> = {
-    laptop: ['PT-LAPTOP-NM-1CFE'],
-    pc: ['PT-HOST-NM-1CFE'],
+    laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
+    pc: [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
     router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
     switch: [],
     wireless: [],

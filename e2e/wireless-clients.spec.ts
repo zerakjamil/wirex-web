@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { startNewWorkspace } from './start'
 
 function createWirelessClientLab() {
   const apEth = {
@@ -154,4 +155,43 @@ test('tablet and smartphone desktops join a secured access point with the networ
   await expect(phone.getByText('Connected to Access Point1')).toBeVisible()
 
   expect(browserErrors).toEqual([])
+})
+
+
+test('the palette ships a Wireless PC with a built-in radio and live site survey', async ({ page }) => {
+  await startNewWorkspace(page)
+
+  await page.getByRole('button', { name: 'Wireless Devices', exact: true }).click()
+  await page.getByRole('button', { name: 'Place AccessPoint-PT', exact: true }).click()
+  const apOverlay = page.getByLabel('Place AccessPoint-PT on workspace')
+  await expect(apOverlay).toBeVisible()
+  await apOverlay.click({ position: { x: 520, y: 220 } })
+  await expect(page.getByRole('button', { name: /Open Wireless0/i })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Miscellaneous', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Miscellaneous', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Network Devices', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: 'Place Wireless PC', exact: true }).click()
+  const pcOverlay = page.getByLabel('Place Wireless PC on workspace')
+  await expect(pcOverlay).toBeVisible()
+  await pcOverlay.click({ position: { x: 240, y: 340 } })
+
+  const pcButton = page.getByRole('button', { name: /Open PC0/i })
+  await expect(pcButton).toBeVisible({ timeout: 10000 })
+  await pcButton.dblclick()
+  const pc = page.locator('.pt-device-window').filter({ hasText: 'PC0' })
+  await expect(pc).toBeVisible()
+
+  await pc.getByRole('tab', { name: 'Physical', exact: true }).click()
+  await expect(pc.getByText('PC0 · Wireless PC')).toBeVisible()
+  await expect(pc.getByRole('button', { name: 'WPC300N', pressed: true })).toBeVisible()
+  await expect(pc.getByText('Linksys-WPC300N 2.4GHz Wireless-N Adapter')).toBeVisible()
+
+  await pc.getByRole('tab', { name: 'Desktop', exact: true }).click()
+  const wireless = pc.locator('[data-desktop-app="wireless"]')
+  await expect(wireless).toContainText('PC Wireless')
+  await wireless.click()
+  await expect(pc.getByText('Linksys - Cisco Wireless Network Adapter Utility (WPC300N)')).toBeVisible()
+  await expect(pc.getByText('Connected to Wireless0')).toBeVisible()
+  await expect(pc.getByText('Default')).toBeVisible()
 })

@@ -128,6 +128,46 @@ test('a cell tower does not advertise a Wi-Fi network', () => {
   assert.deepEqual(apAdvertisedWlans(tower), [])
 })
 
+test('a preconfigured wireless PC joins an open access point on placement', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  useNetworkStore.setState({ devices: [ap], links: [] })
+  useNetworkStore.getState().addDevice('pc', 100, 100, 'Wireless PC')
+  let state = useNetworkStore.getState()
+  const pc = state.devices.find(device => device.model === 'Wireless PC')!
+  assert.ok(pc)
+  assert.equal(pc.ports[0].type, 'wireless')
+  assert.equal(pc.modules?.[0], 'WPC300N')
+  const links = state.links.filter(link => link.type === 'wireless' && (link.fromDeviceId === pc.id || link.toDeviceId === pc.id))
+  assert.equal(links.length, 1)
+  assert.equal(links[0].toPortId, 'Wireless0')
+
+  useNetworkStore.setState({ devices: [ap], links: [] })
+  useNetworkStore.getState().addDevice('pc', 100, 100, 'PC-PT')
+  state = useNetworkStore.getState()
+  assert.equal(state.links.length, 0)
+})
+
+test('access points join existing clients but never associate with each other', () => {
+  const pc = createDevice('pc', 0, 0, 'Wireless PC')
+  useNetworkStore.setState({ devices: [pc], links: [] })
+  useNetworkStore.getState().addDevice('wireless', 100, 0, 'AccessPoint-PT')
+  let state = useNetworkStore.getState()
+  const ap = state.devices.find(device => device.type === 'wireless')!
+  const links = state.links.filter(link => link.type === 'wireless')
+  assert.equal(links.length, 1)
+  assert.equal(links[0].fromDeviceId, ap.id)
+  assert.equal(links[0].toDeviceId, pc.id)
+
+  const apA = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  const apB = createDevice('wireless', 100, 0, 'AccessPoint-PT')
+  apA.power = false
+  apB.power = false
+  useNetworkStore.getState().loadLab([apA, apB], [])
+  useNetworkStore.getState().toggleDevicePower(apA.id)
+  state = useNetworkStore.getState()
+  assert.equal(state.links.filter(link => link.type === 'wireless').length, 0)
+})
+
 test('powering on a wireless client only auto-joins an open access point', () => {
   const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
   const laptop = createDevice('laptop', 0, 0, 'Laptop-PT')

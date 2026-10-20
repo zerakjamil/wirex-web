@@ -27,18 +27,18 @@ Classification legend:
 | Logical clusters | Create New Cluster (Shift+U) · Cluster Name · boundary zones · Cluster Associations dialog | Flat named clusters created from a ≥2-device selection (`Shift+U` or the header button) with boundary zones; double-click focuses the canvas; `[Root] › [Cluster]` path strip; rename, disband and Undo; Options → Cluster Associations... delivers PT's Logical to Physical / Physical to Logical mapping with Create New Container and Move Devices, persisted with the workspace and pruned when its container disappears | `ClusterNode.tsx`, `canvasNodes.ts`, `workspaceStore` cluster + association actions, `ClusterAssociationsModal.tsx`; `e2e/physical.spec.ts` |
 | Traffic Generator | Traffic Generator desktop app (Single Shot / Periodic, application picker, packet color, DSCP) | PC/laptop Desktop gains a `Traffic Generator` card with PT's five groups; applications ICMP/HTTP/TFTP/UDP/DNS/NTP plus `UDP (raw)` / `TCP (raw)` injectors; PT's `Auto Select Port` with a manual Outgoing Port selector; source MAC / IPv4 overrides; per-application source port (0 = automatic), payload size (0–1472 B) and data editors; a 0.001–1,000,000 s interval, `Test`/`Send`/`Stop` with a frozen-on-stop counter; dispatches ride the real application flows while the raw injectors send a bare datagram or a real SYN handshake (SYN-ACK against the modeled HTTP listener, RST-ACK elsewhere); periodic runs persist through both autosave paths and resume on restore, one run per device; colored + DSCP-labeled packets ride the canvas and PDU details | `TrafficGeneratorApp.tsx`, `src/simulator/trafficGenerator.ts`, `networkStore` generator actions; `src/simulator/trafficGenerator.test.ts` (11), `src/store/trafficGenerator.test.ts` (13), `e2e/traffic-generator.spec.ts` (3); `docs/TRAFFIC_GENERATOR_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 555/555, Playwright
-E2E 49 of 50 flows against the production build on the latest 2026-10-18 run —
-every functional flow passes, including the Traffic Generator raw-injector and
+Every item above is exercised by the automated suites: unit 619/619, Playwright
+E2E 68 of 69 flows against the production build on the 2026-10-20 run — every
+functional flow passes, including the palette Wireless PC spec, the Activity
+Wizard routing-option unit coverage, the Traffic Generator raw-injector and
 run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
-the four physical specs; the realtime scale case passes every functional
+the four physical specs. The realtime scale case passes every functional
 assertion (8/8 pings, queue peak 2,132, drained clean, no warnings, engine tick
-p95 11.8–13.9 ms) and its pacing bound only flags under host conditions — the
-longest browser task measured 502–520 ms against the unchanged 500 ms bound
-(502–534 ms across recent runs, including under host load), consistent with the
-same-host A/B where the previous commit measured 534 ms under host load, so the
-overrun is a machine-boundary artifact and the bound was not weakened —
-`tsc` clean, ESLint clean, `next build` green.
+p95 in the low-teens ms) and its pacing bound only flags under host conditions —
+the longest browser task measured 681–689 ms against the unchanged 500 ms bound
+across recent runs, so the overrun is a machine-boundary artifact and the bound
+was not weakened. `tsc` clean, ESLint 0 errors / 28 existing warnings,
+`npm run electron:prep` green.
 
 ## Deliberately deferred (post-launch, recorded)
 

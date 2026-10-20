@@ -675,8 +675,11 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       const updatedNewDev = { ...newDevice }
       let updatedDevices = [...state.devices]
 
-      // Automatic wireless association if AccessPoint is present
-      if (type === 'smartphone' || type === 'tablet') {
+      // Automatic wireless association if AccessPoint is present. This applies
+      // to client hardware only; access points and home routers also expose a
+      // wireless port but must never associate to another access point.
+      const wirelessClient = ['pc', 'laptop', 'tablet', 'smartphone'].includes(type)
+      if (wirelessClient && updatedNewDev.ports.some((p) => isWifiRadioPort(p))) {
         const ap = state.devices.find((d) => d.type === 'wireless' && (d.power ?? true) && isOpenAccessPoint(d))
         const apWlan = ap?.ports.find((p) => isWifiRadioPort(p))
         const clientWlan = updatedNewDev.ports.find((p) => isWifiRadioPort(p))
@@ -703,7 +706,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         if (apWlan && isOpenAccessPoint(updatedNewDev)) {
           const newLinks: NetworkLink[] = []
           updatedDevices = updatedDevices.map((d) => {
-            const isClient = d.type === 'smartphone' || d.type === 'tablet' || (d.type === 'laptop' && d.modules?.includes('WPC300N'))
+            const isClient = ['pc', 'laptop', 'tablet', 'smartphone'].includes(d.type)
             const freeWlan = d.ports.find((p) => isWifiRadioPort(p) && !p.connectedLinkId)
             if (isClient && freeWlan && (d.power ?? true)) {
               const wLink: NetworkLink = {
@@ -761,7 +764,10 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       let finalLinks = updatedLinks
       if (nextPower) {
         const thisDev = updatedDevices.find((d) => d.id === id)
-        const freeWlan = thisDev?.ports.find((p) => isWifiRadioPort(p) && !p.connectedLinkId)
+        // Only client hardware joins an access point; an access point or home
+        // router being powered on must not associate to another access point.
+        const wirelessClient = !!thisDev && ['pc', 'laptop', 'tablet', 'smartphone'].includes(thisDev.type)
+        const freeWlan = wirelessClient ? thisDev.ports.find((p) => isWifiRadioPort(p) && !p.connectedLinkId) : undefined
         if (freeWlan && thisDev) {
           const ap = updatedDevices.find((d) => d.type === 'wireless' && (d.power ?? true) && d.id !== id && isOpenAccessPoint(d))
           const apWlan = ap?.ports.find((p) => isWifiRadioPort(p))

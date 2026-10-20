@@ -74,6 +74,12 @@ test('wireless shelf carries the PT models with their radio roles', () => {
 test('end devices use PT names without changing their behavior', () => {
   assert.equal(build('7960', 'phone').ports.length, 2)
   assert.equal(build('TabletPC-PT', 'tablet').ports[0].type, 'wireless')
+  const wirelessPc = build('Wireless PC', 'pc')
+  assert.equal(wirelessPc.ports[0].type, 'wireless')
+  assert.equal(wirelessPc.modules?.[0], 'WPC300N')
+  const wirelessLaptop = build('Wireless Laptop', 'laptop')
+  assert.equal(wirelessLaptop.ports[0].type, 'wireless')
+  assert.equal(wirelessLaptop.modules?.[0], 'WPC300N')
   assert.equal(build('SMARTPHONE-PT', 'smartphone').ports.length, 2)
   assert.equal(build('DSL-Modem-PT', 'modem').ports[0].type, 'phone')
   assert.equal(build('Cable-Modem-PT', 'modem').ports[0].type, 'coaxial')
