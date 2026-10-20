@@ -981,6 +981,22 @@ export const messages = {
   '8 to 63 characters.':['8 to 63 characters.','من 8 إلى 63 حرفًا.','لە 8 بۆ 63 پیت.'],
   '10 hexadecimal characters.':['10 hexadecimal characters.','10 أحرف ست عشرية.','10 پیتی شازدەیی.'],
   'SSID and security are managed by the wireless LAN controller.':['SSID and security are managed by the wireless LAN controller.','يتم إدارة SSID والأمان بواسطة وحدة التحكم اللاسلكية.','SSID و ئاسایش لەلایەن کۆنترۆڵەری وایەرلێس بەڕێوەدەبرێن.'],
+  'Sniffer':['Sniffer','الملتقط','سنیفەر'],
+  'Sniffer Service':['Sniffer Service','خدمة الملتقط','خزمەتگوزاری سنیفەر'],
+  'Buffer Size':['Buffer Size','حجم المخزن المؤقت','قەبارەی بیرگە'],
+  'All Protocols':['All Protocols','كل البروتوكولات','هەموو پرۆتۆکۆلەکان'],
+  'Clear Captures':['Clear Captures','مسح اللقطات','سڕینەوەی تۆمارەکان'],
+  'Packet Details':['Packet Details','تفاصيل الحزمة','وردەکاری پاکێت'],
+  'PDU Details':['PDU Details','تفاصيل PDU','وردەکاری PDU'],
+  'Capture only frames that arrive on enabled ports.':['Capture only frames that arrive on enabled ports.','التقط فقط الأُطر الواردة على المنافذ الممكّنة.','تەنها ئەو چوارچێوانە تۆمار بکە کە لە پۆرتە چالاکەکانەوە دێن.'],
+  'Install a repeater module in the Physical tab to capture packets.':['Install a repeater module in the Physical tab to capture packets.','ثبّت وحدة مكرّر في علامة التبويب Physical لالتقاط الحزم.','ماژولێکی دووبارەکەرەوە لە تابی Physical دابمەزرێنە بۆ تۆمارکردنی پاکێتەکان.'],
+  'No packets captured yet.':['No packets captured yet.','لم يتم التقاط أي حزم بعد.','هێشتا هیچ پاکێتێک تۆمار نەکراوە.'],
+  'No packets match this filter.':['No packets match this filter.','لا توجد حزم تطابق هذا المرشّح.','هیچ پاکێتێک لەگەڵ ئەم فلتەرە ناگونجێت.'],
+  'Connect this Sniffer between devices and generate traffic.':['Connect this Sniffer between devices and generate traffic.','صِل هذا الملتقط بين الأجهزة وأنشئ حركة مرور.','ئەم سنیفەرە لە نێوان ئامێرەکان ببەستە و ترافیک دروست بکە.'],
+  'All captured packets are hidden by the current protocol filter.':['All captured packets are hidden by the current protocol filter.','جميع الحزم الملتقطة مخفية بواسطة مرشّح البروتوكول الحالي.','هەموو پاکێتە تۆمارکراوەکان لەلایەن فلتەری پرۆتۆکۆلی ئێستاوە شاردراون.'],
+  'Select a packet to inspect its details.':['Select a packet to inspect its details.','اختر حزمة لعرض تفاصيلها.','پاکێتێک هەڵبژێرە بۆ بینینی وردەکارییەکانی.'],
+  'Captures stay in this browser session.':['Captures stay in this browser session.','تبقى اللقطات في جلسة المتصفح هذه.','تۆمارەکان لەم دانیشتنی وێبگەڕەدا دەمێننەوە.'],
+  'Packet Capture':['Packet Capture','التقاط الحزم','تۆمارکردنی پاکێت'],
 } as const
 
 export type MessageKey=keyof typeof messages

@@ -440,6 +440,8 @@ useNetworkStore.subscribe((state, previous) => {
 
 export function saveWorkspace() {
   const data = snapshot()
+  // Captures are runtime evidence owned by the live session, never lab state.
+  data.devices = data.devices.map(device => ({ ...device, snifferCaptures: undefined }))
   const url = URL.createObjectURL(new Blob([JSON.stringify({ format: 'wireforge-web', version: 1, ...data }, null, 2)], { type: 'application/json' }))
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'network.wf.json'; anchor.click()
   URL.revokeObjectURL(url)

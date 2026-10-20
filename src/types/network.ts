@@ -314,6 +314,12 @@ export interface DeviceConfig {
   guiHtml?: string
   /** Digest of the optional password that locks GUI HTML editing. */
   guiHtmlPasswordHash?: string
+  /** Sniffer service toggle. Undefined means the service is on. */
+  snifferServiceEnabled?: boolean
+  /** Per-port capture toggles for a Sniffer. Undefined means the port is on. */
+  snifferPorts?: Record<string, boolean>
+  /** Number of packets retained in the Sniffer capture buffer. */
+  snifferBufferSize?: number
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]
@@ -580,6 +586,8 @@ export interface IotServerRuntime {
 
 export interface NetworkDevice {
   stpRuntime?: StpRuntime
+  /** Runtime capture buffer. Nested PDUs are snapshots owned by the Sniffer. */
+  snifferCaptures?: SnifferCapture[]
   ospf?: OspfRuntime
   ospfv3?: Ospfv3Runtime
   ipv6Eigrp?: EigrpV6Runtime
@@ -1195,6 +1203,14 @@ export interface TcpOutstandingSegment {
   retries: number
   failApplicationOnTimeout: boolean
   lastError?: string
+}
+
+export interface SnifferCapture {
+  id: string
+  tick: number
+  portId: string
+  portName: string
+  pdu: PacketPdu
 }
 
 export interface InFlightPacket {

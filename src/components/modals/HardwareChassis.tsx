@@ -1064,6 +1064,28 @@ function GenericChassis(props: ChassisProps) {
   )
 }
 
+function SnifferChassis(props: ChassisProps) {
+  const { device, profile, power } = props
+  const { t } = useI18n()
+  return (
+    <div className="hw-sniffer" data-power={power ? 'on' : 'off'}>
+      <div className="hw-sniffer-top">
+        <span className="hw-sniffer-brand" dir="ltr">
+          <strong>{device.model}</strong>
+          <small>{t('Packet Capture')}</small>
+        </span>
+        <span className="hw-status"><span className="hw-led" data-state={power ? 'up' : 'down'} /><small>PWR</small></span>
+        <PowerSwitch power={power} onToggle={props.onTogglePower} />
+      </div>
+      <div className="hw-sniffer-bays">
+        {Array.from({ length: profile.slots }, (_, slot) => (
+          <ModuleBay key={slot} {...props} slot={slot} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function HubChassis(props: ChassisProps) {
   const { device, ports, power } = props
   return (
@@ -1095,6 +1117,8 @@ export function HardwareChassis(props: ChassisProps) {
       return <RackChassis {...props} />
     case 'hub':
       return <HubChassis {...props} />
+    case 'sniffer':
+      return <SnifferChassis {...props} />
     case 'tower':
       return <DesktopChassis {...props} />
     case 'laptop':

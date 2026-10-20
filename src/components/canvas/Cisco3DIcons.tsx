@@ -37,7 +37,7 @@ export function Cisco3DIcon({
       {type === 'tablet' && <Tablet3DIcon size={size} />}
       {type === 'server' && <Server3DIcon size={size} />}
       {type === 'cloud' && <Cloud3DIcon size={size} />}
-      {type === 'hub' && <Hub3DIcon size={size} />}
+      {type === 'hub' && (model === 'Sniffer' ? <Sniffer3DIcon /> : <Hub3DIcon size={size} />)}
       {type === 'security' && <Security3DIcon size={size} />}
       {type === 'printer' && <Printer3DIcon size={size} />}
       {type === 'phone' && <Phone3DIcon size={size} />}
@@ -716,6 +716,40 @@ function Hub3DIcon({ size }: { size: number }) {
         <line x1="-16" y1="0" x2="16" y2="0" stroke="#78350f" strokeWidth="3" strokeLinecap="round" />
         <line x1="0" y1="-8" x2="0" y2="8" stroke="#78350f" strokeWidth="3" strokeLinecap="round" />
       </g>
+    </svg>
+  )
+}
+
+function Sniffer3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="h-full w-full overflow-visible drop-shadow-md" aria-hidden="true">
+      <defs>
+        <radialGradient id="sniffer-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.38" />
+          <stop offset="85%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="sniffer-top" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9ed3ef" />
+          <stop offset="100%" stopColor="#4f8fb4" />
+        </linearGradient>
+        <linearGradient id="sniffer-front" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#376b8c" />
+          <stop offset="100%" stopColor="#1f4059" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="64" rx="43" ry="11" fill="url(#sniffer-shadow)" />
+      <polygon points="7,34 77,34 94,24 24,24" fill="url(#sniffer-top)" stroke="#a8d8ee" strokeWidth="0.8" />
+      <polygon points="7,34 77,34 77,55 7,55" fill="url(#sniffer-front)" stroke="#163449" strokeWidth="1" />
+      <polygon points="77,34 94,24 94,45 77,55" fill="#17374d" stroke="#163449" strokeWidth="1" />
+      <rect x="14" y="38" width="18" height="11" rx="1.5" fill="#071119" stroke="#6f8fa3" strokeWidth="0.8" />
+      <rect x="36" y="38" width="18" height="11" rx="1.5" fill="#071119" stroke="#6f8fa3" strokeWidth="0.8" />
+      <circle cx="15" cy="29" r="1.4" fill="#72f2a2" />
+      <circle cx="21" cy="29" r="1.4" fill="#8ba5b4" />
+      <g transform="translate(56 27)">
+        <path d="M0 3 L10 0 L20 3 L10 6 Z" fill="#d8f0fb" opacity="0.95" />
+        <path d="M4 5 L10 3 L16 5 L10 7 Z" fill="#7ac3e8" />
+      </g>
+      <text x="14" y="53" fill="#b7d7e8" fontSize="4.2" fontFamily="Arial, sans-serif" letterSpacing="0.6">SNIFFER</text>
     </svg>
   )
 }

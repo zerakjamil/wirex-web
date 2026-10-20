@@ -592,3 +592,21 @@ test('a routed SMTP ACL denial reaches the mail client as the actual packet fail
   assert.match(result?.reason??'',/ACL DENY-SMTP on GigabitEthernet0\/2/i)
   assert.match(result?.reason??'',/TCP 10\.10\.0\.10 -> 10\.30\.0\.20/i)
 })
+
+test('Sniffer store actions persist service and port state and trim captures to the buffer',()=>{
+  const sniffer=createDevice('hub',0,0,'Sniffer')
+  sniffer.id='sniffer-store'
+  sniffer.snifferCaptures=[1,2,3,4,5].map(index=>({id:`capture-${index}`,tick:index,portId:'port-1',portName:'FastEthernet1/0',pdu:{protocol:'ICMP'}})) as never
+  useNetworkStore.getState().loadLab([sniffer],[])
+  useNetworkStore.getState().setSnifferService('sniffer-store',false)
+  useNetworkStore.getState().setSnifferPortEnabled('sniffer-store','port-1',false)
+  useNetworkStore.getState().setSnifferBufferSize('sniffer-store',2)
+  let stored=useNetworkStore.getState().devices.find(device=>device.id==='sniffer-store')!
+  assert.equal(stored.config.snifferServiceEnabled,false)
+  assert.deepEqual(stored.config.snifferPorts,{'port-1':false})
+  assert.equal(stored.config.snifferBufferSize,2)
+  assert.deepEqual(stored.snifferCaptures?.map(capture=>capture.id),['capture-4','capture-5'])
+  useNetworkStore.getState().clearSnifferCaptures('sniffer-store')
+  stored=useNetworkStore.getState().devices.find(device=>device.id==='sniffer-store')!
+  assert.deepEqual(stored.snifferCaptures,[])
+})

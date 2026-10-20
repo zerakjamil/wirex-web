@@ -12,6 +12,7 @@ import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from '@/simulator/tftp'
 import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
 import { usePingFeedback } from './usePingFeedback'
 import { isGenericEndDevice } from '@/simulator/endDevice'
+import { isSniffer } from '@/simulator/sniffer'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
@@ -26,6 +27,7 @@ import { EmailServiceSettings } from './EmailServiceSettings'
 import { EmailClientApp } from './EmailClientApp'
 import { TrafficGeneratorApp } from './TrafficGeneratorApp'
 import { EndDeviceGui, EndDeviceHtmlTab } from './EndDeviceGui'
+import { SnifferApp } from './SnifferApp'
 import { IotTab, IotServiceSection } from './IotTabs'
 
 type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
@@ -45,6 +47,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   const [activeTab,setActiveTab] = useState<WindowTab>(()=>{
     const state=useNetworkStore.getState()
     const initial=state.devices.find(candidate=>candidate.id===deviceId)
+    if(initial && isSniffer(initial) && state.activeTab==='gui')return 'gui'
     if(initial && isGenericEndDevice(initial) && (state.activeTab==='gui'||state.activeTab==='html'))return state.activeTab
     if(initial && usesDesktop(initial) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
     if(initial && !usesCli(initial.type) && state.activeTab==='cli')return 'config'
@@ -60,7 +63,8 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
     { id: 'physical', label: t('Physical') },
     { id: 'config', label: t('Config') },
   ]
-  if (isGenericEndDevice(device)) tabs.push({ id: 'gui', label: t('GUI') }, { id: 'html', label: t('HTML') })
+  if (isSniffer(device)) tabs.push({ id: 'gui', label: t('GUI') })
+  else if (isGenericEndDevice(device)) tabs.push({ id: 'gui', label: t('GUI') }, { id: 'html', label: t('HTML') })
   else if (usesDesktop(device)) tabs.push({ id: 'desktop', label: t('Desktop') })
   else if (usesCli(device.type)) tabs.push({ id: 'cli', label: t('CLI') })
   if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
@@ -123,6 +127,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           {currentTab === 'services' && <ServicesTab deviceId={device.id} />}
           {currentTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
           {currentTab === 'desktop' && <DesktopTab deviceId={device.id} />}
+          {currentTab === 'gui' && isSniffer(device) && <SnifferApp deviceId={device.id} />}
           {currentTab === 'gui' && isGenericEndDevice(device) && <EndDeviceGui deviceId={device.id} />}
           {currentTab === 'html' && isGenericEndDevice(device) && <EndDeviceHtmlTab deviceId={device.id} />}
           {currentTab === 'physical' && <PhysicalTab deviceId={device.id} />}

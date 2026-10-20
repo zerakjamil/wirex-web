@@ -3,6 +3,7 @@ import { isInSameSubnet, ipToNumber, isValidIpv4 } from './protocols/ip'
 import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAddress, ipv6SolicitedNodeMulticastMac, isValidIpv6, parseIpv6, formatIpv6, ipv6PrefixMask, ipv6AddressFromPrefixAndInterfaceId, ipv6InterfaceIdFromMac, isIpv6LinkLocal, isIpv6Multicast } from './protocols/ipv6'
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates,applyStpIngressGuard } from './spanningTree'
 import { ageLearnedMacTables } from './macLearning'
+import { captureSnifferPacket, isSniffer } from './sniffer'
 import { evaluateAcl } from './acl'
 import { allocateDhcpLease } from './dhcp'
 import { prepareOspfTick, receiveOspfPacket, hasOspf, ospfArea } from './ospf'
@@ -1721,6 +1722,10 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
     if ((packet.hops ?? 0) >= MAX_FRAME_HOPS) { drop(packet, 'Frame hop limit exceeded.'); continue }
     const progress = packet.progress + PACKET_PROGRESS_PER_TICK
     if (progress < 1) { enqueue({ ...packet, progress }); continue }
+    if (isSniffer(receiver)) {
+      const captured = captureSnifferPacket(byId.get(receiver.id)!, packet, receivingPort, simulationTick)
+      if (captured) editDevice(receiver.id).snifferCaptures = captured.snifferCaptures
+    }
     if(packet.pdu.protocol==='STP'){
       const senderId=link.fromDeviceId===receiver.id?link.toDeviceId:link.fromDeviceId
       const vlanId=packet.pdu.payload.stpVlan

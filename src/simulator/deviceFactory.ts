@@ -193,6 +193,10 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
           createPort('FastEthernet1', 'Fa1', 'fastethernet', 'up'),
         ]
+      } else if (model === 'Sniffer') {
+        // The Sniffer is a two-slot repeater and ships with both bays empty.
+        name = `Sniffer${index}`
+        ports = []
       } else {
         ports = [
           createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
@@ -433,6 +437,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
+      ...(model === 'Sniffer' ? { snifferServiceEnabled: true, snifferPorts: {}, snifferBufferSize: 100 } : {}),
       ...(type === 'wireless' && model !== 'Cell-Tower' && ports.some(port => port.type === 'wireless')
         ? {
             wirelessSsid: ['WRT300N', 'Linksys-WRT300N', 'HomeRouter-PT-AC'].includes(model) ? 'linksys' : 'Default',
@@ -496,6 +501,68 @@ export interface ModuleDefinition {
 }
 
 export const MODULE_CATALOG: Record<string, ModuleDefinition> = {
+  'PT-REPEATER-NM-1CFE': {
+    id: 'PT-REPEATER-NM-1CFE',
+    name: '1-Port 100BASE-TX FastEthernet RJ-45',
+    description: 'Adds one 10/100 Mbps copper FastEthernet port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'fastethernet',
+    media: 'copper',
+  },
+  'PT-REPEATER-NM-1CE': {
+    id: 'PT-REPEATER-NM-1CE',
+    name: '1-Port 10BASE-T Ethernet RJ-45',
+    description: 'Adds one 10 Mbps copper Ethernet port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'fastethernet',
+    media: 'copper',
+  },
+  'PT-REPEATER-NM-1CGE': {
+    id: 'PT-REPEATER-NM-1CGE',
+    name: '1-Port 1000BASE-T Gigabit Ethernet RJ-45',
+    description: 'Adds one copper Gigabit Ethernet port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'gigabitethernet',
+    media: 'copper',
+  },
+  'PT-REPEATER-NM-1FFE': {
+    id: 'PT-REPEATER-NM-1FFE',
+    name: '1-Port 100BASE-FX FastEthernet Multi-mode Fiber',
+    description: 'Adds one multi-mode FastEthernet fiber port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'fastethernet',
+    media: 'fiber',
+  },
+  'PT-REPEATER-NM-1FFE-SM': {
+    id: 'PT-REPEATER-NM-1FFE-SM',
+    name: '1-Port 100BASE-FX FastEthernet Single-mode Fiber',
+    description: 'Adds one single-mode FastEthernet fiber port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'fastethernet',
+    media: 'fiber',
+  },
+  'PT-REPEATER-NM-1FGE': {
+    id: 'PT-REPEATER-NM-1FGE',
+    name: '1-Port 1000BASE-SX Gigabit Multi-mode Fiber',
+    description: 'Adds one multi-mode Gigabit fiber port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'gigabitethernet',
+    media: 'fiber',
+  },
+  'PT-REPEATER-NM-1FGE-SM': {
+    id: 'PT-REPEATER-NM-1FGE-SM',
+    name: '1-Port 1000BASE-LX Gigabit Single-mode Fiber',
+    description: 'Adds one single-mode Gigabit fiber port to a Repeater or Sniffer slot.',
+    applicableTypes: ['hub'],
+    portType: 'gigabitethernet',
+    media: 'fiber',
+  },
+  'PT-REPEATER-NM-COVER': {
+    id: 'PT-REPEATER-NM-COVER',
+    name: 'Slot Cover',
+    description: 'A blank cover for an unused Repeater or Sniffer module slot.',
+    applicableTypes: ['hub'],
+  },
   'WPC300N': {
     id: 'WPC300N',
     name: 'Linksys-WPC300N 2.4GHz Wireless-N Adapter',

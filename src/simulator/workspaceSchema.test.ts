@@ -20,6 +20,21 @@ test('generic end device GUI HTML and lock survive workspace validation', () => 
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...device, config: { ...device.config, guiHtml: 42 } }], links: [] }))
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...device, config: { ...device.config, guiHtmlPasswordHash: {} } }], links: [] }))
 })
+test('Sniffer configuration survives workspace validation while its runtime capture buffer is stripped', () => {
+  const sniffer = createDevice('hub', 10, 20, 'Sniffer')
+  sniffer.config.snifferServiceEnabled = false
+  sniffer.config.snifferBufferSize = 50
+  sniffer.config.snifferPorts = { 'port-1': false }
+  sniffer.snifferCaptures = [{ id: 'capture-1' } as never]
+  const restored = parseWorkspace({ version: 1, devices: [sniffer], links: [] }).devices[0]
+  assert.equal(restored.config.snifferServiceEnabled, false)
+  assert.equal(restored.config.snifferBufferSize, 50)
+  assert.deepEqual(restored.config.snifferPorts, { 'port-1': false })
+  assert.equal(restored.snifferCaptures, undefined)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...sniffer, config: { ...sniffer.config, snifferBufferSize: 0 } }], links: [] }), /Sniffer buffer/)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...sniffer, config: { ...sniffer.config, snifferPorts: { 'port-1': 'yes' } } }], links: [] }), /Sniffer port/)
+})
+
 test('workspace validation rejects broken device types, coordinates, ports and nested config', () => {
   const device = createDevice('router', 10, 20)
   for (const change of [ { type: 'unknown' }, { x: Infinity }, { ports: [null] }, { config: { hostname: 'R1', dhcpPools: {} } }, { routingTable: [{network:42}] }, { config: {hostname:'R1',dhcpPools:[{network:42,mask:null}]} }, { config: {hostname:'R1',defaultGateway:42} } ]) {

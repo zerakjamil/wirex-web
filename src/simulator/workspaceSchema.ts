@@ -88,6 +88,12 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     if (config.ospfPassiveDefault !== undefined && typeof config.ospfPassiveDefault !== 'boolean') throw new Error('Invalid OSPF passive default.')
     if (config.dnsServiceEnabled !== undefined && typeof config.dnsServiceEnabled !== 'boolean') throw new Error('Invalid DNS service setting.')
     if (config.udpEchoServiceEnabled !== undefined && typeof config.udpEchoServiceEnabled !== 'boolean') throw new Error('Invalid UDP Echo service setting.')
+    if (config.snifferServiceEnabled !== undefined && typeof config.snifferServiceEnabled !== 'boolean') throw new Error('Invalid Sniffer service setting.')
+    if (config.snifferBufferSize !== undefined && (!Number.isInteger(config.snifferBufferSize) || Number(config.snifferBufferSize) < 1 || Number(config.snifferBufferSize) > 500)) throw new Error('Invalid Sniffer buffer size.')
+    if (config.snifferPorts !== undefined) {
+      const ports = object(config.snifferPorts)
+      if (Object.keys(ports).length > 64 || Object.values(ports).some(value => typeof value !== 'boolean')) throw new Error('Invalid Sniffer port setting.')
+    }
     if (config.ntpMaster !== undefined && typeof config.ntpMaster !== 'boolean') throw new Error('Invalid NTP master setting.')
     if (config.ntpMasterStratum !== undefined && (!Number.isInteger(config.ntpMasterStratum) || Number(config.ntpMasterStratum) < 1 || Number(config.ntpMasterStratum) > 15)) throw new Error('Invalid NTP master stratum.')
     if (config.ntpServer !== undefined && (typeof config.ntpServer !== 'string' || !isValidIpv4(config.ntpServer))) throw new Error('Invalid NTP server address.')
@@ -283,6 +289,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
       }
     }
     for (const route of array(device.routingTable, 10000).map(object)) { textFields(route, ['network', 'netmask', 'nextHop', 'interfaceName']); finite(route.metric); oneOf(route.type, ['C', 'S', 'O', 'R']) }
+    delete device.snifferCaptures
     delete device.ospf
     delete device.rip
     delete device.asaNatTranslations

@@ -24,7 +24,7 @@ test('the device shelf has unique model names across every category', () => {
 })
 
 test('every shelf model is created under its own name and has a usable interface set', () => {
-  const empty = new Set(['Router-PT-Empty', 'Switch-PT-Empty', 'Cloud-PT-Empty'])
+  const empty = new Set(['Router-PT-Empty', 'Switch-PT-Empty', 'Cloud-PT-Empty', 'Sniffer'])
   for (const groups of Object.values(deviceCatalog)) {
     for (const group of groups ?? []) {
       for (const model of group.models) {

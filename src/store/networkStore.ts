@@ -27,6 +27,7 @@ import {
   NetworkCluster,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
+import { snifferBufferLimit } from '@/simulator/sniffer'
 import { apAdvertisedWlans, isWifiAccessPoint, isWifiRadioPort } from '@/simulator/capwap'
 import {
   addContainer,
@@ -187,6 +188,10 @@ interface NetworkStore {
 
   updatePortConfig: (deviceId: string, portId: string, updates: Partial<NetworkPort>) => void
   updateDeviceConfig: (deviceId: string, updates: Partial<DeviceConfig>) => void
+  setSnifferService: (deviceId: string, enabled: boolean) => void
+  setSnifferPortEnabled: (deviceId: string, portId: string, enabled: boolean) => void
+  setSnifferBufferSize: (deviceId: string, size: number) => void
+  clearSnifferCaptures: (deviceId: string) => void
   renameDevice: (deviceId: string, name: string) => void
 
   executeIosCommand: (deviceId: string, cmd: string) => string
@@ -1213,6 +1218,42 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
             }
           : d
       ),
+    }))
+  },
+
+  setSnifferService: (deviceId, enabled) => {
+    set((state) => ({
+      devices: state.devices.map((d) => d.id === deviceId
+        ? { ...d, config: { ...d.config, snifferServiceEnabled: enabled } }
+        : d),
+    }))
+  },
+
+  setSnifferPortEnabled: (deviceId, portId, enabled) => {
+    set((state) => ({
+      devices: state.devices.map((d) => d.id === deviceId
+        ? { ...d, config: { ...d.config, snifferPorts: { ...d.config.snifferPorts, [portId]: enabled } } }
+        : d),
+    }))
+  },
+
+  setSnifferBufferSize: (deviceId, size) => {
+    set((state) => ({
+      devices: state.devices.map((d) => {
+        if (d.id !== deviceId) return d
+        const limit = snifferBufferLimit({ ...d.config, snifferBufferSize: size })
+        return {
+          ...d,
+          config: { ...d.config, snifferBufferSize: limit },
+          snifferCaptures: d.snifferCaptures?.slice(-limit),
+        }
+      }),
+    }))
+  },
+
+  clearSnifferCaptures: (deviceId) => {
+    set((state) => ({
+      devices: state.devices.map((d) => d.id === deviceId ? { ...d, snifferCaptures: [] } : d),
     }))
   },
 
