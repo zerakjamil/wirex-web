@@ -14,7 +14,7 @@ import { usePingFeedback } from './usePingFeedback'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
-import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, isWifiAccessPoint, wirelessKeyAccepted } from '@/simulator/capwap'
+import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, isWifiAccessPoint, isWifiRadioPort, wirelessKeyAccepted } from '@/simulator/capwap'
 import { algorithmFields, algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
 import { deviceAttributes } from '@/simulator/deviceAttributes'
 import { getTerminalSuggestions } from './terminalSuggestions'
@@ -2198,7 +2198,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
   const commandFeedback = usePingFeedback(appendCommand)
   const terminalFeedback = usePingFeedback(appendTerminal)
 
-  const wirelessPort = device.ports.find((p) => p.type === 'wireless')
+  const wirelessPort = device.ports.find((p) => isWifiRadioPort(p))
   const activeWirelessLink = wirelessPort
     ? links.find(
         (l) =>
@@ -2540,7 +2540,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
       )
     }
 
-    const availableAps = devices.filter((d) => isWifiAccessPoint(d) && d.ports.some((p) => p.type === 'wireless'))
+    const availableAps = devices.filter((d) => isWifiAccessPoint(d) && d.ports.some((p) => isWifiRadioPort(p)))
     const connectedAp = activeWirelessLink
       ? devices.find((d) => d.id === (activeWirelessLink.fromDeviceId === device.id ? activeWirelessLink.toDeviceId : activeWirelessLink.fromDeviceId))
       : null
@@ -2555,7 +2555,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
         {/* App Title Header */}
         <div className="bg-[#0284c7] text-white px-4 py-2.5 flex items-center justify-between text-xs font-bold shadow-xs">
           <div className="flex items-center gap-2">
-            <span>Linksys - Cisco Wireless Network Adapter Utility (WPC300N)</span>
+            <span>{device.type === 'pc' || device.type === 'laptop' ? 'Linksys - Cisco Wireless Network Adapter Utility (WPC300N)' : t('Wireless Network Connection')}</span>
           </div>
           <button
             type="button"
@@ -2721,7 +2721,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
                   <tbody>
                     {availableAps.map((ap) => {
                       const isThisConnected = connectedAp?.id === ap.id
-                      const apWlan = ap.ports.find((p) => p.type === 'wireless')
+                      const apWlan = ap.ports.find((p) => isWifiRadioPort(p))
                       const surveyed = apAdvertisedWlans(ap)
                       const lapPending = isLightweightAp(ap) && apRuntimeOf(ap).state !== 'run'
                       const securityText = surveyed.length === 0 || surveyed[0].security === 'none' ? t('Open') : surveyed[0].security === 'wep' ? t('WEP') : t('WPA2-PSK')
@@ -3211,9 +3211,10 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
           </button>
         ))}
 
-        {/* PC Wireless App */}
-        {(device.type === 'pc' || device.type === 'laptop') && <button
+        {/* Wireless App */}
+        {(device.type === 'pc' || device.type === 'laptop' || device.type === 'tablet' || device.type === 'smartphone') && <button
           type="button"
+          data-desktop-app="wireless"
           onClick={() => setActiveApp('wireless')}
           className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
         >
@@ -3225,7 +3226,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
               <line x1="12" y1="20" x2="12.01" y2="20" strokeWidth="3" />
             </svg>
           </div>
-          <span className="text-xs font-bold text-slate-800">{t('PC Wireless')}</span>
+          <span className="text-xs font-bold text-slate-800">{device.type === 'pc' || device.type === 'laptop' ? t('PC Wireless') : t('Wireless')}</span>
         </button>}
 
         {/* Command Prompt App */}

@@ -55,7 +55,7 @@ overrun is a machine-boundary artifact and the bound was not weakened —
 | Additional locales (~30) | Full Qt locale catalog | English, Arabic, Kurdish Sorani (RTL complete, unit-tested) | Adding locales is incremental; no functional gap |
 | PKZ/PKC source formats | Proprietary project archives | JSON workspace + PKT read/write codec + PKT export/import APIs | wireX interops with `.pkt`; its own format is open and inspectable |
 | Template library breadth | 91 shipped templates | Curated sample labs across topics | Breadth is content work; learning paths already ship |
-| Desktop app breadth | VPN, Firewall editor, Bluetooth, IoT maker… (Traffic Generator landed) | Browser, email, terminal, IP/DHCP clients plus the Traffic Generator with raw UDP/TCP injection, pinned outgoing port, source MAC/IP overrides and persisted periodic runs | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
+| Desktop app breadth | VPN, Firewall editor, Bluetooth, IoT maker… (Traffic Generator landed) | Browser, email, terminal, IP/DHCP clients, the Traffic Generator with raw UDP/TCP injection, pinned outgoing port, source MAC/IP overrides and persisted periodic runs, and a wireless site survey with real key validation on PC/laptop/tablet/smartphone | Per-app engineering tracked per feature doc (`docs/*_IMPLEMENTATION.md`) |
 | Extensions menu contents | MQTT/Marvel/etc. integrations + Activity Wizard entry | Extensions entry with availability note; Activity Wizard on toolbar | Kept honest: no fake integrations |
 | Boards / module expansion breadth | Very large HW catalog | Core module/slot system shipped (Physical tab) | Catalog breadth is data-entry work post-launch |
 
@@ -65,7 +65,6 @@ overrun is a machine-boundary artifact and the bound was not weakened —
 | --- | --- |
 | Completely free, no login, runs in a browser | Core product promise — removes the license/server friction PT users know |
 | Extra left-side device navigator with search | Affordance we keep from wireX; complements the bottom device box |
-| Command Prompt reachable as a tab on end devices | WireX exposes the terminal more directly; PT nests it as a Desktop app |
 | Arabic/Kurdish-first localization quality | WireX ships tested RTL locales; PT parity here is not a goal |
 | Open JSON workspace format | Inspectable, diffable, education-friendly |
 

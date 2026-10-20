@@ -27,7 +27,7 @@ import {
   NetworkCluster,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
-import { apAdvertisedWlans, isWifiAccessPoint } from '@/simulator/capwap'
+import { apAdvertisedWlans, isWifiAccessPoint, isWifiRadioPort } from '@/simulator/capwap'
 import {
   addContainer,
   addCluster,
@@ -678,8 +678,8 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       // Automatic wireless association if AccessPoint is present
       if (type === 'smartphone' || type === 'tablet') {
         const ap = state.devices.find((d) => d.type === 'wireless' && (d.power ?? true) && isOpenAccessPoint(d))
-        const apWlan = ap?.ports.find((p) => p.type === 'wireless')
-        const clientWlan = updatedNewDev.ports.find((p) => p.type === 'wireless')
+        const apWlan = ap?.ports.find((p) => isWifiRadioPort(p))
+        const clientWlan = updatedNewDev.ports.find((p) => isWifiRadioPort(p))
         if (ap && apWlan && clientWlan) {
           const wLink: NetworkLink = {
             id: `wlink-${ap.name}-${newDevice.name}-${Math.floor(Math.random() * 1000)}`,
@@ -699,12 +699,12 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         }
       } else if (type === 'wireless') {
         // When Access Point is added, connect to any unlinked wireless clients (e.g. Smartphone or Tablet)
-        const apWlan = updatedNewDev.ports.find((p) => p.type === 'wireless')
+        const apWlan = updatedNewDev.ports.find((p) => isWifiRadioPort(p))
         if (apWlan && isOpenAccessPoint(updatedNewDev)) {
           const newLinks: NetworkLink[] = []
           updatedDevices = updatedDevices.map((d) => {
             const isClient = d.type === 'smartphone' || d.type === 'tablet' || (d.type === 'laptop' && d.modules?.includes('WPC300N'))
-            const freeWlan = d.ports.find((p) => p.type === 'wireless' && !p.connectedLinkId)
+            const freeWlan = d.ports.find((p) => isWifiRadioPort(p) && !p.connectedLinkId)
             if (isClient && freeWlan && (d.power ?? true)) {
               const wLink: NetworkLink = {
                 id: `wlink-${updatedNewDev.name}-${d.name}-${Math.floor(Math.random() * 1000)}`,
@@ -761,10 +761,10 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
       let finalLinks = updatedLinks
       if (nextPower) {
         const thisDev = updatedDevices.find((d) => d.id === id)
-        const freeWlan = thisDev?.ports.find((p) => p.type === 'wireless' && !p.connectedLinkId)
+        const freeWlan = thisDev?.ports.find((p) => isWifiRadioPort(p) && !p.connectedLinkId)
         if (freeWlan && thisDev) {
           const ap = updatedDevices.find((d) => d.type === 'wireless' && (d.power ?? true) && d.id !== id && isOpenAccessPoint(d))
-          const apWlan = ap?.ports.find((p) => p.type === 'wireless')
+          const apWlan = ap?.ports.find((p) => isWifiRadioPort(p))
           if (ap && apWlan) {
             const newLink: NetworkLink = {
               id: `wlink-${ap.name}-${thisDev.name}-${Math.floor(Math.random() * 1000)}`,
@@ -984,11 +984,11 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     if (!fromDev || !toDev || fromDeviceId === toDeviceId) return false
 
     // Check wireless connection
-    const fromHasWireless = fromDev.ports.some((p) => p.type === 'wireless')
-    const toHasWireless = toDev.ports.some((p) => p.type === 'wireless')
+    const fromHasWireless = fromDev.ports.some((p) => isWifiRadioPort(p))
+    const toHasWireless = toDev.ports.some((p) => isWifiRadioPort(p))
     if ((fromDev.type === 'wireless' && toHasWireless) || (toDev.type === 'wireless' && fromHasWireless)) {
-      const p1 = fromDev.ports.find((p) => p.type === 'wireless')
-      const p2 = toDev.ports.find((p) => p.type === 'wireless')
+      const p1 = fromDev.ports.find((p) => isWifiRadioPort(p))
+      const p2 = toDev.ports.find((p) => isWifiRadioPort(p))
       if (p1 && p2) {
         return connectPorts(fromDeviceId, p1.id, toDeviceId, p2.id, 'wireless')
       }

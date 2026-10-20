@@ -129,13 +129,16 @@ with no IOS rendering and shows the explanatory notice instead.
   attributes table, aliases and catalog coverage.
 - `src/simulator/dhcp.test.ts` — pool starting-IP coverage alongside the
   existing DHCP lifecycle tests.
-- `src/simulator/wlc.test.ts` — 4 wireless tests: advertised SSID/channel/security,
-  WEP key validation, open-network-only auto-association, and the Cell-Tower
-  exclusion.
+- `src/simulator/wlc.test.ts` — 6 wireless tests: advertised SSID/channel/security,
+  WEP key validation, open-network-only auto-association, the Cell-Tower
+  exclusion, Wi-Fi-vs-cellular port classification, and power-on without a
+  second association through the cellular modem.
 - `src/simulator/syslog.test.ts` — 6 tests for UDP/514 packet fields, a disabled
   receiver, an outbound ACL, IOS `logging` validation, link-state delivery and
   `logging trap` filtering; `e2e/syslog.spec.ts` covers enable → CLI logging →
   shutdown → delivery → reload.
+- `e2e/wireless-clients.spec.ts` — tablet and smartphone windows, the Wireless
+  Desktop app, wrong-key rejection, secured association and reload persistence.
 - `e2e/config-parity.spec.ts` — 14 browser tests: tree + Settings + pane,
   static-route round trip, algorithm override, Attributes, display name vs
   hostname, PC/CLI tab rules, PC Static/DHCP and IPv6 controls, server Services

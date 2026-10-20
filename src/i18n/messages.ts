@@ -300,6 +300,8 @@ export const messages = {
   'Quick CLI:':['Quick CLI:','أوامر سريعة:','فەرمانی خێرا:'],
   'Cisco Command Suggestions:':['Cisco Command Suggestions:','اقتراحات أوامر Cisco:','پێشنیاری فەرمانەکانی Cisco:'],
   'PC Wireless':['PC Wireless','لاسلكي الحاسوب','بێتەلی کۆمپیوتەر'],
+  'Wireless':['Wireless','لاسلكي','بێتەل'],
+  'Wireless Network Connection':['Wireless Network Connection','اتصال الشبكة اللاسلكية','پەیوەندی تۆڕی بێتەل'],
   'Terminal':['Terminal','الطرفية','تێرمیناڵ'],
   'Web Browser':['Web Browser','متصفح الويب','وێبگەڕ'],
   'OK':['OK','موافق','باشە'],

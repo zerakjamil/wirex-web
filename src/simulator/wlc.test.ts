@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createPingPackets, stepSimulationTick } from './engine'
 import { createDevice } from './deviceFactory'
 import { deviceCatalog } from './deviceCatalog'
-import { apAdvertisedWlans, apRuntimeOf, apWirelessSettings, wirelessKeyAccepted, wlcRegisteredAps, wlcWlans } from './capwap'
+import { apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isWifiRadioPort, wirelessKeyAccepted, wlcRegisteredAps, wlcWlans } from './capwap'
 import { getWlcLab } from './starterLabs'
 import { synchronizeLinkState } from './linkState'
 import { useNetworkStore } from '../store/networkStore'
@@ -147,6 +147,29 @@ test('powering on a wireless client only auto-joins an open access point', () =>
   useNetworkStore.getState().toggleDevicePower(laptop.id)
 
   assert.equal(useNetworkStore.getState().links.filter(link => link.type === 'wireless').length, 0)
+})
+
+test('powering on a smartphone does not auto-associate its cellular modem', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  const phone = createDevice('smartphone', 0, 0)
+  const apWlan = ap.ports.find(port => port.type === 'wireless')!
+  const phoneWlan = phone.ports.find(port => port.name === 'Wireless0')!
+  const link: NetworkLink = {
+    id: 'phone-ap', type: 'wireless', status: 'up',
+    fromDeviceId: ap.id, fromPortId: apWlan.id, toDeviceId: phone.id, toPortId: phoneWlan.id,
+  }
+  Object.assign(apWlan, { connectedLinkId: link.id, connectedDeviceId: phone.id, connectedPortId: phoneWlan.id })
+  Object.assign(phoneWlan, { connectedLinkId: link.id, connectedDeviceId: ap.id, connectedPortId: apWlan.id })
+  useNetworkStore.getState().loadLab([ap, phone], [link])
+  useNetworkStore.getState().toggleDevicePower(phone.id)
+  useNetworkStore.getState().toggleDevicePower(phone.id)
+
+  const phoneLinks = useNetworkStore.getState().links.filter(item =>
+    item.type === 'wireless' && (item.fromDeviceId === phone.id || item.toDeviceId === phone.id))
+  assert.equal(phoneLinks.length, 1)
+  const cellular = useNetworkStore.getState().devices.find(device => device.id === phone.id)!
+    .ports.find(port => port.name === 'Cellular0')!
+  assert.equal(cellular.connectedLinkId, undefined)
 })
 
 test('autonomous access points advertise their configured SSID, channel and security', () => {
@@ -344,4 +367,12 @@ test('the starter lab brings both access points online and switches client traff
   assert.ok(toWireless.replySeen, toWireless.trace.join('\n'))
   assert.equal(toWireless.remaining, 0, toWireless.trace.join('\n'))
   assert.ok(toWireless.trace.some(line => line.includes('CAPWAP tunnel')), toWireless.trace.join('\n'))
+})
+
+test('Wi-Fi association ignores the smartphone cellular modem', () => {
+  const phone = createDevice('smartphone', 10, 20)
+  const wifi = phone.ports.find(port => port.name === 'Wireless0')!
+  const cellular = phone.ports.find(port => port.name === 'Cellular0')!
+  assert.equal(isWifiRadioPort(wifi), true)
+  assert.equal(isWifiRadioPort(cellular), false)
 })

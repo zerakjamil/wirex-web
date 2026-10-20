@@ -35,6 +35,10 @@ export const isLightweightAp = (device: NetworkDevice) => device.type === 'wirel
 export const isWirelessAp = (device: NetworkDevice) => device.type === 'wireless' && device.model !== 'WRT300N' && device.model !== 'Cell-Tower'
 export const apWiredPort = (device: NetworkDevice) => device.ports.find(port => port.type !== 'wireless')
 export const apWirelessPort = (device: NetworkDevice) => device.ports.find(port => port.type === 'wireless')
+/** True for a Wi-Fi radio. A smartphone's cellular modem is also typed `wireless`
+ *  in the port model but must not join a Wi-Fi network. */
+export const isWifiRadioPort = (port: NetworkPort) =>
+  port.type === 'wireless' && !/cell/i.test(port.name) && !/cell/i.test(port.shortName ?? '')
 export const wlcManagementPort = (device: NetworkDevice) => device.ports.find(port => port.type === 'gigabitethernet') ?? device.ports.find(port => port.type === 'fastethernet') ?? device.ports[0]
 
 /** True while the topology contains a controller or a lightweight AP, so the realtime loop keeps driving CAPWAP timers even with no packets in flight. */
