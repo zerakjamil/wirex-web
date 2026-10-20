@@ -267,6 +267,13 @@ test('the new facets are cleared for students and graded against live state', ()
 
 test('activity files round-trip the DHCP, ACL, HSRP and IPv6 snapshots', () => {
   const router = serviceRouter()
+  const noop = structuredClone(router)
+  noop.config.ospfPassiveDefault = false
+  noop.config.ospfPassiveInterfaces = []
+  noop.config.ospfActiveInterfaces = [router.ports[0].name]
+  assert.equal(collectAssessmentCandidates([noop]).filter(item =>
+    item.spec.kind === 'routing-option' && item.spec.protocol === 'ospf' && item.spec.option === 'passive').length, 0)
+
   const activity = activityFrom([router])
   const parsed = parseActivity(JSON.parse(serializeActivity(activity)))
   assert.deepEqual(parsed.items, activity.items)
@@ -277,5 +284,97 @@ test('parseActivity rejects invalid new facet payloads', () => {
   const raw = JSON.parse(serializeActivity(activityFrom([router]))) as { items: Array<{ spec: { kind: string; group?: number } }> }
   const hsrp = raw.items.find(item => item.spec.kind === 'hsrp')!
   hsrp.spec.group = 999
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+})
+
+function routingOptionRouter() {
+  const router = createDevice('router', 0, 0)
+  router.config.ospfProcessId = 1
+  router.config.ospfNetworks = [{ network: '10.0.0.0', wildcard: '0.0.0.255', area: 0 }]
+  router.config.ospfRouterId = '1.1.1.1'
+  router.config.ospfPassiveDefault = true
+  router.config.ospfActiveInterfaces = [router.ports[0].name]
+  router.config.eigrpAs = 100
+  router.config.eigrpNetworks = [{ network: '10.0.0.0', wildcard: '0.0.0.255' }]
+  router.config.eigrpRouterId = '2.2.2.2'
+  router.config.eigrpPassiveInterfaces = [router.ports[1].name]
+  router.config.ripNetworks = ['10.0.0.0']
+  router.config.ripPassiveDefault = true
+  router.config.ripActiveInterfaces = [router.ports[1].name]
+  router.config.bgpAs = 65000
+  router.config.bgpRouterId = '3.3.3.3'
+  router.config.bgpNetworks = [{ network: '10.0.0.0', mask: '255.255.255.0' }]
+  return router
+}
+
+test('OSPF and EIGRP router-id and passive-interface state become assessment items', () => {
+  const router = routingOptionRouter()
+  const items = collectAssessmentCandidates([router])
+  const optionItems = items.filter(item => item.spec.kind === 'routing-option')
+  const byProtocol = (protocol: string, option: string) => optionItems.find(item =>
+    item.spec.kind === 'routing-option' && item.spec.protocol === protocol && item.spec.option === option)!
+
+  assert.equal(byProtocol('ospf', 'router-id').label, 'OSPF router-id')
+  assert.equal(byProtocol('ospf', 'router-id').expected, 'OSPF router-id 1.1.1.1')
+  assert.equal(byProtocol('ospf', 'passive').label, 'OSPF passive interfaces')
+  assert.equal(byProtocol('ospf', 'passive').expected, `OSPF passive default, except ${router.ports[0].name}`)
+  assert.equal(byProtocol('eigrp', 'router-id').expected, 'EIGRP router-id 2.2.2.2')
+  assert.equal(byProtocol('eigrp', 'passive').expected, `EIGRP passive ${router.ports[1].name}`)
+  assert.equal(byProtocol('rip', 'passive').expected, `RIP passive default, except ${router.ports[1].name}`)
+  assert.equal(byProtocol('bgp', 'router-id').expected, 'BGP router-id 3.3.3.3')
+
+  const initial = clearAssessedConfig([router], optionItems)[0]
+  assert.equal(initial.config.ospfRouterId, undefined)
+  assert.equal(initial.config.eigrpRouterId, undefined)
+  assert.equal(initial.config.bgpRouterId, undefined)
+  assert.equal(initial.config.ospfPassiveDefault, false)
+  assert.equal(initial.config.ripPassiveDefault, false)
+  assert.deepEqual(initial.config.ospfPassiveInterfaces, [])
+  assert.deepEqual(initial.config.ospfActiveInterfaces, [])
+  assert.deepEqual(initial.config.eigrpPassiveInterfaces, [])
+  assert.equal(initial.config.ospfProcessId, 1)
+  assert.deepEqual(initial.config.ospfNetworks, router.config.ospfNetworks)
+  assert.equal(router.config.ospfRouterId, '1.1.1.1')
+
+  assert.ok(evaluateActivityItems([initial], optionItems).every(check => check.status === 'failed'))
+  assert.ok(evaluateActivityItems([router], optionItems).every(check => check.status === 'successful'))
+
+  const changedId = structuredClone(router)
+  changedId.config.ospfRouterId = '9.9.9.9'
+  const idCheck = evaluateActivityItems([changedId], [byProtocol('ospf', 'router-id')])[0]
+  assert.equal(idCheck.status, 'failed')
+  assert.equal(idCheck.observed, 'OSPF router-id 9.9.9.9')
+
+  const changedPassive = structuredClone(router)
+  changedPassive.config.ospfPassiveDefault = false
+  changedPassive.config.ospfActiveInterfaces = []
+  const passiveCheck = evaluateActivityItems([changedPassive], [byProtocol('ospf', 'passive')])[0]
+  assert.equal(passiveCheck.status, 'failed')
+  assert.equal(passiveCheck.observed, 'OSPF passive interfaces not set')
+
+  const noop = structuredClone(router)
+  noop.config.ospfPassiveDefault = false
+  noop.config.ospfPassiveInterfaces = []
+  noop.config.ospfActiveInterfaces = [router.ports[0].name]
+  assert.equal(collectAssessmentCandidates([noop]).filter(item =>
+    item.spec.kind === 'routing-option' && item.spec.protocol === 'ospf' && item.spec.option === 'passive').length, 0)
+
+  const activity = activityFrom([router])
+  const parsed = parseActivity(JSON.parse(serializeActivity(activity)))
+  assert.deepEqual(parsed.items, activity.items)
+})
+
+test('parseActivity rejects impossible routing-option facets', () => {
+  const router = routingOptionRouter()
+  const raw = JSON.parse(serializeActivity(activityFrom([router]))) as { items: Array<{ spec: { kind: string; protocol?: string; option?: string } }> }
+  const option = raw.items.find(item => item.spec.kind === 'routing-option')!
+  option.spec.protocol = 'rip'
+  option.spec.option = 'router-id'
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+  option.spec.protocol = 'bgp'
+  option.spec.option = 'passive'
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+  option.spec.protocol = 'ospf'
+  option.spec.option = 'bogus'
   assert.throws(() => parseActivity(raw), /invalid assessment item/)
 })

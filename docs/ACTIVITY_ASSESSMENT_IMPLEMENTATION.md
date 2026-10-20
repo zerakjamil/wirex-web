@@ -1,4 +1,4 @@
-# Instructor activity assessment (Activity Wizard), 2026-10-18
+# Instructor activity assessment (Activity Wizard), 2026-10-18 (routing options added 2026-10-20)
 
 wireX now has the acceptance flow of Cisco Packet Tracer's Activity Wizard as a reduced assessment model: an instructor derives graded items from a finished "answer" network, selects a subset, saves a `.wxact.json` activity file, and a student loads it, works on the cleared network, and runs Check Results to grade live state. This is a reduced model, not a full parity claim for every PT assessment-tree type, and not the complete replacement release gate.
 
@@ -28,14 +28,19 @@ The chip opens the instruction panel: instructions rendered as a numbered list, 
 | `port-admin` | router physical ports and SVIs | answer has `adminStatus up` + IP and no dot1q tag | `up` / `down` |
 | `route` | any device | `type 'S'` entry in the routing table | network + mask + next hop |
 | `routing-protocol` | any device | one item per protocol (RIP/OSPF/EIGRP/BGP) that is configured | snapshot: RIP version + networks; OSPF process id + network/wildcard/area; EIGRP AS + network/wildcard; BGP AS + neighbors + networks |
+| `routing-option` | any device | OSPF/EIGRP/BGP router-id, or RIP/OSPF/EIGRP passive-interface state, on a protocol that is already configured | router-id value, or passive default + sorted passive/active interface lists |
 | `ip-routing` | switch | `ip routing` enabled | enabled / disabled |
 | `ipv4-address` | hosts (PC, laptop, server, printer, tablet, smartphone, TV, phone) | static address (all host facets are skipped when `dhcpEnabled`) | IP + mask |
 | `default-gateway` | hosts, and switches without `ip routing` | gateway set | gateway |
 | `dns-server` | hosts | DNS server set | DNS server |
+| `dhcp-pool` | server | server has a DHCP pool | pool name, network, mask, gateway, DNS, start address and options |
+| `acl` | router/switch | numbered or named ACL exists | name/number, type and ordered rules |
+| `hsrp` | router/switch | HSRP group exists | group, virtual IP, priority, preempt and tracked ports |
+| `ipv6-address` | any device | static IPv6 address on a port | port, address and prefix length |
 
 Trunk allowed-VLAN semantics: `undefined` means *all* (compared as all), an empty list means *none*, otherwise the sorted lists must match exactly — extra allowed VLANs fail the item.
 
-Not assessed in this reduced model (documented boundaries): ACLs, DHCP pools, HSRP, IPv6, wireless/WLC configuration, OSPF/EIGRP/BGP router-id and passive interfaces, connectivity tests, port shutdown tasks beyond router ports and SVIs, and any *removals* (extras beyond the answer never fail an item; there is no "must not exist" item type).
+Not assessed in this reduced model (documented boundaries): wireless/WLC configuration, connectivity tests, port shutdown tasks beyond router ports and SVIs, and any *removals* (extras beyond the answer never fail an item; there is no "must not exist" item type). ACLs, DHCP pools, HSRP, IPv6 addresses, router-ids and passive interfaces are assessed. Every option item is derived only when the protocol itself is configured, so a stray `router-id` or passive-interface line on an otherwise empty process does not create an item.
 
 ## File format
 
@@ -71,10 +76,10 @@ UI chrome strings are localized (EN/AR/CKB); generated item text, parse errors a
 
 ## Evidence
 
-- Unit: `src/simulator/activity.test.ts` (12 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, DHCP-pool/ACL/HSRP/IPv6 derivation and summaries, clear-and-grade coverage for those facets, serialize/parse round-trip and slugging, parser rejections) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
+- Unit: `src/simulator/activity.test.ts` (14 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, DHCP-pool/ACL/HSRP/IPv6 derivation and summaries, clear-and-grade coverage for those facets, OSPF/EIGRP/BGP router-id and RIP/OSPF/EIGRP passive-interface derivation, clearing and grading, serialize/parse round-trip and slugging, parser rejections for impossible routing options) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
 - Browser: `e2e/activity.spec.ts` (2 flows: author via toolbar → partial selection → trial → grading → fix to 100% → reset → exit restores the answer; save file → File → New → File → Open Activity... → grade → invalid-file error → exit).
-- `npm test` 538/538, `npx tsc --noEmit` clean, lint zero errors (28 pre-existing warnings), `npm run electron:prep` green, full Playwright suite 48/48.
+- `npm test` 617/617, `npx tsc --noEmit` clean, lint zero errors (28 pre-existing warnings), `npm run electron:prep` green, production-browser suite 67/68 with only the unchanged `simulation-scale` wall-clock bound red at 689 ms.
 
 ## Remaining boundaries
 
-No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and no OSPF/EIGRP router-id, passive-interface or wireless facets. The facet set covers VLANs, L2 ports, interface addressing/admin state, static routes, RIP/OSPF/EIGRP/BGP snapshots, switch IP routing, host IPv4/gateway/DNS, DHCP pools, ACLs, HSRP groups and IPv6 addresses. Activity sessions live in browser storage; there is no classroom management around them.
+No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and no wireless/WLC facets. The facet set covers VLANs, L2 ports, interface addressing/admin state, static routes, RIP/OSPF/EIGRP/BGP snapshots, OSPF/EIGRP/BGP router-ids, RIP/OSPF/EIGRP passive interfaces, switch IP routing, host IPv4/gateway/DNS, DHCP pools, ACLs, HSRP groups and IPv6 addresses. Activity sessions live in browser storage; there is no classroom management around them.

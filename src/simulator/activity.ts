@@ -12,6 +12,7 @@ export type ActivityFacetKind =
   | 'port-admin'
   | 'route'
   | 'routing-protocol'
+  | 'routing-option'
   | 'ip-routing'
   | 'ipv4-address'
   | 'default-gateway'
@@ -28,6 +29,7 @@ export type ActivityFacetSpec =
   | { kind: 'port-admin'; portId: string }
   | { kind: 'route'; network: string; netmask: string; nextHop: string }
   | { kind: 'routing-protocol'; protocol: RoutingProtocolKind; snapshot: string }
+  | { kind: 'routing-option'; protocol: RoutingProtocolKind; option: 'router-id' | 'passive'; snapshot: string }
   | { kind: 'ip-routing' }
   | { kind: 'ipv4-address'; portId: string; ip: string; mask: string }
   | { kind: 'default-gateway'; gateway: string }
@@ -128,6 +130,11 @@ export function collectAssessmentCandidates(devices: NetworkDevice[]): ActivityI
       const snapshot = protocolSnapshot(device.config, protocol)
       if (!snapshot) continue
       push(device, 'routing-protocol', protocol, protocol.toUpperCase(), protocolSummary(device.config, protocol), { kind: 'routing-protocol', protocol, snapshot })
+      for (const option of ['router-id', 'passive'] as const) {
+        const optionSnapshot = routingOptionSnapshot(device.config, protocol, option)
+        if (!optionSnapshot) continue
+        push(device, 'routing-option', `${protocol}:${option}`, routingOptionLabel(protocol, option), routingOptionSummary(device.config, protocol, option), { kind: 'routing-option', protocol, option, snapshot: optionSnapshot })
+      }
     }
 
     if (device.type === 'switch' && device.config.ipRouting === true) {
@@ -316,6 +323,57 @@ export function protocolSummary(config: DeviceConfig, protocol: RoutingProtocolK
   return `BGP ${config.bgpAs}: neighbors ${neighbors.length ? neighbors.join(', ') : 'none'}, networks ${networks.length ? networks.join(', ') : 'none'}`
 }
 
+type RoutingOption = 'router-id' | 'passive'
+
+function protocolLabel(protocol: RoutingProtocolKind) {
+  return protocol.toUpperCase()
+}
+
+function routingOptionLabel(protocol: RoutingProtocolKind, option: RoutingOption) {
+  return `${protocolLabel(protocol)} ${option === 'router-id' ? 'router-id' : 'passive interfaces'}`
+}
+
+function routingOptionSnapshot(config: DeviceConfig, protocol: RoutingProtocolKind, option: RoutingOption): string | null {
+  if (option === 'router-id') {
+    if (protocol === 'rip') return null
+    const value = protocol === 'ospf' ? config.ospfRouterId : protocol === 'eigrp' ? config.eigrpRouterId : config.bgpRouterId
+    return value ? JSON.stringify({ protocol, option, value }) : null
+  }
+  if (protocol === 'bgp') return null
+  const passiveDefault = protocol === 'ospf' ? config.ospfPassiveDefault : protocol === 'eigrp' ? config.eigrpPassiveDefault : config.ripPassiveDefault
+  const passive = protocol === 'ospf' ? config.ospfPassiveInterfaces : protocol === 'eigrp' ? config.eigrpPassiveInterfaces : config.ripPassiveInterfaces
+  const active = protocol === 'ospf' ? config.ospfActiveInterfaces : protocol === 'eigrp' ? config.eigrpActiveInterfaces : config.ripActiveInterfaces
+  if (!passiveDefault && !(passive?.length)) return null
+  return JSON.stringify({
+    protocol,
+    option,
+    default: !!passiveDefault,
+    passive: [...(passive ?? [])].sort(),
+    // An active exception only matters under `passive-interface default`.
+    active: passiveDefault ? [...(active ?? [])].sort() : [],
+  })
+}
+
+function routingOptionSummary(config: DeviceConfig, protocol: RoutingProtocolKind, option: RoutingOption): string {
+  if (option === 'router-id') {
+    if (protocol === 'rip') return 'RIP has no router-id'
+    const value = protocol === 'ospf' ? config.ospfRouterId : protocol === 'eigrp' ? config.eigrpRouterId : config.bgpRouterId
+    return `${protocolLabel(protocol)} router-id ${value || 'not set'}`
+  }
+  if (protocol === 'bgp') return 'BGP has no passive interfaces'
+  const passiveDefault = protocol === 'ospf' ? config.ospfPassiveDefault : protocol === 'eigrp' ? config.eigrpPassiveDefault : config.ripPassiveDefault
+  const passive = protocol === 'ospf' ? config.ospfPassiveInterfaces : protocol === 'eigrp' ? config.eigrpPassiveInterfaces : config.ripPassiveInterfaces
+  const active = protocol === 'ospf' ? config.ospfActiveInterfaces : protocol === 'eigrp' ? config.eigrpActiveInterfaces : config.ripActiveInterfaces
+  const prefix = protocolLabel(protocol)
+  if (passiveDefault) {
+    const exceptions = [...(active ?? [])].sort()
+    return `${prefix} passive default${exceptions.length ? `, except ${exceptions.join(', ')}` : ''}`
+  }
+  const names = [...(passive ?? [])].sort()
+  if (names.length) return `${prefix} passive ${names.join(', ')}`
+  return `${prefix} passive interfaces not set`
+}
+
 // ---------------------------------------------------------------------------
 // Grading
 // ---------------------------------------------------------------------------
@@ -355,6 +413,10 @@ function readObserved(device: NetworkDevice, spec: ActivityFacetSpec): { ok: boo
   if (spec.kind === 'routing-protocol') {
     const snapshot = protocolSnapshot(device.config, spec.protocol)
     return { ok: snapshot === spec.snapshot, observed: protocolSummary(device.config, spec.protocol) }
+  }
+  if (spec.kind === 'routing-option') {
+    const snapshot = routingOptionSnapshot(device.config, spec.protocol, spec.option)
+    return { ok: snapshot === spec.snapshot, observed: routingOptionSummary(device.config, spec.protocol, spec.option) }
   }
   if (spec.kind === 'dhcp-pool') {
     const pool = device.config.dhcpPools?.find(candidate => candidate.name === spec.name)
@@ -472,6 +534,26 @@ function clearItem(device: NetworkDevice, spec: ActivityFacetSpec) {
       device.config.bgpNetworks = []
     }
     if (device.activeRoutingProtocol === spec.protocol) delete device.activeRoutingProtocol
+    return
+  }
+  if (spec.kind === 'routing-option') {
+    if (spec.option === 'router-id') {
+      if (spec.protocol === 'ospf') delete device.config.ospfRouterId
+      else if (spec.protocol === 'eigrp') delete device.config.eigrpRouterId
+      else if (spec.protocol === 'bgp') delete device.config.bgpRouterId
+    } else if (spec.protocol === 'rip') {
+      device.config.ripPassiveDefault = false
+      device.config.ripPassiveInterfaces = []
+      device.config.ripActiveInterfaces = []
+    } else if (spec.protocol === 'ospf') {
+      device.config.ospfPassiveDefault = false
+      device.config.ospfPassiveInterfaces = []
+      device.config.ospfActiveInterfaces = []
+    } else if (spec.protocol === 'eigrp') {
+      device.config.eigrpPassiveDefault = false
+      device.config.eigrpPassiveInterfaces = []
+      device.config.eigrpActiveInterfaces = []
+    }
     return
   }
   if (spec.kind === 'dhcp-pool') {
@@ -643,6 +725,16 @@ function parseSpec(input: unknown): ActivityFacetSpec {
       if (raw.protocol !== 'rip' && raw.protocol !== 'ospf' && raw.protocol !== 'eigrp' && raw.protocol !== 'bgp') throw new Error('This activity file has an invalid assessment item.')
       if (typeof raw.snapshot !== 'string' || raw.snapshot.length > 4096) throw new Error('This activity file has an invalid assessment item.')
       return { kind: 'routing-protocol', protocol: raw.protocol, snapshot: raw.snapshot }
+    }
+    case 'routing-option': {
+      const protocol = raw.protocol
+      if (protocol !== 'rip' && protocol !== 'ospf' && protocol !== 'eigrp' && protocol !== 'bgp') throw new Error('This activity file has an invalid assessment item.')
+      const option = raw.option
+      if (option !== 'router-id' && option !== 'passive') throw new Error('This activity file has an invalid assessment item.')
+      if (option === 'router-id' && protocol === 'rip') throw new Error('This activity file has an invalid assessment item.')
+      if (option === 'passive' && protocol === 'bgp') throw new Error('This activity file has an invalid assessment item.')
+      if (typeof raw.snapshot !== 'string' || raw.snapshot.length > 4096) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'routing-option', protocol, option, snapshot: raw.snapshot }
     }
     case 'ip-routing':
       return { kind: 'ip-routing' }
