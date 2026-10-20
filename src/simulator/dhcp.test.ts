@@ -66,6 +66,15 @@ test('DHCP assigns an unused local address and pool gateway, respecting excluded
  assert.equal(pc.ports[0].ipAddress,undefined)
 })
 
+test('DHCP pool starting address seeds the first offered lease',()=>{
+ const {client,devices,links}=localTopology()
+ const server=devices.find(d=>d.id==='local-server')!
+ server.config.dhcpPools=[{name:'STUDENT-LAN',network:'192.168.50.0',mask:'255.255.255.0',startIp:'192.168.50.100',defaultRouter:'192.168.50.1',dnsServer:'192.168.50.2'}]
+ const result=allocateDhcpLease(devices,links,client.id)
+ assert.equal(result.lease?.ipAddress,'192.168.50.100')
+ assert.equal(result.lease?.gateway,'192.168.50.1')
+})
+
 test('DHCP host reservations select the matching MAC address and leave other clients on the dynamic pool',()=>{
  const {client,sw,server,devices,links}=localTopology()
  const mac=client.ports[0].macAddress.replace(/[^0-9a-f]/gi,'').toLowerCase()

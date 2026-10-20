@@ -348,73 +348,73 @@ export function IotServiceSection({ device }: { device: NetworkDevice }) {
     const spec = client.model ? iotThingSpec(client.model) : iotThingSpecByKind(client.kind)
     if (spec.control === 'toggle') return (
       <>
-        <button type="button" data-iot-action="on" onClick={() => issue(client, { power: true })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Turn on')}</button>
-        <button type="button" data-iot-action="off" onClick={() => issue(client, { power: false })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Turn off')}</button>
+        <button type="button" data-iot-action="on" onClick={() => issue(client, { power: true })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{t('Turn on')}</button>
+        <button type="button" data-iot-action="off" onClick={() => issue(client, { power: false })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{t('Turn off')}</button>
       </>
     )
     if (spec.control === 'open-close') return (
       <>
-        <button type="button" data-iot-action="open" onClick={() => issue(client, { open: true })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Open')}</button>
-        <button type="button" data-iot-action="close" onClick={() => issue(client, { open: false })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Close')}</button>
+        <button type="button" data-iot-action="open" onClick={() => issue(client, { open: true })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{t('Open')}</button>
+        <button type="button" data-iot-action="close" onClick={() => issue(client, { open: false })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{t('Close')}</button>
       </>
     )
     if (spec.control === 'level') return (
       <>
         {[0, 50, 100].map(value => (
-          <button key={value} type="button" data-iot-action={`level-${value}`} onClick={() => issue(client, { level: value })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{value}</button>
+          <button key={value} type="button" data-iot-action={`level-${value}`} onClick={() => issue(client, { level: value })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{value}</button>
         ))}
       </>
     )
     if (spec.control === 'temperature') return (
       <>
-        <button type="button" data-iot-action="temperature-down" onClick={() => issue(client, { temperature: (clientState.temperature ?? 22) - 1 })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">−</button>
-        <button type="button" data-iot-action="temperature-up" onClick={() => issue(client, { temperature: (clientState.temperature ?? 22) + 1 })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">＋</button>
+        <button type="button" data-iot-action="temperature-down" onClick={() => issue(client, { temperature: (clientState.temperature ?? 22) - 1 })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">−</button>
+        <button type="button" data-iot-action="temperature-up" onClick={() => issue(client, { temperature: (clientState.temperature ?? 22) + 1 })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">＋</button>
       </>
     )
     if (spec.control === 'button') return (
-      <button type="button" data-iot-action="press" onClick={() => issue(client, { pressedAtTick: simulationTick })} className="min-h-[32px] rounded border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-slate-50">{t('Press')}</button>
+      <button type="button" data-iot-action="press" onClick={() => issue(client, { pressedAtTick: simulationTick })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] hover:bg-[#e2e2e2]">{t('Press')}</button>
     )
-    return <span className="text-[11px] text-slate-500">{clientDevice ? sensorReading(client.kind, iotStateOf(clientDevice), t) : t('Offline')}</span>
+    return <span className="text-[11px] text-[#555]">{clientDevice ? sensorReading(client.kind, iotStateOf(clientDevice), t) : t('Offline')}</span>
   }
   return (
-    <section data-iot-service className="pt-4 border-t border-[#e2e8f0] space-y-3" aria-labelledby={`iot-service-${device.id}`}>
+    <section data-iot-service className="space-y-2" aria-labelledby={`iot-service-${device.id}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h4 id={`iot-service-${device.id}`} className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('IoT Registration Service')}</h4>
-          <p className="mt-1 text-xs text-slate-500">{t('Smart devices discover this server, register, and report state so you can control them remotely.')}</p>
+          <h4 id={`iot-service-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('IoT Registration Service')}</h4>
+          <p className="mt-0.5 text-[11px] text-[#555]">{t('Smart devices discover this server, register, and report state so you can control them remotely.')}</p>
         </div>
-        <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
+        <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
           <input
             type="checkbox"
             checked={enabled}
             onChange={event => updateDeviceConfig(device.id, { iotServiceEnabled: event.target.checked })}
-            className="h-4 w-4 accent-sky-600"
+            className="h-[13px] w-[13px] accent-[#316ac5]"
           />
           {t('Enable IoT registration service')}
         </label>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5" htmlFor={`iot-user-${device.id}`}>{t('Username')}</label>
-          <input id={`iot-user-${device.id}`} type="text" value={usernameDraft} onChange={event => setUsernameDraft(event.target.value)} className="w-full rounded border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800" />
+          <label className="block text-[11px] text-[#222]" htmlFor={`iot-user-${device.id}`}>{t('Username')}</label>
+          <input id={`iot-user-${device.id}`} type="text" value={usernameDraft} onChange={event => setUsernameDraft(event.target.value)} className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5" htmlFor={`iot-pass-${device.id}`}>{t('Password')}</label>
-          <input id={`iot-pass-${device.id}`} type="password" value={passwordDraft} onChange={event => setPasswordDraft(event.target.value)} className="w-full rounded border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800" />
+          <label className="block text-[11px] text-[#222]" htmlFor={`iot-pass-${device.id}`}>{t('Password')}</label>
+          <input id={`iot-pass-${device.id}`} type="password" value={passwordDraft} onChange={event => setPasswordDraft(event.target.value)} className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
         </div>
         <button
           type="button"
           onClick={() => { updateDeviceConfig(device.id, { iotCredentials: { username: usernameDraft, password: passwordDraft } }); setMessage(t('Credentials saved.')) }}
-          className="min-h-[38px] rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+          className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]"
         >
           {t('Save')}
         </button>
       </div>
-      {!enabled && <p className="text-xs text-slate-500">{t('The IoT registration service is disabled.')}</p>}
-      {enabled && clients.length === 0 && <p className="text-xs text-slate-500">{t('No IoT devices have registered yet.')}</p>}
+      {!enabled && <p className="text-[11px] text-[#555]">{t('The IoT registration service is disabled.')}</p>}
+      {enabled && clients.length === 0 && <p className="text-[11px] text-[#555]">{t('No IoT devices have registered yet.')}</p>}
       {enabled && clients.length > 0 && (
         <div className="space-y-2">
-          <h5 className="text-xs font-bold text-slate-700">{t('Registered devices')} ({clients.length})</h5>
+          <h5 className="text-[11px] font-bold text-[#222]">{t('Registered devices')} ({clients.length})</h5>
           <ul className="space-y-2">
             {clients.map(client => {
               const clientDevice = devices.find(item => item.id === client.deviceId)
@@ -422,15 +422,15 @@ export function IotServiceSection({ device }: { device: NetworkDevice }) {
               const age = Math.max(0, (simulationTick - client.lastSeenTick) * 0.06)
               const spec = client.model ? iotThingSpec(client.model) : iotThingSpecByKind(client.kind)
               return (
-                <li key={client.deviceId} data-iot-client={client.deviceId} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <li key={client.deviceId} data-iot-client={client.deviceId} className="space-y-1.5 border border-[#c8c8c8] bg-[#f8f8f8] px-2 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                     <div className="flex items-center gap-2 font-semibold text-slate-700">
                       <span className={`h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                       <span>{clientDevice?.name ?? client.deviceId}</span>
                       <span className="font-normal text-slate-500">({t(spec.label)})</span>
                     </div>
-                    <span className="font-mono text-slate-600">{client.address}</span>
-                    <span className="text-slate-500">{online ? t('Online') : t('Offline')} · {t('last report')} {age.toFixed(1)} {t('seconds ago')}</span>
+                    <span className="font-mono text-[#333]">{client.address}</span>
+                    <span className="text-[#555]">{online ? t('Online') : t('Offline')} · {t('last report')} {age.toFixed(1)} {t('seconds ago')}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">{controlButtons(client)}</div>
                 </li>
@@ -439,8 +439,8 @@ export function IotServiceSection({ device }: { device: NetworkDevice }) {
           </ul>
         </div>
       )}
-      {message && <p role="status" className="text-xs font-semibold text-sky-700">{message}</p>}
-      <p className="text-[11px] leading-relaxed text-slate-500">{t('The dashboard reflects the shared simulation state and the last registration or report from each device. Offline devices are marked after')} {Math.round(IOT_CLIENT_STALE_MS / 1000)} {t('seconds without a report.')}</p>
+      {message && <p role="status" className="text-[11px] font-semibold text-[#2f6b2f]">{message}</p>}
+      <p className="text-[11px] leading-relaxed text-[#555]">{t('The dashboard reflects the shared simulation state and the last registration or report from each device. Offline devices are marked after')} {Math.round(IOT_CLIENT_STALE_MS / 1000)} {t('seconds without a report.')}</p>
     </section>
   )
 }

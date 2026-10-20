@@ -6,7 +6,7 @@ import { getPrompt } from '@/simulator/ios/ciscoParser'
 import { Cisco3DIcon } from '@/components/canvas/Cisco3DIcons'
 import { useShallow } from 'zustand/react/shallow'
 import type { NetworkDevice } from '@/types/network'
-import { isValidIpv4 } from '@/simulator/protocols/ip'
+import { getNetworkAddress, isValidIpv4 } from '@/simulator/protocols/ip'
 import { parseIpv6WithPrefix } from '@/simulator/protocols/ipv6'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from '@/simulator/tftp'
 import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
@@ -15,7 +15,8 @@ import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
 import { apAdvertisedWlans, apRuntimeOf, isLightweightAp } from '@/simulator/capwap'
-import { algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
+import { algorithmFields, algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
+import { deviceAttributes } from '@/simulator/deviceAttributes'
 import { getTerminalSuggestions } from './terminalSuggestions'
 import {useWorkspaceStore} from '@/store/workspaceStore'
 import {useI18n} from '@/i18n/useI18n'
@@ -25,12 +26,24 @@ import { EmailClientApp } from './EmailClientApp'
 import { TrafficGeneratorApp } from './TrafficGeneratorApp'
 import { IotTab, IotServiceSection } from './IotTabs'
 
+type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'webadmin' | 'attributes' | 'imported'
+
+function usesDesktop(type: NetworkDevice['type']): boolean {
+  return type === 'pc' || type === 'server' || type === 'laptop' || type === 'tablet' || type === 'smartphone'
+}
+
+function usesCli(type: NetworkDevice['type']): boolean {
+  return type === 'router' || type === 'switch' || type === 'security' || type === 'wlc'
+}
+
 export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: () => void }) {
   const {t}=useI18n()
   const devices = useNetworkStore(state=>state.devices)
-  const [activeTab,setActiveTab] = useState<ReturnType<typeof useNetworkStore.getState>['activeTab']>(()=>{
+  const [activeTab,setActiveTab] = useState<WindowTab>(()=>{
     const state=useNetworkStore.getState()
     const initial=state.devices.find(candidate=>candidate.id===deviceId)
+    if(initial && usesDesktop(initial.type) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
+    if(initial && !usesCli(initial.type) && state.activeTab==='cli')return 'config'
     if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
     if(initial?.type==='iot'&&(state.activeTab==='cli'||state.activeTab==='config'||state.activeTab==='desktop'))return 'iot'
     return state.activeTab==='gui'?'cli':state.activeTab
@@ -39,12 +52,19 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   if (!device) return null
   if (device.type === 'phone') return <PhoneDeviceWindow deviceId={device.id} />
 
-  const isEndDevice =
-    device.type === 'pc' ||
-    device.type === 'server' ||
-    device.type === 'laptop' ||
-    device.type === 'tablet' ||
-    device.type === 'smartphone'
+  const tabs: Array<{ id: WindowTab; label: string }> = [
+    { id: 'physical', label: t('Physical') },
+    { id: 'config', label: t('Config') },
+  ]
+  if (usesDesktop(device.type)) tabs.push({ id: 'desktop', label: t('Desktop') })
+  else if (usesCli(device.type)) tabs.push({ id: 'cli', label: t('CLI') })
+  if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
+  if (device.type === 'iot') tabs.push({ id: 'iot', label: t('IoT') })
+  if (device.type === 'security') tabs.push({ id: 'asdm', label: t('ASDM') })
+  if (device.type === 'wlc') tabs.push({ id: 'webadmin', label: t('GUI') })
+  tabs.push({ id: 'attributes', label: t('Attributes') })
+  if (device.importedRunningConfig?.length) tabs.push({ id: 'imported', label: t('Imported Config') })
+  const currentTab = tabs.some(tab => tab.id === activeTab) ? activeTab : 'config'
 
   return (
     <div className="pt-device-panel">
@@ -56,7 +76,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
               <Cisco3DIcon type={device.type} model={device.model} size={20} />
             </div>
             <span className="text-xs font-bold drop-shadow-xs truncate">
-              {device.config.hostname || device.name} ({device.model})
+              {device.name || device.config.hostname || device.model}
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -71,154 +91,37 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           </div>
         </div>
 
-        {/* Hardware Configuration Tabs with Generous Spacing */}
-        <div className="flex items-end px-4 pt-2.5 bg-[#d6dfe7] border-b border-[#94a3b8] flex-shrink-0 gap-2 overflow-x-auto">
-          {/* Physical Tab */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('physical')}
-            className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'physical'
-                ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-            }`}
-          >
-            {t('Physical')}
-          </button>
-
-          {/* Config Tab */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('config')}
-            className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'config'
-                ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-            }`}
-          >
-            {t('Config')}
-          </button>
-
-          {/* Services Tab (Server devices — service enablement: DNS, TFTP, UDP Echo, SNMP, Mail) */}
-          {device.type === 'server' && (
+        <div className="flex items-end px-1 pt-1 bg-[#d6dfe7] border-b border-[#94a3b8] flex-shrink-0 gap-0.5 overflow-x-auto" role="tablist">
+          {tabs.map(tab => (
             <button
+              key={tab.id}
               type="button"
-              onClick={() => setActiveTab('services')}
-              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-                activeTab === 'services'
-                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
+              role="tab"
+              data-device-tab={tab.id}
+              aria-selected={currentTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`min-h-[26px] whitespace-nowrap border border-b-0 px-3 py-1 text-[12px] transition cursor-pointer ${
+                currentTab === tab.id
+                  ? '-mb-px z-10 border-[#94a3b8] bg-[#eff2f7] text-[#111]'
+                  : 'border-[#94a3b8] bg-[#c3d0dc] text-[#333] hover:bg-[#cfdae4]'
               }`}
             >
-              {t('Services')}
+              {tab.label}
             </button>
-          )}
-
-          {/* IoT Tab (smart devices) */}
-          {device.type === 'iot' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('iot')}
-              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-                activeTab === 'iot'
-                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-              }`}
-            >
-              {t('IoT')}
-            </button>
-          )}
-
-          {/* CLI / Command Prompt Tab */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('cli')}
-            className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'cli' || activeTab === 'gui'
-                ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-            }`}
-          >
-            {isEndDevice ? t('Command Prompt') : t('CLI')}
-          </button>
-
-          {/* Desktop Tab (for End Devices) */}
-          {isEndDevice && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('desktop')}
-              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-                activeTab === 'desktop'
-                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-              }`}
-            >
-              {t('Desktop')}
-            </button>
-          )}
-
-          {/* ASDM Tab (for ASA Security Appliances) */}
-          {device.type === 'security' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('asdm')}
-              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-                activeTab === 'asdm'
-                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-              }`}
-            >
-              {t('ASDM')}
-            </button>
-          )}
-
-          {/* WLC Web GUI Tab */}
-          {device.type === 'wlc' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('webadmin')}
-              className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 transition cursor-pointer flex items-center gap-2 ${
-                activeTab === 'webadmin'
-                  ? 'bg-[#eff2f7] text-slate-900 border-[#94a3b8] -mb-[1px] z-10 shadow-sm'
-                  : 'bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0]'
-              }`}
-            >
-              {t('GUI')}
-            </button>
-          )}
-
-          {/* Programming Tab */}
-          <button
-            type="button"
-            onClick={() => alert('Programming Tab: Python and Blockly IoT scripting engine.')}
-            className="min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0] cursor-pointer"
-          >
-            {t('Programming')}
-          </button>
-
-          {device.importedRunningConfig?.length ? <button type="button" onClick={() => setActiveTab('imported')}
-            className={`min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 ${activeTab==='imported'?'bg-[#eff2f7] text-slate-900 border-[#94a3b8]':'bg-[#b8c7d6] text-slate-700 border-transparent'}`}>{t('Imported Config')}</button> : null}
-          {/* Attributes Tab */}
-          <button
-            type="button"
-            onClick={() => alert('Attributes Tab: Device power draw, rack placement and cost.')}
-            className="min-h-[42px] px-5 py-2 text-xs font-bold rounded-t-lg border-t-2 border-x-2 bg-[#b8c7d6] text-slate-700 border-transparent hover:bg-[#c6d3e0] cursor-pointer"
-          >
-            {t('Attributes')}
-          </button>
+          ))}
         </div>
 
-        {/* Tab Content Body with Spacious Padding */}
-        <div className="flex-1 overflow-hidden p-3 sm:p-4 bg-[#eff2f7] flex flex-col">
-          {(activeTab === 'cli' || activeTab === 'gui') && <CliTab deviceId={device.id} onSelectTab={setActiveTab} />}
-          {activeTab === 'config' && (device.type === 'wlc' ? <WlcConfigTab deviceId={device.id} /> : <ConfigTab deviceId={device.id} />)}
-          {activeTab === 'webadmin' && device.type === 'wlc' && <WlcWebTab deviceId={device.id} />}
-          {activeTab === 'services' && <ServicesTab deviceId={device.id} />}
-          {activeTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
-          {activeTab === 'desktop' && <DesktopTab deviceId={device.id} />}
-          {activeTab === 'physical' && <PhysicalTab deviceId={device.id} />}
-          {activeTab === 'asdm' && <AsdmTab deviceId={device.id} />}
-          {activeTab === 'imported' && <div className="flex-1 min-h-0 overflow-auto bg-white text-slate-900 p-4">
+        <div className="flex-1 overflow-hidden p-1 bg-[#eff2f7] flex flex-col">
+          {currentTab === 'cli' && <CliTab deviceId={device.id} onSelectTab={(tab) => setActiveTab(tab as WindowTab)} />}
+          {currentTab === 'config' && (device.type === 'wlc' ? <WlcConfigTab deviceId={device.id} /> : <ConfigTab deviceId={device.id} />)}
+          {currentTab === 'webadmin' && device.type === 'wlc' && <WlcWebTab deviceId={device.id} />}
+          {currentTab === 'services' && <ServicesTab deviceId={device.id} />}
+          {currentTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
+          {currentTab === 'desktop' && <DesktopTab deviceId={device.id} />}
+          {currentTab === 'physical' && <PhysicalTab deviceId={device.id} />}
+          {currentTab === 'asdm' && <AsdmTab deviceId={device.id} />}
+          {currentTab === 'attributes' && <AttributesTab deviceId={device.id} />}
+          {currentTab === 'imported' && <div className="flex-1 min-h-0 overflow-auto bg-white text-slate-900 p-4">
             <p className="text-sm mb-3">Original configuration from the imported file. Preserved commands may include features this simulator does not execute.</p>
             <h3 className="font-bold text-sm">Running configuration at import</h3><pre className="text-xs font-mono whitespace-pre-wrap p-3">{device.importedRunningConfig?.join('\n')}</pre>
             <h3 className="font-bold text-sm">Startup configuration at import</h3><pre className="text-xs font-mono whitespace-pre-wrap p-3">{device.importedStartupConfig?.join('\n')}</pre>
@@ -229,14 +132,44 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   )
 }
 
+function PhoneConfigTab({ deviceId }: { deviceId: string }) {
+  const { t } = useI18n()
+  const device = useNetworkStore(state => state.devices.find(item => item.id === deviceId))
+  const renameDevice = useNetworkStore(state => state.renameDevice)
+  if (!device) return null
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-auto bg-white p-2 text-[11px] text-[#222]">
+      <ConfigPageHeader title={t('Global Settings')} />
+      <div className="w-full max-w-[520px] space-y-2">
+        <SettingsRow label={t('Display Name')} htmlFor={`phone-display-name-${device.id}`}>
+          <input
+            id={`phone-display-name-${device.id}`}
+            type="text"
+            value={device.name}
+            onChange={(event) => renameDevice(device.id, event.target.value)}
+            onBlur={(event) => {
+              const value = event.target.value.trim()
+              if (!value) renameDevice(device.id, device.model)
+              else if (value !== event.target.value) renameDevice(device.id, value)
+            }}
+            className={configFieldInput}
+          />
+        </SettingsRow>
+        <p className="text-[#555]">{t('No configurable options for this device.')}</p>
+      </div>
+    </div>
+  )
+}
+
 function PhoneDeviceWindow({deviceId}: {deviceId:string}) {
   const {t}=useI18n()
-  const [tab,setTab]=useState<'gui'|'physical'|'config'>('gui')
+  const [tab,setTab]=useState<'gui'|'physical'|'config'|'attributes'>('gui')
   const device=useNetworkStore(state=>state.devices.find(device=>device.id===deviceId))
   if(!device)return null
+  const labels: Record<typeof tab, string> = { physical: t('Physical'), config: t('Config'), gui: t('GUI'), attributes: t('Attributes') }
   return <section className="pt-phone-content" aria-label={`${device.name} phone window`}>
-    <div className="phone-window-tabs" role="tablist">{(['physical','config','gui'] as const).map(value=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{value==='gui'?'GUI':value==='physical'?t('Physical'):t('Config')}</button>)}</div>
-    <div className="phone-window-body">{tab==='gui'?<PhoneGui deviceId={deviceId}/>:tab==='physical'?<PhysicalTab deviceId={deviceId}/>:<ConfigTab deviceId={deviceId}/>}</div>
+    <div className="phone-window-tabs" role="tablist">{(['physical','config','gui','attributes'] as const).map(value=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{labels[value]}</button>)}</div>
+    <div className="phone-window-body">{tab==='gui'?<PhoneGui deviceId={deviceId}/>:tab==='physical'?<PhysicalTab deviceId={deviceId}/>:tab==='config'?<PhoneConfigTab deviceId={deviceId}/>:<AttributesTab deviceId={deviceId}/>}</div>
   </section>
 }
 
@@ -790,16 +723,30 @@ function ConfigTab({ deviceId }: { deviceId: string }) {
   return device ? <ConfigSession key={device.id} device={device} /> : null
 }
 
-const configFieldLabel = 'mb-2 block text-xs font-medium text-slate-600'
-const configFieldInput = 'h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-mono text-slate-800 placeholder:text-slate-400 transition-colors focus:border-sky-600'
-const configFieldSelect = 'h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800 transition-colors focus:border-sky-600'
-const configButton = 'inline-flex min-h-[36px] items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
-const configPrimaryButton = 'inline-flex min-h-[36px] items-center justify-center rounded-md border border-sky-700 bg-sky-700 px-3 text-xs font-semibold text-white transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50'
+const configFieldLabel = 'mb-1 block text-[11px] text-[#222]'
+const configFieldInput = 'h-[22px] w-full min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none placeholder:text-[#777] focus:border-[#316ac5]'
+const configFieldSelect = 'h-[22px] w-full min-w-0 border border-[#7f7f7f] bg-white px-1 text-[11px] text-[#111] outline-none focus:border-[#316ac5]'
+const configButton = 'inline-flex h-[24px] min-w-[64px] items-center justify-center border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] transition-colors hover:bg-[#e2e2e2] disabled:cursor-not-allowed disabled:opacity-50'
+const configPrimaryButton = 'inline-flex h-[24px] min-w-[64px] items-center justify-center border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] transition-colors hover:bg-[#e2e2e2] disabled:cursor-not-allowed disabled:opacity-50'
 
 type ConfigTranslate = (key: string) => string
 type ConfigUpdateDevice = (deviceId: string, updates: Partial<NetworkDevice['config']>) => void
+type ConfigRenameDevice = (deviceId: string, name: string) => void
 type ConfigUpdatePort = (deviceId: string, portId: string, updates: Partial<NetworkDevice['ports'][number]>) => void
 type ConfigExecuteIos = (deviceId: string, command: string) => string
+
+function ConfigPageHeader({ title }: { title: string }) {
+  return <div className="mb-3 border border-[#a0a0a0] bg-[#ececec] px-3 py-1 text-center text-[11px] font-bold text-[#222]">{title}</div>
+}
+
+function AlgorithmRow({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-2">
+      <label htmlFor={htmlFor} className="pt-0.5 text-[11px] leading-[1.35] text-[#222]">{label}</label>
+      <div className="flex min-w-0 items-center gap-1.5">{children}</div>
+    </div>
+  )
+}
 
 function runIosSequence(execute: ConfigExecuteIos, deviceId: string, currentMode: NetworkDevice['currentCliMode'], commands: string[]): string {
   const prelude: string[] = []
@@ -814,9 +761,10 @@ function runIosSequence(execute: ConfigExecuteIos, deviceId: string, currentMode
 
 function ConfigSession({ device }: { device: NetworkDevice }) {
   const { t } = useI18n()
-  const { updatePortConfig, updateDeviceConfig, executeIosCommand } = useNetworkStore(useShallow(state => ({
+  const { updatePortConfig, updateDeviceConfig, renameDevice, executeIosCommand } = useNetworkStore(useShallow(state => ({
     updatePortConfig: state.updatePortConfig,
     updateDeviceConfig: state.updateDeviceConfig,
+    renameDevice: state.renameDevice,
     executeIosCommand: state.executeIosCommand,
   })))
 
@@ -826,20 +774,17 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
   const page = pages.find((candidate) => candidate.id === requestedPageId) ?? pages[0] ?? { id: 'settings', name: 'Settings', group: 'GLOBAL' as const }
   const pageId = page.id
   const commands = useMemo(() => equivalentIosCommands(device, pageId), [device, pageId])
+  const hasIosCommands = device.type === 'router' || device.type === 'switch' || device.type === 'security'
 
   return (
     <div className="@container flex h-full min-h-0 flex-1 overflow-hidden">
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white @md:flex-row">
-        <aside className="flex w-full flex-shrink-0 flex-col border-b border-slate-200 bg-slate-50 @md:w-60 @md:border-b-0 @md:border-r">
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Config')}</span>
-            <span className="min-w-0 truncate text-xs font-medium text-slate-400">{device.config.hostname || device.name}</span>
-          </div>
-          <div className="max-h-56 min-h-0 flex-1 overflow-y-auto p-2 @md:max-h-none">
+        <aside className="flex w-full flex-shrink-0 flex-col border-b border-[#a0a0a0] bg-[#f0f0f0] @md:w-48 @md:border-b-0 @md:border-r">
+          <div className="max-h-56 min-h-0 flex-1 overflow-y-auto px-1 py-1.5 @md:max-h-none">
             {groups.map((group) => (
-              <div key={group.id} data-config-group={group.id} className="mb-3 last:mb-0">
-                <p className="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{t(group.id)}</p>
-                <div className="space-y-1">
+              <div key={group.id} data-config-group={group.id} className="mb-2 last:mb-0">
+                <p className="px-2 pb-0.5 pt-1 text-[11px] font-bold text-[#333]">{t(group.id)}</p>
+                <div>
                   {group.pages.map((candidate) => {
                     const port = candidate.id.startsWith('interface:')
                       ? device.ports.find((item) => item.id === candidate.id.slice('interface:'.length))
@@ -852,21 +797,11 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
                         data-config-page={candidate.id}
                         onClick={() => setRequestedPageId(candidate.id)}
                         aria-current={selected ? 'true' : undefined}
-                        className={`flex h-9 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-xs font-medium transition-colors ${
-                          selected ? 'bg-sky-700 text-white' : 'text-slate-700 hover:bg-slate-200/70'
+                        className={`flex h-[22px] w-full items-center gap-2 px-2 text-left text-[11px] transition-colors ${
+                          selected ? 'bg-[#316ac5] text-white' : 'text-[#222] hover:bg-[#d8e4f0]'
                         }`}
                       >
                         <span className="truncate">{port ? candidate.name : t(candidate.name)}</span>
-                        {port && (
-                          <span
-                            aria-hidden="true"
-                            className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                              port.status === 'up' && port.adminStatus === 'up'
-                                ? selected ? 'bg-emerald-300' : 'bg-emerald-500'
-                                : selected ? 'bg-rose-300' : 'bg-rose-500'
-                            }`}
-                          />
-                        )}
                       </button>
                     )
                   })}
@@ -877,9 +812,9 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="@container min-h-0 flex-1 overflow-y-auto p-4 @sm:p-5">
+          <div className="@container min-h-0 flex-1 overflow-y-auto p-2 @sm:p-3">
             {pageId === 'settings' && (
-              <ConfigSettingsPage device={device} t={t} updateDeviceConfig={updateDeviceConfig} executeIosCommand={executeIosCommand} />
+              <ConfigSettingsPage device={device} t={t} updateDeviceConfig={updateDeviceConfig} renameDevice={renameDevice} executeIosCommand={executeIosCommand} />
             )}
             {pageId === 'algorithm-settings' && (
               <ConfigAlgorithmPage device={device} t={t} updateDeviceConfig={updateDeviceConfig} />
@@ -902,7 +837,7 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
               />
             )}
           </div>
-          <ConfigIosPane label={t('Equivalent IOS Commands')} emptyLabel={t('No Cisco IOS equivalent for this page')} commands={commands} />
+          {hasIosCommands && <ConfigIosPane label={t('Equivalent IOS Commands')} emptyLabel={t('No Cisco IOS equivalent for this page')} commands={commands} />}
         </div>
       </div>
     </div>
@@ -911,23 +846,33 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
 
 function ConfigIosPane({ label, emptyLabel, commands }: { label: string; emptyLabel: string; commands: string }) {
   return (
-    <section aria-label={label} className="flex-none border-t border-slate-200 bg-slate-50">
-      <div className="flex items-center justify-between px-4 pt-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
-      </div>
+    <section aria-label={label} className="flex-none border-t border-[#a0a0a0] bg-[#f0f0f0] px-1.5 py-1">
+      <div className="px-0.5 pb-0.5 text-[11px] font-bold text-[#222]">{label}</div>
       {commands ? (
-        <pre className="m-0 max-h-40 overflow-auto whitespace-pre px-4 pb-3 pt-1 font-mono text-[11px] leading-relaxed text-slate-700">{commands}</pre>
+        <pre className="m-0 max-h-28 overflow-auto whitespace-pre border border-[#a0a0a0] bg-white px-1.5 py-1 font-mono text-[10px] leading-[1.45] text-[#111]">{commands}</pre>
       ) : (
-        <p className="px-4 pb-3 pt-1 text-[11px] text-slate-500">{emptyLabel}</p>
+        <p className="m-0 border border-[#a0a0a0] bg-white px-1.5 py-1 text-[10px] text-[#555]">{emptyLabel}</p>
       )}
     </section>
   )
 }
 
-function ConfigSettingsPage({ device, t, updateDeviceConfig, executeIosCommand }: {
+function SettingsRow({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-2">
+      {htmlFor
+        ? <label htmlFor={htmlFor} className="text-[11px] text-[#222]">{label}</label>
+        : <span className="text-[11px] text-[#222]">{label}</span>}
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  )
+}
+
+function ConfigSettingsPage({ device, t, updateDeviceConfig, renameDevice, executeIosCommand }: {
   device: NetworkDevice
   t: ConfigTranslate
   updateDeviceConfig: ConfigUpdateDevice
+  renameDevice: ConfigRenameDevice
   executeIosCommand: ConfigExecuteIos
 }) {
   const [now, setNow] = useState(() => new Date())
@@ -942,9 +887,16 @@ function ConfigSettingsPage({ device, t, updateDeviceConfig, executeIosCommand }
   }, [])
 
   const pad = (value: number) => String(value).padStart(2, '0')
-  const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} ${now.toLocaleDateString(undefined, { weekday: 'short' })} ${now.toLocaleDateString(undefined, { month: 'short' })} ${now.getDate()}`
+  const weekday = now.toLocaleDateString('en-US', { weekday: 'short' })
+  const month = now.toLocaleDateString('en-US', { month: 'short' })
+  const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} ${weekday} ${month} ${now.getDate()} ${now.getFullYear()} UTC`
   const host = device.config.hostname || device.name
-  const showsGateway = device.type === 'pc' || device.type === 'laptop' || device.type === 'server'
+  const isIosDevice = device.type === 'router' || device.type === 'switch' || device.type === 'security'
+  const showsGateway = device.type === 'pc' || device.type === 'laptop' || device.type === 'server' ||
+    device.type === 'tablet' || device.type === 'smartphone' || device.type === 'printer'
+  const dhcpEnabled = device.config.dhcpEnabled === true
+  const hostPort = device.ports.find((port) => port.type === 'fastethernet' || port.type === 'gigabitethernet') ?? device.ports[0]
+  const ipv6Auto = hostPort ? hostPort.ipv6Autoconfig === true || hostPort.ipv6Dhcp === true : false
 
   const runningConfig = (): string | null => {
     const output = executeIosCommand(device.id, 'show running-config')
@@ -1019,89 +971,146 @@ function ConfigSettingsPage({ device, t, updateDeviceConfig, executeIosCommand }
   }
 
   return (
-    <div className="space-y-6">
-      <section aria-labelledby={`config-settings-${device.id}`}>
-        <h3 id={`config-settings-${device.id}`} className="text-sm font-semibold text-slate-900">{t('Settings')}</h3>
-        <div className="mt-4 grid grid-cols-1 gap-4 @sm:grid-cols-2">
-          <div className="min-w-0">
-            <label htmlFor={`config-hostname-${device.id}`} className={configFieldLabel}>{t('Hostname')}</label>
-            <input
-              id={`config-hostname-${device.id}`}
-              type="text"
-              value={device.config.hostname || ''}
-              onChange={(event) => updateDeviceConfig(device.id, { hostname: event.target.value })}
-              className={configFieldInput}
-            />
-          </div>
-          <div className="min-w-0">
-            <label htmlFor={`config-clock-${device.id}`} className={configFieldLabel}>{t('Device Clock')}</label>
-            <input
-              id={`config-clock-${device.id}`}
-              type="text"
-              readOnly
-              value={clock}
-              className={`${configFieldInput} bg-slate-50 text-slate-500`}
-            />
-          </div>
-          {showsGateway && (
-            <>
-              <div className="min-w-0">
-                <label htmlFor={`config-gateway-${device.id}`} className={configFieldLabel}>{t('Default Gateway')}</label>
+    <div className="space-y-3">
+      <ConfigPageHeader title={t('Global Settings')} />
+      <div className="w-full max-w-[620px] space-y-1.5">
+        <SettingsRow label={t('Display Name')} htmlFor={`config-display-name-${device.id}`}>
+          <input
+            id={`config-display-name-${device.id}`}
+            type="text"
+            value={device.name}
+            onChange={(event) => renameDevice(device.id, event.target.value)}
+            onBlur={(event) => {
+              const value = event.target.value.trim()
+              if (!value) renameDevice(device.id, device.config.hostname || device.model)
+              else if (value !== event.target.value) renameDevice(device.id, value)
+            }}
+            className={`${configFieldInput} max-w-[260px]`}
+          />
+        </SettingsRow>
+        {isIosDevice && (
+          <>
+            <SettingsRow label={t('Hostname')} htmlFor={`config-hostname-${device.id}`}>
+              <input
+                id={`config-hostname-${device.id}`}
+                type="text"
+                value={device.config.hostname || ''}
+                onChange={(event) => updateDeviceConfig(device.id, { hostname: event.target.value })}
+                className={configFieldInput}
+              />
+            </SettingsRow>
+            <SettingsRow label={t('NVRAM')}>
+              <button type="button" onClick={eraseNvram} disabled={!device.config.startupConfig} className={configButton}>{t('Erase')}</button>
+              <button type="button" onClick={saveToNvram} className={configPrimaryButton}>{t('Save')}</button>
+            </SettingsRow>
+            <SettingsRow label={t('Startup Config')}>
+              <button type="button" onClick={() => startupFileRef.current?.click()} className={configButton}>{t('Load...')}</button>
+              <button type="button" onClick={exportStartup} disabled={!device.config.startupConfig} className={configButton}>{t('Export...')}</button>
+            </SettingsRow>
+            <SettingsRow label={t('Running Config')}>
+              <button type="button" onClick={exportRunning} className={configButton}>{t('Export...')}</button>
+              <button type="button" onClick={() => mergeFileRef.current?.click()} className={configButton}>{t('Merge...')}</button>
+            </SettingsRow>
+            <SettingsRow label={t('Device Clock')} htmlFor={`config-clock-${device.id}`}>
+              <input
+                id={`config-clock-${device.id}`}
+                type="text"
+                readOnly
+                value={clock}
+                className={`${configFieldInput} bg-[#f4f4f4] text-[#444]`}
+              />
+            </SettingsRow>
+          </>
+        )}
+        {showsGateway && (
+          <>
+            <SettingsRow label={t('IP Configuration')}>
+              <label className="flex items-center gap-1 text-[11px] text-[#222]">
                 <input
-                  id={`config-gateway-${device.id}`}
-                  type="text"
-                  value={device.config.defaultGateway || ''}
-                  placeholder="e.g. 192.168.1.1"
-                  onChange={(event) => updateDeviceConfig(device.id, { defaultGateway: event.target.value.trim() })}
-                  className={configFieldInput}
+                  type="radio"
+                  name={`ip-mode-${device.id}`}
+                  checked={!dhcpEnabled}
+                  onChange={() => updateDeviceConfig(device.id, { dhcpEnabled: false, dhcpLease: undefined })}
+                  className="h-[13px] w-[13px] accent-[#316ac5]"
                 />
-              </div>
-              <div className="min-w-0">
-                <label htmlFor={`config-dns-${device.id}`} className={configFieldLabel}>{t('DNS Server')}</label>
+                {t('Static')}
+              </label>
+              <label className="flex items-center gap-1 text-[11px] text-[#222]">
                 <input
-                  id={`config-dns-${device.id}`}
-                  type="text"
-                  value={device.config.dnsServer || ''}
-                  placeholder="e.g. 8.8.8.8"
-                  onChange={(event) => updateDeviceConfig(device.id, { dnsServer: event.target.value.trim() })}
-                  className={configFieldInput}
+                  type="radio"
+                  name={`ip-mode-${device.id}`}
+                  checked={dhcpEnabled}
+                  onChange={() => useWorkspaceStore.getState().setStatus(useNetworkStore.getState().requestDhcp(device.id))}
+                  className="h-[13px] w-[13px] accent-[#316ac5]"
                 />
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section className="border-t border-slate-200 pt-5" aria-labelledby={`config-nvram-${device.id}`}>
-        <h3 id={`config-nvram-${device.id}`} className="text-sm font-semibold text-slate-900">{t('NVRAM')}</h3>
-        <div className="mt-4 space-y-3">
-          <div className="rounded-lg border border-slate-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-700">{t('Startup Config')}</span>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => startupFileRef.current?.click()} className={configButton}>{t('Load file to startup config')}</button>
-                <button type="button" onClick={exportStartup} disabled={!device.config.startupConfig} className={configButton}>{t('Export startup config to file')}</button>
-                <button type="button" onClick={eraseNvram} disabled={!device.config.startupConfig} className={configButton}>{t('Erase NVRAM')}</button>
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-500">{device.config.startupConfig ? t('Saved to NVRAM.') : '—'}</p>
-          </div>
-          <div className="rounded-lg border border-slate-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-700">{t('Running Config')}</span>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={saveToNvram} className={configPrimaryButton}>{t('Save Running config to NVRAM')}</button>
-                <button type="button" onClick={exportRunning} className={configButton}>{t('Export running config to file')}</button>
-                <button type="button" onClick={() => mergeFileRef.current?.click()} className={configButton}>{t('Merge file to running config')}</button>
-              </div>
-            </div>
-          </div>
-          <input ref={startupFileRef} type="file" accept=".cfg,.txt" className="hidden" onChange={(event) => { void loadStartupFile(event.target.files?.[0]); event.target.value = '' }} />
-          <input ref={mergeFileRef} type="file" accept=".cfg,.txt" className="hidden" onChange={(event) => { void mergeConfigFile(event.target.files?.[0]); event.target.value = '' }} />
-          <p role="status" aria-live="polite" className="min-h-[16px] text-xs font-medium text-emerald-700">{nvramNote}</p>
-          {mergeError && <p role="alert" className="text-xs font-semibold text-rose-700">{mergeError}</p>}
-        </div>
-      </section>
+                {t('DHCP')}
+              </label>
+            </SettingsRow>
+            <div className="pt-2 text-[11px] font-bold text-[#222]">{t('Gateway/DNS')}</div>
+            <SettingsRow label={t('Default Gateway')} htmlFor={`config-gateway-${device.id}`}>
+              <input
+                id={`config-gateway-${device.id}`}
+                type="text"
+                disabled={dhcpEnabled}
+                value={device.config.defaultGateway || ''}
+                placeholder="e.g. 192.168.1.1"
+                onChange={(event) => updateDeviceConfig(device.id, { defaultGateway: event.target.value.trim() })}
+                className={`${configFieldInput} max-w-[260px] disabled:bg-[#f4f4f4] disabled:text-[#777]`}
+              />
+            </SettingsRow>
+            <SettingsRow label={t('DNS Server')} htmlFor={`config-dns-${device.id}`}>
+              <input
+                id={`config-dns-${device.id}`}
+                type="text"
+                disabled={dhcpEnabled}
+                value={device.config.dnsServer || ''}
+                placeholder="e.g. 8.8.8.8"
+                onChange={(event) => updateDeviceConfig(device.id, { dnsServer: event.target.value.trim() })}
+                className={`${configFieldInput} max-w-[260px] disabled:bg-[#f4f4f4] disabled:text-[#777]`}
+              />
+            </SettingsRow>
+            <SettingsRow label={t('IPv6 Configuration')}>
+              <label className="flex items-center gap-1 text-[11px] text-[#222]">
+                <input
+                  type="radio"
+                  name={`ipv6-mode-${device.id}`}
+                  checked={!ipv6Auto}
+                  disabled={!hostPort}
+                  onChange={() => hostPort && useNetworkStore.getState().setIpv6HostMode(device.id, hostPort.id, 'static')}
+                  className="h-[13px] w-[13px] accent-[#316ac5]"
+                />
+                {t('Static')}
+              </label>
+              <label className="flex items-center gap-1 text-[11px] text-[#222]">
+                <input
+                  type="radio"
+                  name={`ipv6-mode-${device.id}`}
+                  checked={ipv6Auto}
+                  disabled={!hostPort}
+                  onChange={() => hostPort && useNetworkStore.getState().setIpv6HostMode(device.id, hostPort.id, 'auto')}
+                  className="h-[13px] w-[13px] accent-[#316ac5]"
+                />
+                {t('Auto Config')}
+              </label>
+            </SettingsRow>
+            <SettingsRow label={t('IPv6 Default Gateway')} htmlFor={`config-ipv6-gateway-${device.id}`}>
+              <input
+                id={`config-ipv6-gateway-${device.id}`}
+                type="text"
+                disabled={ipv6Auto}
+                value={device.config.ipv6DefaultGateway || ''}
+                placeholder="e.g. 2001:db8:1::1"
+                onChange={(event) => updateDeviceConfig(device.id, { ipv6DefaultGateway: event.target.value.trim() })}
+                className={`${configFieldInput} max-w-[260px] disabled:bg-[#f4f4f4] disabled:text-[#777]`}
+              />
+            </SettingsRow>
+          </>
+        )}
+      </div>
+      <input ref={startupFileRef} type="file" accept=".cfg,.txt" className="hidden" onChange={(event) => { void loadStartupFile(event.target.files?.[0]); event.target.value = '' }} />
+      <input ref={mergeFileRef} type="file" accept=".cfg,.txt" className="hidden" onChange={(event) => { void mergeConfigFile(event.target.files?.[0]); event.target.value = '' }} />
+      <p role="status" aria-live="polite" className="min-h-[14px] w-full max-w-[620px] text-[11px] font-medium text-[#2f6b2f]">{nvramNote}</p>
+      {mergeError && <p role="alert" className="w-full max-w-[620px] text-[11px] font-semibold text-[#a40000]">{mergeError}</p>}
     </div>
   )
 }
@@ -1112,24 +1121,33 @@ function ConfigAlgorithmPage({ device, t, updateDeviceConfig }: {
   updateDeviceConfig: ConfigUpdateDevice
 }) {
   const settings = algorithmSettings(device)
-  const fields = [
-    { key: 'halfOpenSessionMultiplier', label: 'Half Open Session Multiplier' },
-    { key: 'maximumConnections', label: 'Maximum number of TCP connections' },
-    { key: 'maximumOpenedSessions', label: 'Maximum number of opened TCP Sessions' },
-    { key: 'maximumRetransmissionTimeoutMs', label: 'Maximum retransmission timeout in milliseconds' },
-  ] as const
+  const fields = algorithmFields(device)
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-900">{t('Algorithm Settings')}</h3>
-      <div className="mt-4 grid grid-cols-1 gap-4 @sm:grid-cols-2">
+      <ConfigPageHeader title={t('Algorithm Settings')} />
+      <div className="w-full max-w-[620px] space-y-1.5">
+        <div className="mb-2 grid grid-cols-[240px_minmax(0,1fr)] items-center gap-2">
+          <label htmlFor={`config-algorithm-global-${device.id}`} className="flex items-center gap-2 text-[11px] text-[#222]">
+            <input
+              id={`config-algorithm-global-${device.id}`}
+              type="checkbox"
+              checked={settings.globalSettings}
+              onChange={(event) => updateDeviceConfig(device.id, {
+                algorithmSettings: { ...settings, globalSettings: event.target.checked },
+              })}
+              className="h-[13px] w-[13px] accent-[#316ac5]"
+            />
+            {t('Global Settings')}
+          </label>
+        </div>
         {fields.map((field) => (
-          <div key={field.key} className="min-w-0">
-            <label htmlFor={`config-algorithm-${field.key}-${device.id}`} className={configFieldLabel}>{t(field.label)}</label>
+          <AlgorithmRow key={field.key} label={t(field.label)} htmlFor={`config-algorithm-${field.key}-${device.id}`}>
             <input
               id={`config-algorithm-${field.key}-${device.id}`}
               type="number"
               min={0}
+              disabled={settings.globalSettings}
               value={settings[field.key]}
               onChange={(event) => {
                 const value = Number(event.target.value)
@@ -1137,9 +1155,9 @@ function ConfigAlgorithmPage({ device, t, updateDeviceConfig }: {
                   algorithmSettings: { ...settings, [field.key]: Number.isFinite(value) ? value : 0 },
                 })
               }}
-              className={configFieldInput}
+              className={`${configFieldInput} max-w-[180px] disabled:bg-[#f4f4f4] disabled:text-[#777]`}
             />
-          </div>
+          </AlgorithmRow>
         ))}
       </div>
     </div>
@@ -1182,7 +1200,7 @@ function ConfigStaticRoutesPage({ device, t, executeIosCommand }: {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-900">{t('Static Routes')}</h3>
+      <ConfigPageHeader title={t('Static Routes')} />
       <div className="mt-4 grid grid-cols-1 items-end gap-3 @sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <label htmlFor={`config-static-network-${device.id}`} className={configFieldLabel}>{t('Network')}</label>
@@ -1253,7 +1271,7 @@ function ConfigRipPage({ device, t, updateDeviceConfig }: {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-900">{t('RIP Routing')}</h3>
+      <ConfigPageHeader title={t('RIP')} />
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
           <label htmlFor={`config-rip-network-${device.id}`} className={configFieldLabel}>{t('Network')}</label>
@@ -1312,7 +1330,7 @@ function ConfigVlanDatabasePage({ device, t, executeIosCommand }: {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-900">{t('VLAN Configuration')}</h3>
+      <ConfigPageHeader title={t('VLAN Database')} />
       <div className="mt-4 grid grid-cols-1 items-end gap-3 @sm:grid-cols-[minmax(0,140px)_minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <label htmlFor={`config-vlan-number-${device.id}`} className={configFieldLabel}>{t('VLAN Number')}</label>
@@ -1374,10 +1392,10 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
+      <ConfigPageHeader title={port.name} />
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#c0c0c0] pb-2">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-slate-900">{port.name}</h3>
-          <p className="mt-1 truncate font-mono text-xs text-slate-500">MAC: {port.macAddress}</p>
+          <p className="truncate font-mono text-[11px] text-[#444]">MAC: {port.macAddress}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -1479,14 +1497,91 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
   )
 }
 
+function AttributesTab({ deviceId }: { deviceId: string }) {
+  const { t } = useI18n()
+  const device = useNetworkStore(state => state.devices.find(item => item.id === deviceId))
+  const focusDeviceWindow = useNetworkStore(state => state.focusDeviceWindow)
+  const [top, setTop] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const attributes = device ? deviceAttributes(device) : null
+  if (!device || !attributes) return null
+
+  const format = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(2))
+  const rows: Array<[string, string]> = [
+    [t('MTBF'), format(attributes.mtbf)],
+    [t('Cost'), format(attributes.cost)],
+    [t('Power Source'), String(attributes.powerSource)],
+    [t('Rack Units'), String(attributes.rackUnits)],
+    [t('Wattage'), format(attributes.wattage)],
+  ]
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-[#f0f0f0] text-[11px] text-[#111]">
+      <div className="min-h-0 flex-1 overflow-auto p-2">
+        <table data-refresh={refreshKey} className="w-full border-collapse border border-[#a0a0a0] bg-white">
+          <tbody>
+            {rows.map(([label, value]) => (
+              <tr key={label}>
+                <th scope="row" data-attribute={label} className="w-1/2 border border-[#c0c0c0] bg-[#f4f4ea] px-2 py-[3px] text-left font-normal">{label}</th>
+                <td className="border border-[#c0c0c0] bg-white px-2 py-[3px] font-mono">{value}</td>
+              </tr>
+            ))}
+            <tr>
+              <th colSpan={2} className="border border-[#c0c0c0] bg-[#e8e8df] px-2 py-[3px] text-left font-bold">{t('Properties')}</th>
+            </tr>
+            <tr>
+              <th scope="row" className="w-1/2 border border-[#c0c0c0] bg-[#f4f4ea] px-2 py-[3px] text-left font-normal">PT_MODEL</th>
+              <td className="border border-[#c0c0c0] bg-white px-2 py-[3px] font-mono">{attributes.ptModel}</td>
+            </tr>
+            <tr>
+              <th scope="row" className="w-1/2 border border-[#c0c0c0] bg-[#f4f4ea] px-2 py-[3px] text-left font-normal">PT_VERSION</th>
+              <td className="border border-[#c0c0c0] bg-white px-2 py-[3px] font-mono">{attributes.ptVersion}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-none items-center justify-between border-t border-[#a0a0a0] bg-[#f0f0f0] px-2 py-1">
+        <label className="inline-flex items-center gap-1.5 text-[11px]">
+          <input
+            type="checkbox"
+            checked={top}
+            onChange={(event) => {
+              setTop(event.target.checked)
+              if (event.target.checked) focusDeviceWindow(device.id)
+            }}
+            className="h-3.5 w-3.5"
+          />
+          {t('Top')}
+        </label>
+        <button type="button" onClick={() => setRefreshKey(key => key + 1)} className={configButton}>{t('Refresh')}</button>
+      </div>
+    </div>
+  )
+}
+
 function ServicesTab({ deviceId }: { deviceId: string }) {
   const device = useNetworkStore(state => state.devices.find(item => item.id === deviceId))
   return device ? <ServicesSession key={device.id} device={device} /> : null
 }
 
-function ServicesSession({ device }: { device: NetworkDevice }) {
+type ServerService = 'http' | 'dhcp' | 'dns' | 'tftp' | 'email' | 'iot' | 'snmp' | 'udp-echo'
+
+const SERVER_SERVICES: Array<{ id: ServerService; label: string }> = [
+  { id: 'http', label: 'HTTP' },
+  { id: 'dhcp', label: 'DHCP' },
+  { id: 'dns', label: 'DNS' },
+  { id: 'tftp', label: 'TFTP' },
+  { id: 'email', label: 'Email' },
+  { id: 'iot', label: 'IoT Server' },
+  { id: 'snmp', label: 'SNMP' },
+  { id: 'udp-echo', label: 'UDP Echo' },
+]
+
+function ServicesSession({ device, initialService, onBack }: { device: NetworkDevice; initialService?: string; onBack?: () => void }) {
   const {t}=useI18n()
   const { updateDeviceConfig } = useNetworkStore(useShallow(state => ({ updateDeviceConfig: state.updateDeviceConfig })))
+  const [service, setService] = useState<ServerService>(() =>
+    SERVER_SERVICES.some((entry) => entry.id === initialService) ? initialService as ServerService : 'http')
   const [dnsDraftDomain, setDnsDraftDomain] = useState('')
   const [dnsDraftIp, setDnsDraftIp] = useState('')
   const [dnsDraftError, setDnsDraftError] = useState('')
@@ -1497,17 +1592,121 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
   const [tftpFileError, setTftpFileError] = useState('')
   const [snmpCommunityDraft, setSnmpCommunityDraft] = useState('classroom')
   const [snmpConfigError, setSnmpConfigError] = useState('')
+  const [poolName, setPoolName] = useState('')
+  const [poolStart, setPoolStart] = useState('')
+  const [poolMask, setPoolMask] = useState('255.255.255.0')
+  const [poolGateway, setPoolGateway] = useState('')
+  const [poolDns, setPoolDns] = useState('')
+  const [poolError, setPoolError] = useState('')
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-white p-4 rounded-xl border border-[#94a3b8] shadow-xs space-y-4">
-            <>
-            <section className="pt-4 border-t border-[#e2e8f0] space-y-3" aria-labelledby={`snmp-config-${device.id}`}>
+    <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border border-[#94a3b8] bg-white shadow-xs">
+      {onBack && (
+        <div className="flex flex-none items-center border-b border-[#a0a0a0] bg-[#f0f0f0] px-2 py-1">
+          <button type="button" onClick={onBack} className={configButton}>{t('Back to Desktop')}</button>
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1">
+        <nav aria-label={t('Server services')} role="tablist" className="w-[150px] flex-shrink-0 overflow-y-auto border-r border-[#a0a0a0] bg-[#f0f0f0] px-1 py-1.5">
+          {SERVER_SERVICES.map((entry) => {
+            const selected = service === entry.id
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                data-service={entry.id}
+                onClick={() => setService(entry.id)}
+                className={`flex h-[22px] w-full items-center px-2 text-left text-[11px] transition-colors ${selected ? 'bg-[#316ac5] text-white' : 'text-[#222] hover:bg-[#d8e4f0]'}`}
+              >
+                {t(entry.label)}
+              </button>
+            )
+          })}
+        </nav>
+        <div role="tabpanel" className="min-h-0 min-w-0 flex-1 overflow-y-auto p-2">
+          {service === 'http' && (
+            <section className="max-w-[760px] space-y-2" aria-labelledby={`http-config-${device.id}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 id={`snmp-config-${device.id}`} className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('SNMP Service')}</h4>
-                  <p className="mt-1 text-xs text-slate-500">{t('SNMP v2c read-only communities')}</p>
+                  <h4 id={`http-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('HTTP')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('The page at / is served from this HTML.')}</p>
                 </div>
-                <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-                  <input type="checkbox" checked={(device.config.snmpCommunities?.length ?? 0) > 0} onChange={event => updateDeviceConfig(device.id, { snmpCommunities: event.target.checked ? device.config.snmpCommunities?.length ? device.config.snmpCommunities : ['classroom'] : [] })} className="h-4 w-4 accent-sky-600" />
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                  <input type="checkbox" checked={device.config.httpServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { httpServiceEnabled: event.target.checked })} className="h-[13px] w-[13px] accent-[#316ac5]" />
+                  {t('Enable HTTP Service')}
+                </label>
+              </div>
+              <label className="block text-[11px] text-[#222]">
+                {t('HTML Content')}
+                <textarea
+                  value={device.config.htmlContent ?? ''}
+                  onChange={event => updateDeviceConfig(device.id, { htmlContent: event.target.value })}
+                  rows={12}
+                  placeholder={'<h1>wireX Web Server</h1>\n<p>HTTP service operational.</p>'}
+                  className="mt-0.5 min-h-[220px] w-full resize-y border border-[#7f7f7f] bg-white px-1.5 py-1 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]"
+                />
+              </label>
+            </section>
+          )}
+          {service === 'dhcp' && (
+            <section className="max-w-[760px] space-y-2" aria-labelledby={`dhcp-config-${device.id}`}>
+              <div>
+                <h4 id={`dhcp-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('DHCP')}</h4>
+                <p className="mt-0.5 text-[11px] text-[#555]">{t('DHCP Pools')}</p>
+              </div>
+              <form className="grid grid-cols-2 gap-x-2 gap-y-1.5" onSubmit={event => {
+                event.preventDefault()
+                const name = poolName.trim()
+                const startIp = poolStart.trim()
+                const mask = poolMask.trim()
+                const gateway = poolGateway.trim()
+                const dns = poolDns.trim()
+                if (!name || !isValidIpv4(startIp) || !isValidIpv4(mask) || (gateway && !isValidIpv4(gateway)) || (dns && !isValidIpv4(dns))) {
+                  setPoolError(t('Invalid DHCP pool. Enter a pool name, a starting IPv4 address, and a subnet mask.'))
+                  return
+                }
+                const pools = (device.config.dhcpPools ?? []).filter(pool => pool.name !== name)
+                updateDeviceConfig(device.id, {
+                  dhcpPools: [...pools, { name, network: getNetworkAddress(startIp, mask), mask, startIp, defaultRouter: gateway || undefined, dnsServer: dns || undefined }],
+                })
+                setPoolName('')
+                setPoolStart('')
+                setPoolGateway('')
+                setPoolDns('')
+                setPoolError('')
+              }}>
+                <label className="block text-[11px] text-[#222]">{t('Pool Name')}<input value={poolName} onChange={event => setPoolName(event.target.value)} className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <label className="block text-[11px] text-[#222]">{t('Starting IP')}<input value={poolStart} onChange={event => setPoolStart(event.target.value)} placeholder="192.168.10.100" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <label className="block text-[11px] text-[#222]">{t('Subnet Mask')}<input value={poolMask} onChange={event => setPoolMask(event.target.value)} className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <label className="block text-[11px] text-[#222]">{t('Default Gateway')}<input value={poolGateway} onChange={event => setPoolGateway(event.target.value)} placeholder="192.168.10.1" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <label className="block text-[11px] text-[#222]">{t('DNS Server')}<input value={poolDns} onChange={event => setPoolDns(event.target.value)} placeholder="192.168.10.2" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <button type="submit" className="h-[24px] justify-self-start self-end border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add pool')}</button>
+              </form>
+              {poolError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{poolError}</p>}
+              <div className="space-y-2">
+                {(device.config.dhcpPools ?? []).map((pool, index) => (
+                  <div key={`${pool.name}-${index}`} className="flex flex-wrap items-center gap-2 border border-[#c8c8c8] p-1.5 text-[11px]">
+                    <span className="font-mono font-bold text-[#111]">{pool.name}</span>
+                    <span className="font-mono text-[#555]">{pool.startIp ?? pool.network} / {pool.mask}</span>
+                    {pool.defaultRouter && <span className="font-mono text-[#555]">GW {pool.defaultRouter}</span>}
+                    {pool.dnsServer && <span className="font-mono text-[#555]">DNS {pool.dnsServer}</span>}
+                    <button type="button" onClick={() => updateDeviceConfig(device.id, { dhcpPools: (device.config.dhcpPools ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="ml-auto h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#7f1d1d] hover:bg-[#e2e2e2]">{t('Remove')}</button>
+                  </div>
+                ))}
+                {(device.config.dhcpPools ?? []).length === 0 && <p className="text-[11px] text-[#555]">{t('No DHCP pools configured.')}</p>}
+              </div>
+            </section>
+          )}
+          {service === 'snmp' && (
+            <section className="space-y-2" aria-labelledby={`snmp-config-${device.id}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 id={`snmp-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('SNMP Service')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('SNMP v2c read-only communities')}</p>
+                </div>
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                  <input type="checkbox" checked={(device.config.snmpCommunities?.length ?? 0) > 0} onChange={event => updateDeviceConfig(device.id, { snmpCommunities: event.target.checked ? device.config.snmpCommunities?.length ? device.config.snmpCommunities : ['classroom'] : [] })} className="h-[13px] w-[13px] accent-[#316ac5]" />
                   {t('Enable SNMP Service')}
                 </label>
               </div>
@@ -1523,36 +1722,38 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
                 setSnmpCommunityDraft('')
                 setSnmpConfigError('')
               }}>
-                <label className="block text-xs font-semibold text-slate-700">{t('Read-only community')}<input value={snmpCommunityDraft} onChange={event => setSnmpCommunityDraft(event.target.value)} maxLength={64} autoComplete="off" className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 font-mono text-xs" /></label>
-                <button type="submit" className="min-h-[40px] rounded border border-sky-700 bg-sky-700 px-4 text-xs font-bold text-white hover:bg-sky-800">{t('Add community')}</button>
+                <label className="block text-[11px] text-[#222]">{t('Read-only community')}<input value={snmpCommunityDraft} onChange={event => setSnmpCommunityDraft(event.target.value)} maxLength={64} autoComplete="off" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add community')}</button>
               </form>
-              {snmpConfigError && <p role="alert" className="text-xs font-semibold text-rose-700">{snmpConfigError}</p>}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <label className="block text-xs font-semibold text-slate-700">{t('System contact')}<input value={device.config.snmpSystemContact ?? ''} maxLength={255} onChange={event => updateDeviceConfig(device.id, { snmpSystemContact: event.target.value })} className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 text-xs" /></label>
-                <label className="block text-xs font-semibold text-slate-700">{t('System location')}<input value={device.config.snmpSystemLocation ?? ''} maxLength={255} onChange={event => updateDeviceConfig(device.id, { snmpSystemLocation: event.target.value })} className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 text-xs" /></label>
+              {snmpConfigError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{snmpConfigError}</p>}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                <label className="block text-[11px] text-[#222]">{t('System contact')}<input value={device.config.snmpSystemContact ?? ''} maxLength={255} onChange={event => updateDeviceConfig(device.id, { snmpSystemContact: event.target.value })} className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 text-xs" /></label>
+                <label className="block text-[11px] text-[#222]">{t('System location')}<input value={device.config.snmpSystemLocation ?? ''} maxLength={255} onChange={event => updateDeviceConfig(device.id, { snmpSystemLocation: event.target.value })} className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 text-xs" /></label>
               </div>
-              <div className="flex flex-wrap gap-2">{(device.config.snmpCommunities ?? []).map(community => <span key={community} className="inline-flex items-center gap-2 rounded border border-slate-300 px-2 py-1 font-mono text-xs">{community} · RO<button type="button" aria-label={`${t('Remove')} ${community}`} onClick={() => updateDeviceConfig(device.id, { snmpCommunities: (device.config.snmpCommunities ?? []).filter(item => item !== community) })} className="font-sans font-bold text-rose-700">×</button></span>)}</div>
-              {(device.config.snmpCommunities ?? []).length === 0 && <p className="text-xs text-slate-500">{t('No SNMP communities configured.')}</p>}
+              <div className="flex flex-wrap gap-1.5">{(device.config.snmpCommunities ?? []).map(community => <span key={community} className="inline-flex items-center gap-2 border border-[#c8c8c8] px-1.5 py-0.5 font-mono text-[11px]">{community} · RO<button type="button" aria-label={`${t('Remove')} ${community}`} onClick={() => updateDeviceConfig(device.id, { snmpCommunities: (device.config.snmpCommunities ?? []).filter(item => item !== community) })} className="font-sans font-bold text-rose-700">×</button></span>)}</div>
+              {(device.config.snmpCommunities ?? []).length === 0 && <p className="text-[11px] text-[#555]">{t('No SNMP communities configured.')}</p>}
             </section>
-            <section className="pt-4 border-t border-[#e2e8f0] space-y-4" aria-labelledby={`dns-config-${device.id}`}>
+          )}
+          {service === 'dns' && (
+            <section className="space-y-2" aria-labelledby={`dns-config-${device.id}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 id={`dns-config-${device.id}`} className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('DNS Service')}</h4>
-                  <p className="text-xs text-slate-500 mt-1">{t('DNS Records')}</p>
+                  <h4 id={`dns-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('DNS Service')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('DNS Records')}</p>
                 </div>
-                <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
                   <input
                     type="checkbox"
                     checked={device.config.dnsServiceEnabled === true}
                     onChange={event => updateDeviceConfig(device.id, { dnsServiceEnabled: event.target.checked })}
-                    className="h-4 w-4 accent-sky-600"
+                    className="h-[13px] w-[13px] accent-[#316ac5]"
                   />
                   {t('Enable DNS Service')}
                 </label>
               </div>
 
               <form
-                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-end"
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2"
                 onSubmit={event => {
                   event.preventDefault()
                   const domain = dnsDraftDomain.trim().toLowerCase().replace(/\.$/, '')
@@ -1569,44 +1770,46 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
                   setDnsDraftError('')
                 }}
               >
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="block text-[11px] text-[#222]">
                   {t('Domain name')}
-                  <input value={dnsDraftDomain} onChange={event => setDnsDraftDomain(event.target.value)} placeholder="www.example.test" className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 font-mono text-xs" />
+                  <input value={dnsDraftDomain} onChange={event => setDnsDraftDomain(event.target.value)} placeholder="www.example.test" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
                 </label>
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="block text-[11px] text-[#222]">
                   {t('IPv4 address')}
-                  <input value={dnsDraftIp} onChange={event => setDnsDraftIp(event.target.value)} placeholder="192.168.1.100" className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 font-mono text-xs" />
+                  <input value={dnsDraftIp} onChange={event => setDnsDraftIp(event.target.value)} placeholder="192.168.1.100" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
                 </label>
-                <button type="submit" className="min-h-[40px] rounded border border-sky-700 bg-sky-700 px-4 text-xs font-bold text-white hover:bg-sky-800">{t('Add record')}</button>
+                <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add record')}</button>
               </form>
-              {dnsDraftError && <p role="alert" className="text-xs font-semibold text-rose-700">{dnsDraftError}</p>}
+              {dnsDraftError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{dnsDraftError}</p>}
 
               <div className="space-y-2">
                 {(device.config.dnsRecords ?? []).map((record, index) => (
-                  <div key={`${record.domain}-${index}`} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-center rounded border border-slate-200 p-2">
+                  <div key={`${record.domain}-${index}`} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 items-center border border-[#c8c8c8] p-2">
                     <input aria-label={`${t('Domain name')} ${index + 1}`} value={record.domain} onChange={event => {
                       const dnsRecords = [...(device.config.dnsRecords ?? [])]
                       dnsRecords[index] = { ...record, domain: event.target.value }
                       updateDeviceConfig(device.id, { dnsRecords })
-                    }} className="min-h-[38px] min-w-0 rounded border border-slate-300 px-2 font-mono text-xs" />
+                    }} className="h-[22px] min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
                     <input aria-label={`${t('IPv4 address')} ${index + 1}`} value={record.ip} onChange={event => {
                       const dnsRecords = [...(device.config.dnsRecords ?? [])]
                       dnsRecords[index] = { ...record, ip: event.target.value }
                       updateDeviceConfig(device.id, { dnsRecords })
-                    }} className="min-h-[38px] min-w-0 rounded border border-slate-300 px-2 font-mono text-xs" />
-                    <button type="button" onClick={() => updateDeviceConfig(device.id, { dnsRecords: (device.config.dnsRecords ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="min-h-[38px] rounded border border-slate-300 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50">{t('Remove')}</button>
+                    }} className="h-[22px] min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                    <button type="button" onClick={() => updateDeviceConfig(device.id, { dnsRecords: (device.config.dnsRecords ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#7f1d1d] hover:bg-[#e2e2e2]">{t('Remove')}</button>
                   </div>
                 ))}
               </div>
             </section>
-            <section className="pt-4 border-t border-[#e2e8f0] space-y-3" aria-labelledby={`udp-echo-config-${device.id}`}>
+          )}
+          {service === 'udp-echo' && (
+            <section className="space-y-2" aria-labelledby={`udp-echo-config-${device.id}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 id={`udp-echo-config-${device.id}`} className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('UDP Echo Service')}</h4>
-                  <p className="text-xs text-slate-500 mt-1">{t('UDP Echo listens on configured ports and returns the received payload.')}</p>
+                  <h4 id={`udp-echo-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('UDP Echo Service')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('UDP Echo listens on configured ports and returns the received payload.')}</p>
                 </div>
-                <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-                  <input type="checkbox" checked={device.config.udpEchoServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { udpEchoServiceEnabled: event.target.checked, udpEchoPorts: device.config.udpEchoPorts ?? [7] })} className="h-4 w-4 accent-sky-600" />
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                  <input type="checkbox" checked={device.config.udpEchoServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { udpEchoServiceEnabled: event.target.checked, udpEchoPorts: device.config.udpEchoPorts ?? [7] })} className="h-[13px] w-[13px] accent-[#316ac5]" />
                   {t('Enable UDP Echo')}
                 </label>
               </div>
@@ -1622,20 +1825,22 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
                 setUdpEchoPortDraft('')
                 setUdpEchoPortError('')
               }}>
-                <label className="block text-xs font-semibold text-slate-700">{t('UDP listening port')}<input aria-label={t('UDP listening port')} type="number" min={1} max={65535} value={udpEchoPortDraft} onChange={event => setUdpEchoPortDraft(event.target.value)} className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 font-mono text-xs" /></label>
-                <button type="submit" className="min-h-[40px] rounded border border-sky-700 bg-sky-700 px-4 text-xs font-bold text-white hover:bg-sky-800">{t('Add port')}</button>
+                <label className="block text-[11px] text-[#222]">{t('UDP listening port')}<input aria-label={t('UDP listening port')} type="number" min={1} max={65535} value={udpEchoPortDraft} onChange={event => setUdpEchoPortDraft(event.target.value)} className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add port')}</button>
               </form>
-              {udpEchoPortError && <p role="alert" className="text-xs font-semibold text-rose-700">{udpEchoPortError}</p>}
-              <div className="flex flex-wrap gap-2">{(device.config.udpEchoPorts ?? [7]).map(port => <span key={port} className="inline-flex items-center gap-2 rounded border border-slate-300 px-2 py-1 font-mono text-xs">UDP/{port}<button type="button" aria-label={`${t('Remove')} UDP ${port}`} onClick={() => updateDeviceConfig(device.id, { udpEchoPorts: (device.config.udpEchoPorts ?? [7]).filter(item => item !== port) })} className="font-sans font-bold text-rose-700">×</button></span>)}</div>
+              {udpEchoPortError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{udpEchoPortError}</p>}
+              <div className="flex flex-wrap gap-1.5">{(device.config.udpEchoPorts ?? [7]).map(port => <span key={port} className="inline-flex items-center gap-2 border border-[#c8c8c8] px-1.5 py-0.5 font-mono text-[11px]">UDP/{port}<button type="button" aria-label={`${t('Remove')} UDP ${port}`} onClick={() => updateDeviceConfig(device.id, { udpEchoPorts: (device.config.udpEchoPorts ?? [7]).filter(item => item !== port) })} className="font-sans font-bold text-rose-700">×</button></span>)}</div>
             </section>
-            <section className="pt-4 border-t border-[#e2e8f0] space-y-3" aria-labelledby={`tftp-config-${device.id}`}>
+          )}
+          {service === 'tftp' && (
+            <section className="space-y-2" aria-labelledby={`tftp-config-${device.id}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h4 id={`tftp-config-${device.id}`} className="text-xs font-bold text-slate-800 uppercase tracking-wider">{t('TFTP Service')}</h4>
-                  <p className="text-xs text-slate-500 mt-1">{t('TFTP serves files in 512-byte blocks over UDP port 69.')}</p>
+                  <h4 id={`tftp-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('TFTP Service')}</h4>
+                  <p className="mt-0.5 text-[11px] text-[#555]">{t('TFTP serves files in 512-byte blocks over UDP port 69.')}</p>
                 </div>
-                <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-                  <input type="checkbox" checked={device.config.tftpServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { tftpServiceEnabled: event.target.checked })} className="h-4 w-4 accent-sky-600" />
+                <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                  <input type="checkbox" checked={device.config.tftpServiceEnabled === true} onChange={event => updateDeviceConfig(device.id, { tftpServiceEnabled: event.target.checked })} className="h-[13px] w-[13px] accent-[#316ac5]" />
                   {t('Enable TFTP Service')}
                 </label>
               </div>
@@ -1652,25 +1857,27 @@ function ServicesSession({ device }: { device: NetworkDevice }) {
                 setTftpFileDraftContents('')
                 setTftpFileError('')
               }}>
-                <label className="block text-xs font-semibold text-slate-700">{t('Filename')}<input value={tftpFileDraftName} onChange={event => setTftpFileDraftName(event.target.value)} placeholder="startup.cfg" className="mt-1 w-full min-h-[40px] rounded border border-[#94a3b8] bg-[#f8fafc] px-3 font-mono text-xs" /></label>
-                <label className="block text-xs font-semibold text-slate-700">{t('File contents')}<textarea value={tftpFileDraftContents} onChange={event => setTftpFileDraftContents(event.target.value)} rows={4} className="mt-1 w-full min-h-[96px] resize-y rounded border border-[#94a3b8] bg-[#f8fafc] px-3 py-2 font-mono text-xs" /></label>
-                <button type="submit" className="min-h-[40px] justify-self-start rounded border border-sky-700 bg-sky-700 px-4 text-xs font-bold text-white hover:bg-sky-800">{t('Add file')}</button>
+                <label className="block text-[11px] text-[#222]">{t('Filename')}<input value={tftpFileDraftName} onChange={event => setTftpFileDraftName(event.target.value)} placeholder="startup.cfg" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <label className="block text-[11px] text-[#222]">{t('File contents')}<textarea value={tftpFileDraftContents} onChange={event => setTftpFileDraftContents(event.target.value)} rows={4} className="mt-0.5 min-h-[96px] w-full resize-y border border-[#7f7f7f] bg-white px-1.5 py-1 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+                <button type="submit" className="h-[24px] justify-self-start border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add file')}</button>
               </form>
-              {tftpFileError && <p role="alert" className="text-xs font-semibold text-rose-700">{tftpFileError}</p>}
+              {tftpFileError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{tftpFileError}</p>}
               <div className="space-y-2">
                 {(device.config.tftpFiles ?? []).map((file, index) => (
-                  <details key={`${file.name}-${index}`} className="rounded border border-slate-200 bg-white p-2">
+                  <details key={`${file.name}-${index}`} className="border border-[#c8c8c8] bg-white p-2">
                     <summary className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700"><span className="font-mono">{file.name}</span><span className="text-slate-500">{new TextEncoder().encode(file.contents).byteLength} {t('bytes')}</span></summary>
                     <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700">{file.contents}</pre>
-                    <button type="button" aria-label={`${t('Remove')} ${file.name}`} onClick={() => updateDeviceConfig(device.id, { tftpFiles: (device.config.tftpFiles ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="mt-2 min-h-[34px] rounded border border-slate-300 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50">{t('Remove')}</button>
+                    <button type="button" aria-label={`${t('Remove')} ${file.name}`} onClick={() => updateDeviceConfig(device.id, { tftpFiles: (device.config.tftpFiles ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="mt-2 h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#7f1d1d] hover:bg-[#e2e2e2]">{t('Remove')}</button>
                   </details>
                 ))}
-                {(device.config.tftpFiles ?? []).length === 0 && <p className="text-xs text-slate-500">{t('No TFTP files configured.')}</p>}
+                {(device.config.tftpFiles ?? []).length === 0 && <p className="text-[11px] text-[#555]">{t('No TFTP files configured.')}</p>}
               </div>
             </section>
-            <EmailServiceSettings device={device} />
-            <IotServiceSection device={device} />
-    </>
+          )}
+          {service === 'email' && <EmailServiceSettings device={device} />}
+          {service === 'iot' && <IotServiceSection device={device} />}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1707,7 +1914,8 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
     requestTftpRead: state.requestTftpRead, requestSnmpQuery: state.requestSnmpQuery, udpTransactions: state.udpTransactions,
     dnsTransactions: state.dnsTransactions, dhcpTransactions: state.dhcpTransactions, simulationWarning: state.simulationWarning,
   })))
-  const [activeApp, setActiveApp] = useState<'launcher' | 'ip' | 'wireless' | 'cmd' | 'terminal' | 'browser' | 'tftp' | 'snmp' | 'email' | 'traffic'>('launcher')
+  const [activeApp, setActiveApp] = useState<'launcher' | 'ip' | 'wireless' | 'cmd' | 'terminal' | 'browser' | 'tftp' | 'snmp' | 'email' | 'traffic' | 'services'>('launcher')
+  const [serviceApp, setServiceApp] = useState<ServerService>('http')
   const [ipv6HostDraft, setIpv6HostDraft] = useState<{ portId: string; text: string } | null>(null)
   const [leaseClockNow,setLeaseClockNow]=useState(0)
   const [urlInput, setUrlInput] = useState('http://192.168.100.10')
@@ -2594,6 +2802,11 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
     )
   }
 
+  // 4b. Server service app (HTTP, DHCP, DNS, TFTP, Email, IoT, SNMP)
+  if (activeApp === 'services') {
+    return <ServicesSession device={device} initialService={serviceApp} onBack={() => setActiveApp('launcher')} />
+  }
+
   // 5. Web Browser App
   if (activeApp === 'browser') {
     const transaction = httpTransactions.find(item => item.requestId === activeHttpRequestId)
@@ -2725,8 +2938,23 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
           <span className="text-xs font-bold text-slate-800">{t('IP Configuration')}</span>
         </button>
 
+        {device.type === 'server' && SERVER_SERVICES.filter((entry) => entry.id !== 'udp-echo').map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            data-desktop-service={entry.id}
+            onClick={() => { setServiceApp(entry.id); setActiveApp('services') }}
+            className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
+          >
+            <div className="w-12 h-12 rounded-xl bg-cyan-100 border border-cyan-300 text-cyan-800 flex items-center justify-center shadow-xs font-bold text-[10px] uppercase">
+              {entry.id === 'email' ? 'MAIL' : entry.id === 'iot' ? 'IoT' : entry.id.toUpperCase()}
+            </div>
+            <span className="text-xs font-bold text-slate-800">{t(entry.label)}</span>
+          </button>
+        ))}
+
         {/* PC Wireless App */}
-        <button
+        {(device.type === 'pc' || device.type === 'laptop') && <button
           type="button"
           onClick={() => setActiveApp('wireless')}
           className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
@@ -2740,7 +2968,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
             </svg>
           </div>
           <span className="text-xs font-bold text-slate-800">{t('PC Wireless')}</span>
-        </button>
+        </button>}
 
         {/* Command Prompt App */}
         <button
@@ -2755,7 +2983,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
         </button>
 
         {/* Terminal Console App */}
-        <button
+        {(device.type === 'pc' || device.type === 'laptop' || device.type === 'server') && <button
           type="button"
           onClick={() => setActiveApp('terminal')}
           className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
@@ -2770,7 +2998,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
             </svg>
           </div>
           <span className="text-xs font-bold text-slate-800">{t('Terminal')}</span>
-        </button>
+        </button>}
 
         {/* Web Browser App */}
         <button

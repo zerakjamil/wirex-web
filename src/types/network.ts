@@ -229,10 +229,13 @@ export interface DeviceConfig {
   banner?: string
   /** Packet Tracer's GLOBAL / Algorithm Settings page (simulation-only knobs). */
   algorithmSettings?: {
+    /** When true the device inherits ALGORITHM_DEFAULTS instead of its local values. */
+    globalSettings?: boolean
     halfOpenSessionMultiplier: number
     maximumConnections: number
     maximumOpenedSessions: number
     maximumRetransmissionTimeoutMs: number
+    stormControlMultiplier: number
   }
   /** Snapshot written by "Save Running config to NVRAM"; cleared by "Erase NVRAM". */
   startupConfig?: string
@@ -318,7 +321,7 @@ export interface DeviceConfig {
   ipv6EigrpPassiveDefault?: boolean
   ipv6EigrpPassiveInterfaces?: string[]
   ipv6EigrpActiveInterfaces?: string[]
-  dhcpPools?: Array<{ name: string; network: string; mask: string; defaultRouter?: string; dnsServer?: string; tftpServer?: string; leaseDurationSeconds?: number; hostIp?: string; hostMask?: string; hardwareAddress?: string; clientIdentifier?: string }>
+  dhcpPools?: Array<{ name: string; network: string; mask: string; startIp?: string; defaultRouter?: string; dnsServer?: string; tftpServer?: string; leaseDurationSeconds?: number; hostIp?: string; hostMask?: string; hardwareAddress?: string; clientIdentifier?: string }>
   dhcpv6Pools?: Array<{ name: string; prefix: string; prefixLength: number; startAddress?: string }>
   dhcpv6Bindings?: Array<{ address: string; clientDeviceId: string; clientMac: string; acquiredAtMs?: number }>
   dhcpv6Lease?: { serverId: string; address: string; prefixLength: number }

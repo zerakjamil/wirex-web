@@ -56,7 +56,7 @@ export function allocateDhcpLease(devices:NetworkDevice[],links:NetworkLink[],cl
     if(!isValidIpv4(pool.network)||!isValidIpv4(pool.mask)||!incoming?.ipAddress||!isInSameSubnet(incoming.ipAddress,pool.network,pool.mask))continue
     if(pool.defaultRouter&&(!isValidIpv4(pool.defaultRouter)||!isInSameSubnet(pool.defaultRouter,pool.network,pool.mask)))return {reason:'DHCP: pool default-router is outside the pool subnet.'}
     const mask=ipToNumber(pool.mask),base=(ipToNumber(pool.network)&mask)>>>0,last=(base|(~mask>>>0))>>>0
-    const start=d.config.dhcpPool?ipToNumber(d.config.dhcpPool.startIp):base+1,end=d.config.dhcpPool?ipToNumber(d.config.dhcpPool.endIp):last-1
+    const start=pool.startIp&&isValidIpv4(pool.startIp)?Math.max(base+1,ipToNumber(pool.startIp)):d.config.dhcpPool?ipToNumber(d.config.dhcpPool.startIp):base+1,end=d.config.dhcpPool?ipToNumber(d.config.dhcpPool.endIp):last-1
     const exclusions=(d.config.excludedDhcpIps||[]).map(text=>text.split(/\s+/).map(ipToNumber))
     const reserved = [pool.defaultRouter, pool.dnsServer, pool.tftpServer].filter((ip): ip is string => Boolean(ip && isValidIpv4(ip))).map(ipToNumber)
     const reservedHosts=pools.filter(candidate=>candidate.hostIp&&isValidIpv4(candidate.hostIp)).map(candidate=>ipToNumber(candidate.hostIp!))
@@ -85,7 +85,7 @@ export function allocateDhcpLease(devices:NetworkDevice[],links:NetworkLink[],cl
        for (const pool of selectedPools) {
          if (!isValidIpv4(pool.network) || !isValidIpv4(pool.mask) || !incoming.ipAddress || !isInSameSubnet(incoming.ipAddress, pool.network, pool.mask)) continue
          const mask = ipToNumber(pool.mask), base = (ipToNumber(pool.network) & mask) >>> 0, last = (base | (~mask >>> 0)) >>> 0
-         const start = server.config.dhcpPool ? ipToNumber(server.config.dhcpPool.startIp) : base + 1, end = server.config.dhcpPool ? ipToNumber(server.config.dhcpPool.endIp) : last - 1
+         const start = pool.startIp && isValidIpv4(pool.startIp) ? Math.max(base + 1, ipToNumber(pool.startIp)) : server.config.dhcpPool ? ipToNumber(server.config.dhcpPool.startIp) : base + 1, end = server.config.dhcpPool ? ipToNumber(server.config.dhcpPool.endIp) : last - 1
          const exclusions = (server.config.excludedDhcpIps || []).map((text) => text.split(/\s+/).map(ipToNumber))
          const reserved = [pool.defaultRouter, pool.dnsServer, pool.tftpServer].filter((ip): ip is string => Boolean(ip && isValidIpv4(ip))).map(ipToNumber)
          const reservedHosts=pools.filter(candidate=>candidate.hostIp&&isValidIpv4(candidate.hostIp)).map(candidate=>ipToNumber(candidate.hostIp!))

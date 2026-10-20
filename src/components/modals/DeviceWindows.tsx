@@ -86,7 +86,7 @@ function FloatingDevice({window:frame}: {window:DeviceWindow}) {
       const origin=dragging.current;if(!origin)return
       useNetworkStore.getState().updateDeviceWindow(frame.deviceId,{x:Math.max(0,Math.min(window.innerWidth-80,origin.x+event.clientX-origin.pointerX)),y:Math.max(0,Math.min(window.innerHeight-32,origin.y+event.clientY-origin.pointerY))})
     }} onPointerCancel={()=>{dragging.current=null}} onPointerUp={event=>{dragging.current=null;if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId)}}>
-      <span>{device.name} ({device.model})</span><div><button aria-label={`Minimize ${device.name}`} onClick={()=>useNetworkStore.getState().minimizeDeviceWindow(frame.deviceId)}>−</button><button aria-label={`Close ${device.name}`} onClick={()=>useNetworkStore.getState().closeDeviceWindow(frame.deviceId)}>×</button></div>
+      <span title={`${device.name} (${device.model})`}>{device.name || device.config.hostname || device.model}</span><div><button aria-label={`Minimize ${device.name}`} onClick={()=>useNetworkStore.getState().minimizeDeviceWindow(frame.deviceId)}>−</button><button aria-label={`Close ${device.name}`} onClick={()=>useNetworkStore.getState().closeDeviceWindow(frame.deviceId)}>×</button></div>
     </header>
     <div className="pt-device-window-content"><DeviceModal deviceId={frame.deviceId} onClose={()=>useNetworkStore.getState().closeDeviceWindow(frame.deviceId)}/></div>
     <div

@@ -137,7 +137,7 @@ interface NetworkStore {
   closeDeviceWindow: (deviceId: string) => void
   minimizeDeviceWindow: (deviceId: string) => void
   focusDeviceWindow: (deviceId: string) => void
-  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'imported' | 'gui' | 'webadmin' | 'asdm' | 'iot'
+  activeTab: 'cli' | 'config' | 'services' | 'desktop' | 'physical' | 'attributes' | 'imported' | 'gui' | 'webadmin' | 'asdm' | 'iot'
   connectingSource: { deviceId: string; portId?: string } | null
 
   // Actions
@@ -184,6 +184,7 @@ interface NetworkStore {
 
   updatePortConfig: (deviceId: string, portId: string, updates: Partial<NetworkPort>) => void
   updateDeviceConfig: (deviceId: string, updates: Partial<DeviceConfig>) => void
+  renameDevice: (deviceId: string, name: string) => void
 
   executeIosCommand: (deviceId: string, cmd: string) => string
   sendPing: (sourceDeviceId: string, targetIp: string) => string | null
@@ -1148,11 +1149,19 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
         d.id === deviceId
           ? {
               ...d,
-              name: updates.hostname || d.name,
               config: { ...d.config, ...updates },
             }
           : d
       ),
+    }))
+  },
+
+  renameDevice: (deviceId, name) => {
+    // Keep raw text (including empty while editing); the input restores the
+    // hostname/model fallback on blur.
+    const displayName = name.slice(0, 64)
+    set((state) => ({
+      devices: state.devices.map((d) => (d.id === deviceId ? { ...d, name: displayName } : d)),
     }))
   },
 

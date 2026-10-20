@@ -19,10 +19,10 @@ export function EmailServiceSettings({ device }: { device: NetworkDevice }) {
   const update = (patch: Partial<EmailServiceConfig>) => updateDeviceConfig(device.id, { emailService: { ...service, ...patch } })
 
   return (
-    <section className="space-y-3 border-t border-slate-200 pt-4" aria-labelledby={`email-service-${device.id}`}>
+    <section className="space-y-2" aria-labelledby={`email-service-${device.id}`}>
       <div>
-        <h4 id={`email-service-${device.id}`} className="text-xs font-bold uppercase tracking-wider text-slate-800">{t('Email Service')}</h4>
-        <p className="mt-1 text-xs text-slate-500">{t('SMTP sends mail over TCP 25. POP3 retrieves the configured mailbox over TCP 110.')}</p>
+        <h4 id={`email-service-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('Email Service')}</h4>
+        <p className="mt-0.5 text-[11px] text-[#555]">{t('SMTP sends mail over TCP 25. POP3 retrieves the configured mailbox over TCP 110.')}</p>
       </div>
       <form className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2" onSubmit={event => {
         event.preventDefault()
@@ -36,19 +36,19 @@ export function EmailServiceSettings({ device }: { device: NetworkDevice }) {
         setDomainDraft(domain)
         setError('')
       }}>
-        <label className="block text-xs font-semibold text-slate-700">
+        <label className="block text-[11px] text-[#222]">
           {t('Mail domain')}
-          <input value={domainDraft} maxLength={253} onChange={event => setDomainDraft(event.target.value)} placeholder="classroom.test" className="mt-1 min-h-[40px] w-full rounded border border-slate-300 bg-white px-3 font-mono text-xs" />
+          <input value={domainDraft} maxLength={253} onChange={event => setDomainDraft(event.target.value)} placeholder="classroom.test" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
         </label>
-        <button type="submit" className="min-h-[40px] rounded border border-slate-300 bg-slate-50 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100">{t('Save domain')}</button>
+        <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Save domain')}</button>
       </form>
       <div className="flex flex-wrap gap-3">
-        <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-          <input type="checkbox" checked={service.smtpEnabled} onChange={event => update({ smtpEnabled: event.target.checked })} className="h-4 w-4 accent-sky-700" />
+        <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+          <input type="checkbox" checked={service.smtpEnabled} onChange={event => update({ smtpEnabled: event.target.checked })} className="h-[13px] w-[13px] accent-[#316ac5]" />
           {t('Enable SMTP (TCP 25)')}
         </label>
-        <label className="inline-flex min-h-[40px] items-center gap-2 rounded border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700">
-          <input type="checkbox" checked={service.pop3Enabled} onChange={event => update({ pop3Enabled: event.target.checked })} className="h-4 w-4 accent-sky-700" />
+        <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+          <input type="checkbox" checked={service.pop3Enabled} onChange={event => update({ pop3Enabled: event.target.checked })} className="h-[13px] w-[13px] accent-[#316ac5]" />
           {t('Enable POP3 (TCP 110)')}
         </label>
       </div>
@@ -72,17 +72,17 @@ export function EmailServiceSettings({ device }: { device: NetworkDevice }) {
         setPassword('')
         setError('')
       }}>
-        <label className="block text-xs font-semibold text-slate-700">{t('Mailbox username')}<input value={username} onChange={event => setUsername(event.target.value)} maxLength={32} autoComplete="off" className="mt-1 min-h-[40px] w-full rounded border border-slate-300 bg-white px-3 font-mono text-xs" /></label>
-        <label className="block text-xs font-semibold text-slate-700">{t('Mailbox password')}<input type="password" value={password} onChange={event => setPassword(event.target.value)} maxLength={128} autoComplete="new-password" className="mt-1 min-h-[40px] w-full rounded border border-slate-300 bg-white px-3 text-xs" /></label>
-        <button type="submit" className="min-h-[40px] rounded border border-sky-800 bg-sky-800 px-4 text-xs font-bold text-white hover:bg-sky-900">{t('Add mailbox')}</button>
+        <label className="block text-[11px] text-[#222]">{t('Mailbox username')}<input value={username} onChange={event => setUsername(event.target.value)} maxLength={32} autoComplete="off" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+        <label className="block text-[11px] text-[#222]">{t('Mailbox password')}<input type="password" value={password} onChange={event => setPassword(event.target.value)} maxLength={128} autoComplete="new-password" className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 text-[11px] text-[#111] outline-none focus:border-[#316ac5]" /></label>
+        <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add mailbox')}</button>
       </form>
-      {error && <p role="alert" className="text-xs font-semibold text-rose-700">{error}</p>}
+      {error && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{error}</p>}
       <div className="space-y-2">
-        {service.users.map(user => <div key={user.username} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-xs">
-          <div><span className="font-mono font-semibold">{user.username}@{service.domain}</span><span data-testid={`mailbox-count-${user.username}`} className="ml-2 text-slate-500">{user.mailbox.length} {t('messages')}</span></div>
-          <button type="button" onClick={() => update({ users: service.users.filter(candidate => candidate.username !== user.username) })} className="min-h-[34px] rounded border border-slate-300 px-3 font-semibold text-rose-700 hover:bg-rose-50">{t('Remove mailbox')}</button>
+        {service.users.map(user => <div key={user.username} className="flex flex-wrap items-center justify-between gap-2 border border-[#c8c8c8] bg-white px-2 py-1 text-[11px]">
+          <div><span className="font-mono font-semibold">{user.username}@{service.domain}</span><span data-testid={`mailbox-count-${user.username}`} className="ml-2 text-[#555]">{user.mailbox.length} {t('messages')}</span></div>
+          <button type="button" onClick={() => update({ users: service.users.filter(candidate => candidate.username !== user.username) })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#7f1d1d] hover:bg-[#e2e2e2]">{t('Remove mailbox')}</button>
         </div>)}
-        {service.users.length === 0 && <p className="text-xs text-slate-500">{t('No mailboxes configured.')}</p>}
+        {service.users.length === 0 && <p className="text-[11px] text-[#555]">{t('No mailboxes configured.')}</p>}
       </div>
     </section>
   )

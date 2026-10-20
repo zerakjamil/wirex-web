@@ -24,17 +24,29 @@ export interface ConfigGroup {
 }
 
 export interface AlgorithmSettings {
+  /** Packet Tracer's per-device "Global Settings" override checkbox. */
+  globalSettings: boolean
   halfOpenSessionMultiplier: number
   maximumConnections: number
   maximumOpenedSessions: number
   maximumRetransmissionTimeoutMs: number
+  stormControlMultiplier: number
+}
+
+export type AlgorithmFieldKey = Exclude<keyof AlgorithmSettings, 'globalSettings'>
+
+export interface AlgorithmField {
+  key: AlgorithmFieldKey
+  label: string
 }
 
 export const ALGORITHM_DEFAULTS: AlgorithmSettings = {
+  globalSettings: true,
   halfOpenSessionMultiplier: 1,
   maximumConnections: 100,
   maximumOpenedSessions: 1000,
   maximumRetransmissionTimeoutMs: 1000,
+  stormControlMultiplier: 1,
 }
 
 /** Models that Packet Tracer treats as routing-capable even though they switch. */
@@ -54,11 +66,55 @@ export function supportsVlanDatabase(device: NetworkDevice): boolean {
 }
 
 export function supportsAlgorithmSettings(device: NetworkDevice): boolean {
-  return device.type === 'router' || device.type === 'switch'
+  return device.type === 'router' ||
+    device.type === 'switch' ||
+    device.type === 'pc' ||
+    device.type === 'laptop' ||
+    device.type === 'server' ||
+    device.type === 'tablet' ||
+    device.type === 'smartphone'
+}
+
+/** Packet Tracer shows a different subset of the algorithm knobs per device. */
+export function algorithmFields(device: NetworkDevice): AlgorithmField[] {
+  if (device.type === 'switch') {
+    const fields: AlgorithmField[] = [
+      { key: 'maximumConnections', label: 'Maximum Number of Connections' },
+      { key: 'maximumOpenedSessions', label: 'Maximum Number of Opened Sessions' },
+      { key: 'stormControlMultiplier', label: 'Storm Control Multiplier' },
+    ]
+    if (device.model.includes('3560')) {
+      fields.push({ key: 'halfOpenSessionMultiplier', label: 'Half-Open Session Multiplier' })
+    }
+    return fields
+  }
+  if (device.type === 'router') {
+    const fields: AlgorithmField[] = [
+      { key: 'halfOpenSessionMultiplier', label: 'Half-Open Session Multiplier' },
+      { key: 'maximumConnections', label: 'Maximum Number of Connections' },
+      { key: 'maximumOpenedSessions', label: 'Maximum Number of Opened Sessions' },
+      { key: 'maximumRetransmissionTimeoutMs', label: 'Maximum Retransmission Timeout in Milliseconds' },
+    ]
+    if (device.model.includes('1841') || device.model.includes('2811')) {
+      fields.push({ key: 'stormControlMultiplier', label: 'Storm Control Multiplier' })
+    }
+    return fields
+  }
+  return [
+    { key: 'maximumConnections', label: 'Maximum Number of Connections' },
+    { key: 'maximumOpenedSessions', label: 'Maximum Number of Opened Sessions' },
+    { key: 'maximumRetransmissionTimeoutMs', label: 'Maximum Retransmission Timeout in Milliseconds' },
+  ]
 }
 
 export function algorithmSettings(device: NetworkDevice): AlgorithmSettings {
-  return { ...ALGORITHM_DEFAULTS, ...(device.config.algorithmSettings ?? {}) }
+  const stored = device.config.algorithmSettings
+  // Packet Tracer checks Global Settings on new devices; a saved local override
+  // written before this flag existed keeps its values.
+  const globalSettings = stored?.globalSettings ?? !stored
+  return globalSettings
+    ? { ...ALGORITHM_DEFAULTS }
+    : { ...ALGORITHM_DEFAULTS, ...stored, globalSettings: false }
 }
 
 /** The Config tab's category tree for one device, in Packet Tracer order. */

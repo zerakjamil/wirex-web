@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createDevice } from './deviceFactory'
 import {
   ALGORITHM_DEFAULTS,
+  algorithmFields,
   algorithmSettings,
   configGroups,
   equivalentIosCommands,
@@ -53,13 +54,37 @@ test('switches get SWITCHING but no ROUTING unless they are multilayer', () => {
   assert.deepEqual(groups(multilayer).ROUTING, ['Static', 'RIP'])
 })
 
-test('end devices keep Settings and their interfaces but no routing or algorithm pages', () => {
+test('PCs and servers get Settings and Algorithm Settings but no routing pages', () => {
   const pc = createDevice('pc', 0, 0)
   const tree = groups(pc)
-  assert.deepEqual(tree.GLOBAL, ['Settings'])
+  assert.deepEqual(tree.GLOBAL, ['Settings', 'Algorithm Settings'])
   assert.ok(tree.INTERFACE.length === pc.ports.length && pc.ports.length > 0)
   assert.equal(tree.ROUTING, undefined)
   assert.equal(tree.SWITCHING, undefined)
+
+  const server = createDevice('server', 0, 0)
+  assert.deepEqual(groups(server).GLOBAL, ['Settings', 'Algorithm Settings'])
+
+  const printer = createDevice('printer', 0, 0)
+  assert.deepEqual(groups(printer).GLOBAL, ['Settings'])
+})
+
+test('algorithm settings expose the Packet Tracer fields for each device family', () => {
+  assert.deepEqual(algorithmFields(router('2911')).map((field) => field.key), [
+    'halfOpenSessionMultiplier', 'maximumConnections', 'maximumOpenedSessions', 'maximumRetransmissionTimeoutMs',
+  ])
+  assert.deepEqual(algorithmFields(router('2811')).map((field) => field.key), [
+    'halfOpenSessionMultiplier', 'maximumConnections', 'maximumOpenedSessions', 'maximumRetransmissionTimeoutMs', 'stormControlMultiplier',
+  ])
+  assert.deepEqual(algorithmFields(switchDevice('2960-24TT')).map((field) => field.key), [
+    'maximumConnections', 'maximumOpenedSessions', 'stormControlMultiplier',
+  ])
+  assert.deepEqual(algorithmFields(switchDevice('3560-24PS')).map((field) => field.key), [
+    'maximumConnections', 'maximumOpenedSessions', 'stormControlMultiplier', 'halfOpenSessionMultiplier',
+  ])
+  assert.deepEqual(algorithmFields(createDevice('pc', 0, 0)).map((field) => field.key), [
+    'maximumConnections', 'maximumOpenedSessions', 'maximumRetransmissionTimeoutMs',
+  ])
 })
 
 test('findPage resolves interface pages by id', () => {
@@ -73,9 +98,22 @@ test('findPage resolves interface pages by id', () => {
 test('algorithm settings fall back to the Packet Tracer defaults', () => {
   const device = router()
   assert.deepEqual(algorithmSettings(device), ALGORITHM_DEFAULTS)
-  device.config.algorithmSettings = { ...ALGORITHM_DEFAULTS, maximumConnections: 250 }
+  device.config.algorithmSettings = { ...ALGORITHM_DEFAULTS, globalSettings: false, maximumConnections: 250 }
   assert.equal(algorithmSettings(device).maximumConnections, 250)
   assert.equal(algorithmSettings(device).maximumOpenedSessions, 1000)
+})
+
+test('algorithm settings honor the Global Settings override checkbox', () => {
+  const device = router()
+  device.config.algorithmSettings = {
+    halfOpenSessionMultiplier: 1, maximumConnections: 250, maximumOpenedSessions: 1000,
+    maximumRetransmissionTimeoutMs: 1000, stormControlMultiplier: 1,
+  }
+  assert.equal(algorithmSettings(device).maximumConnections, 250)
+  assert.equal(algorithmSettings(device).globalSettings, false)
+  device.config.algorithmSettings = { ...ALGORITHM_DEFAULTS, globalSettings: true, maximumConnections: 250 }
+  assert.equal(algorithmSettings(device).maximumConnections, ALGORITHM_DEFAULTS.maximumConnections)
+  assert.equal(algorithmSettings(device).globalSettings, true)
 })
 
 test('settings page emits the hostname command with mode prompts', () => {
