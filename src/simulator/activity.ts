@@ -1,4 +1,5 @@
 import type { AccessList, AclRule, DeviceConfig, HsrpGroupConfig, Ipv6AddressConfig, NetworkAnnotation, NetworkDevice, NetworkLink, NetworkPort } from '@/types/network'
+import { apWirelessSettings, isLightweightAp, isWifiAccessPoint } from './capwap'
 
 // Reduced instructor assessment model. An activity is authored from a finished
 // ("answer") network: the wizard derives assessment items from its live state, and the
@@ -21,6 +22,7 @@ export type ActivityFacetKind =
   | 'acl'
   | 'hsrp'
   | 'ipv6-address'
+  | 'wireless'
 
 export type ActivityFacetSpec =
   | { kind: 'vlan'; vlanId: number; name: string }
@@ -38,6 +40,7 @@ export type ActivityFacetSpec =
   | { kind: 'acl'; id: string; snapshot: string }
   | { kind: 'hsrp'; portId: string; group: number; snapshot: string }
   | { kind: 'ipv6-address'; portId: string; snapshot: string }
+  | { kind: 'wireless'; snapshot: string }
 
 export type RoutingProtocolKind = 'rip' | 'ospf' | 'eigrp' | 'bgp'
 
@@ -137,6 +140,11 @@ export function collectAssessmentCandidates(devices: NetworkDevice[]): ActivityI
       }
     }
 
+    const wireless = wirelessState(device)
+    if (wireless && wirelessSnapshot(wireless) !== wirelessSnapshot(wirelessDefaultState(device))) {
+      push(device, 'wireless', 'settings', 'Wireless settings', wirelessSummary(wireless), { kind: 'wireless', snapshot: wirelessSnapshot(wireless) })
+    }
+
     if (device.type === 'switch' && device.config.ipRouting === true) {
       push(device, 'ip-routing', '', 'IP routing', 'ip routing enabled', { kind: 'ip-routing' })
     }
@@ -193,6 +201,94 @@ function l2Expected(spec: L2Spec): string {
     return `trunk, allowed ${allowed}, native VLAN ${spec.native ?? 1}${voice}`
   }
   return `access VLAN ${spec.vlan ?? 1}${voice}`
+}
+
+type WirelessAuthentication = NonNullable<DeviceConfig['wirelessAuthentication']>
+type WirelessEncryption = NonNullable<DeviceConfig['wirelessEncryption']>
+
+interface WirelessSettingsState {
+  ssid: string
+  channel: number
+  authentication: WirelessAuthentication
+  encryption: WirelessEncryption | null
+  key: string
+}
+
+const HOME_ROUTER_MODELS = new Set(['WRT300N', 'Linksys-WRT300N', 'HomeRouter-PT-AC'])
+
+/** Effective autonomous AP settings. Lightweight APs are managed by a WLC. */
+function wirelessState(device: NetworkDevice): WirelessSettingsState | null {
+  if (!isWifiAccessPoint(device) || isLightweightAp(device)) return null
+  const settings = apWirelessSettings(device)
+  const secured = settings.authentication === 'wpa-psk' || settings.authentication === 'wpa2-psk'
+  return {
+    ssid: settings.ssid,
+    channel: settings.channel,
+    authentication: settings.authentication,
+    encryption: secured ? settings.encryption : null,
+    key: settings.authentication === 'wep' ? settings.wepKey.toLowerCase() : secured ? settings.passphrase : '',
+  }
+}
+
+function wirelessDefaultState(device: NetworkDevice): WirelessSettingsState {
+  return {
+    ssid: HOME_ROUTER_MODELS.has(device.model) ? 'linksys' : 'Default',
+    channel: 6,
+    authentication: 'open',
+    encryption: null,
+    key: '',
+  }
+}
+
+function wirelessSnapshot(state: WirelessSettingsState): string {
+  return JSON.stringify(state)
+}
+
+function wirelessSecurityLabel(authentication: WirelessAuthentication) {
+  if (authentication === 'wep') return 'WEP'
+  if (authentication === 'wpa-psk') return 'WPA-PSK'
+  if (authentication === 'wpa2-psk') return 'WPA2-PSK'
+  return 'Open'
+}
+
+function wirelessSummary(state: WirelessSettingsState, keyMatches = true) {
+  const encryption = state.encryption ? ` / ${state.encryption.toUpperCase()}` : ''
+  const key = state.authentication === 'open' ? '' : state.key ? ', key set' : ', key missing'
+  const mismatch = !keyMatches && state.authentication !== 'open' ? ' (key mismatch)' : ''
+  return `${state.ssid} · channel ${state.channel} · ${wirelessSecurityLabel(state.authentication)}${encryption}${key}${mismatch}`
+}
+
+function parseWirelessSnapshot(snapshot: string): WirelessSettingsState | null {
+  try {
+    return parseWirelessState(JSON.parse(snapshot))
+  } catch {
+    return null
+  }
+}
+
+function parseWirelessState(value: unknown): WirelessSettingsState | null {
+  if (!value || typeof value !== 'object') return null
+  const raw = value as Record<string, unknown>
+  if (typeof raw.ssid !== 'string' || raw.ssid.length > 64) return null
+  if (!Number.isInteger(raw.channel) || (raw.channel as number) < 1 || (raw.channel as number) > 11) return null
+  const authentication = raw.authentication
+  if (authentication !== 'open' && authentication !== 'wep' && authentication !== 'wpa-psk' && authentication !== 'wpa2-psk') return null
+  const encryption = raw.encryption
+  if (authentication === 'open' || authentication === 'wep') {
+    if (encryption !== null) return null
+  } else if (encryption !== 'aes' && encryption !== 'tkip') {
+    return null
+  }
+  if (typeof raw.key !== 'string' || raw.key.length > 128) return null
+  if (authentication === 'open' && raw.key !== '') return null
+  if (authentication === 'wep' && raw.key !== '' && !/^[0-9a-f]{10}$/i.test(raw.key)) return null
+  return {
+    ssid: raw.ssid,
+    channel: raw.channel as number,
+    authentication,
+    encryption: encryption as WirelessEncryption | null,
+    key: authentication === 'wep' ? raw.key.toLowerCase() : raw.key,
+  }
 }
 
 type DhcpPool = NonNullable<DeviceConfig['dhcpPools']>[number]
@@ -428,6 +524,13 @@ function readObserved(device: NetworkDevice, spec: ActivityFacetSpec): { ok: boo
     if (!list) return { ok: false, observed: `no ACL ${spec.id}` }
     return { ok: aclSnapshot(list) === spec.snapshot, observed: aclSummary(list) }
   }
+  if (spec.kind === 'wireless') {
+    const state = wirelessState(device)
+    if (!state) return { ok: false, observed: 'no autonomous wireless settings' }
+    const expected = parseWirelessSnapshot(spec.snapshot)
+    const ok = !!expected && wirelessSnapshot(state) === wirelessSnapshot(expected)
+    return { ok, observed: wirelessSummary(state, !expected || expected.key === state.key) }
+  }
   const port = device.ports.find(p => p.id === spec.portId)
   if (!port) return { ok: false, observed: 'interface missing' }
   if (spec.kind === 'hsrp') {
@@ -562,6 +665,16 @@ function clearItem(device: NetworkDevice, spec: ActivityFacetSpec) {
   }
   if (spec.kind === 'acl') {
     device.config.accessLists = (device.config.accessLists ?? []).filter(list => list.id !== spec.id)
+    return
+  }
+  if (spec.kind === 'wireless') {
+    const defaults = wirelessDefaultState(device)
+    device.config.wirelessSsid = defaults.ssid
+    device.config.wirelessChannel = defaults.channel
+    device.config.wirelessAuthentication = defaults.authentication
+    device.config.wirelessPassphrase = ''
+    device.config.wirelessWepKey = ''
+    device.config.wirelessEncryption = 'aes'
     return
   }
   const port = device.ports.find(p => p.id === spec.portId)
@@ -761,6 +874,18 @@ function parseSpec(input: unknown): ActivityFacetSpec {
     case 'ipv6-address': {
       if (typeof raw.snapshot !== 'string' || raw.snapshot.length > 8192) throw new Error('This activity file has an invalid assessment item.')
       return { kind: 'ipv6-address', portId: portId(), snapshot: raw.snapshot }
+    }
+    case 'wireless': {
+      if (typeof raw.snapshot !== 'string' || raw.snapshot.length > 4096) throw new Error('This activity file has an invalid assessment item.')
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(raw.snapshot)
+      } catch {
+        throw new Error('This activity file has an invalid assessment item.')
+      }
+      const state = parseWirelessState(parsed)
+      if (!state) throw new Error('This activity file has an invalid assessment item.')
+      return { kind: 'wireless', snapshot: wirelessSnapshot(state) }
     }
     default:
       throw new Error('This activity file has an invalid assessment item.')

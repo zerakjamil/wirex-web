@@ -1,4 +1,4 @@
-# Instructor activity assessment (Activity Wizard), 2026-10-18 (routing options added 2026-10-20)
+# Instructor activity assessment (Activity Wizard), 2026-10-18 (routing options and wireless added 2026-10-20)
 
 wireX now has the acceptance flow of Cisco Packet Tracer's Activity Wizard as a reduced assessment model: an instructor derives graded items from a finished "answer" network, selects a subset, saves a `.wxact.json` activity file, and a student loads it, works on the cleared network, and runs Check Results to grade live state. This is a reduced model, not a full parity claim for every PT assessment-tree type, and not the complete replacement release gate.
 
@@ -37,10 +37,11 @@ The chip opens the instruction panel: instructions rendered as a numbered list, 
 | `acl` | router/switch | numbered or named ACL exists | name/number, type and ordered rules |
 | `hsrp` | router/switch | HSRP group exists | group, virtual IP, priority, preempt and tracked ports |
 | `ipv6-address` | any device | static IPv6 address on a port | port, address and prefix length |
+| `wireless` | autonomous APs and home routers (lightweight APs and Cell-Tower excluded) | effective SSID, channel, authentication, WPA/WPA2 encryption or key differs from the model default (channel 6, open, AES; `linksys` on home routers, otherwise `Default`) | SSID, channel, authentication, encryption and key |
 
 Trunk allowed-VLAN semantics: `undefined` means *all* (compared as all), an empty list means *none*, otherwise the sorted lists must match exactly — extra allowed VLANs fail the item.
 
-Not assessed in this reduced model (documented boundaries): wireless/WLC configuration, connectivity tests, port shutdown tasks beyond router ports and SVIs, and any *removals* (extras beyond the answer never fail an item; there is no "must not exist" item type). ACLs, DHCP pools, HSRP, IPv6 addresses, router-ids and passive interfaces are assessed. Every option item is derived only when the protocol itself is configured, so a stray `router-id` or passive-interface line on an otherwise empty process does not create an item.
+Not assessed in this reduced model (documented boundaries): WLC/CAPWAP configuration and lightweight-AP settings (their wireless state is controller-managed), connectivity tests, port shutdown tasks beyond router ports and SVIs, and any *removals* (extras beyond the answer never fail an item; there is no "must not exist" item type). ACLs, DHCP pools, HSRP, IPv6 addresses, autonomous wireless AP settings, router-ids and passive interfaces are assessed. Every option item is derived only when the protocol itself is configured, so a stray `router-id` or passive-interface line on an otherwise empty process does not create an item. The wireless item compares the key but the author/student text shows only `key set` / `key missing`, never the key itself.
 
 ## File format
 
@@ -66,7 +67,7 @@ Every selected item has equal weight: `percent = round(passed / total * 100)`, s
 
 ## Architecture
 
-- `src/simulator/activity.ts` — pure module (no engine/store imports): candidate collection, facet specs, `clearAssessedConfig`, `deriveInitialNetwork`, `evaluateActivityItems`, `scoreActivity`, protocol snapshots/summaries, DHCP-pool/ACL/HSRP/IPv6 facet snapshots, `serializeActivity` / `parseActivity`, slug/file-name helpers and results-document assembly.
+- `src/simulator/activity.ts` — pure module (no engine/store imports): candidate collection, facet specs, `clearAssessedConfig`, `deriveInitialNetwork`, `evaluateActivityItems`, `scoreActivity`, protocol snapshots/summaries, DHCP-pool/ACL/HSRP/IPv6/wireless facet snapshots, `serializeActivity` / `parseActivity`, slug/file-name helpers and results-document assembly.
 - `src/store/activityStore.ts` — session store (`session`, `error`) with `start`, `loadFromFile`, `check`, `reset`, `exit`, `dismissError`, `resultsJson`, plus `saveActivityToStorage` / `restoreActivityFromStorage` under `wireforge-activity-v1` (32 MB bound for the stored payload). Exposes `window.__wireforgeActivityStore`.
 - `src/components/modals/ActivityWizardModal.tsx` — author dialog.
 - `src/components/cisco/ActivityWorkspace.tsx` — student chip, instruction panel, results list and the `role="alert"` error box.
@@ -76,10 +77,10 @@ UI chrome strings are localized (EN/AR/CKB); generated item text, parse errors a
 
 ## Evidence
 
-- Unit: `src/simulator/activity.test.ts` (14 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, DHCP-pool/ACL/HSRP/IPv6 derivation and summaries, clear-and-grade coverage for those facets, OSPF/EIGRP/BGP router-id and RIP/OSPF/EIGRP passive-interface derivation, clearing and grading, serialize/parse round-trip and slugging, parser rejections for impossible routing options) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
-- Browser: `e2e/activity.spec.ts` (2 flows: author via toolbar → partial selection → trial → grading → fix to 100% → reset → exit restores the answer; save file → File → New → File → Open Activity... → grade → invalid-file error → exit).
-- `npm test` 617/617, `npx tsc --noEmit` clean, lint zero errors (28 pre-existing warnings), `npm run electron:prep` green, production-browser suite 67/68 with only the unchanged `simulation-scale` wall-clock bound red at 689 ms.
+- Unit: `src/simulator/activity.test.ts` (18 tests: candidate derivation and kinds, default-port/DHCP exclusions, trunk allowed semantics, clearing coverage, pass/fail grading with partial fixes, switch ip-routing vs L2 gateway, DHCP-pool/ACL/HSRP/IPv6 derivation and summaries, clear-and-grade coverage for those facets, OSPF/EIGRP/BGP router-id and RIP/OSPF/EIGRP passive-interface derivation, clearing and grading, autonomous AP wireless derivation/default/lightweight/Cell-Tower exclusions, key-masked and case-insensitive WEP grading, serialize/parse round-trip and slugging, parser rejections for impossible routing options and malformed wireless snapshots) and `src/store/activityStore.test.ts` (5 tests: trial/clear/check/fix/reset/exit restoration, file load and error surfacing, results export and storage round-trip, autosave storing the pre-activity network, training-starting guard).
+- Browser: `e2e/activity.spec.ts` (2 flows: author via toolbar → partial selection → trial → grading → fix to 100% → reset → exit restores the answer; save file → File → New → File → Open Activity... → grade → invalid-file error → exit). The existing activity lab has no AP, so the wireless facet is covered by the unit suite rather than a separate browser flow.
+- `npm test` 623/623, `npx tsc --noEmit` clean, lint zero errors (28 pre-existing warnings), `npm run electron:prep` green, production-browser suite 68/69 with only the unchanged `simulation-scale` wall-clock bound red at 727 ms (standalone rerun 688 ms).
 
 ## Remaining boundaries
 
-No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and no wireless/WLC facets. The facet set covers VLANs, L2 ports, interface addressing/admin state, static routes, RIP/OSPF/EIGRP/BGP snapshots, OSPF/EIGRP/BGP router-ids, RIP/OSPF/EIGRP passive interfaces, switch IP routing, host IPv4/gateway/DNS, DHCP pools, ACLs, HSRP groups and IPv6 addresses. Activity sessions live in browser storage; there is no classroom management around them.
+No password-protected activity files, no submit-to-server or gradebook, no manual item tree editing beyond the derived candidate list, no "must not exist" items, no per-item weighting, and no WLC/CAPWAP or lightweight-AP facets. The facet set covers VLANs, L2 ports, interface addressing/admin state, static routes, RIP/OSPF/EIGRP/BGP snapshots, OSPF/EIGRP/BGP router-ids, RIP/OSPF/EIGRP passive interfaces, switch IP routing, host IPv4/gateway/DNS, DHCP pools, ACLs, HSRP groups, IPv6 addresses and autonomous wireless AP settings. Activity sessions live in browser storage; there is no classroom management around them.

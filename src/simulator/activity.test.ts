@@ -378,3 +378,102 @@ test('parseActivity rejects impossible routing-option facets', () => {
   option.spec.option = 'bogus'
   assert.throws(() => parseActivity(raw), /invalid assessment item/)
 })
+
+function wirelessAp() {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  ap.name = 'AP1'
+  ap.config.wirelessSsid = 'SecureLab'
+  ap.config.wirelessChannel = 11
+  ap.config.wirelessAuthentication = 'wpa2-psk'
+  ap.config.wirelessPassphrase = 'wirexpass'
+  ap.config.wirelessEncryption = 'aes'
+  return ap
+}
+
+test('wireless access point settings become a graded, clearable facet', () => {
+  const ap = wirelessAp()
+  const items = collectAssessmentCandidates([ap])
+  const item = items.find(candidate => candidate.spec.kind === 'wireless')!
+  assert.equal(item.label, 'Wireless settings')
+  assert.equal(item.expected, 'SecureLab · channel 11 · WPA2-PSK / AES, key set')
+
+  const initial = clearAssessedConfig([ap], [item])[0]
+  assert.equal(initial.config.wirelessSsid, 'Default')
+  assert.equal(initial.config.wirelessChannel, 6)
+  assert.equal(initial.config.wirelessAuthentication, 'open')
+  assert.equal(initial.config.wirelessPassphrase, '')
+  assert.equal(initial.config.wirelessWepKey, '')
+  assert.equal(initial.config.wirelessEncryption, 'aes')
+
+  const initialCheck = evaluateActivityItems([initial], [item])[0]
+  assert.equal(initialCheck.status, 'failed')
+  assert.equal(initialCheck.observed, 'Default · channel 6 · Open')
+  const correctCheck = evaluateActivityItems([ap], [item])[0]
+  assert.equal(correctCheck.status, 'successful')
+  assert.equal(correctCheck.observed, 'SecureLab · channel 11 · WPA2-PSK / AES, key set')
+
+  const wrongKey = structuredClone(ap)
+  wrongKey.config.wirelessPassphrase = 'wrongpass'
+  const keyCheck = evaluateActivityItems([wrongKey], [item])[0]
+  assert.equal(keyCheck.status, 'failed')
+  assert.equal(keyCheck.observed, 'SecureLab · channel 11 · WPA2-PSK / AES, key set (key mismatch)')
+  assert.doesNotMatch(keyCheck.observed, /wirexpass|wrongpass/)
+
+  const wrongSsid = structuredClone(ap)
+  wrongSsid.config.wirelessSsid = 'Guest'
+  const ssidCheck = evaluateActivityItems([wrongSsid], [item])[0]
+  assert.equal(ssidCheck.status, 'failed')
+  assert.equal(ssidCheck.observed, 'Guest · channel 11 · WPA2-PSK / AES, key set')
+})
+
+test('WEP keys compare case-insensitively', () => {
+  const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  ap.name = 'AP1'
+  ap.config.wirelessSsid = 'Lab'
+  ap.config.wirelessAuthentication = 'wep'
+  ap.config.wirelessWepKey = 'AABBCCDDEE'
+  const item = collectAssessmentCandidates([ap]).find(candidate => candidate.spec.kind === 'wireless')!
+  assert.equal(JSON.parse((item.spec as { snapshot: string }).snapshot).key, 'aabbccddee')
+  const lower = structuredClone(ap)
+  lower.config.wirelessWepKey = 'aabbccddee'
+  assert.equal(evaluateActivityItems([lower], [item])[0].status, 'successful')
+  const wrong = structuredClone(ap)
+  wrong.config.wirelessWepKey = '0011223344'
+  assert.equal(evaluateActivityItems([wrong], [item])[0].status, 'failed')
+})
+
+test('default APs, lightweight APs and cell towers contribute no wireless item', () => {
+  const defaultAp = createDevice('wireless', 0, 0, 'AccessPoint-PT')
+  assert.equal(collectAssessmentCandidates([defaultAp]).filter(item => item.spec.kind === 'wireless').length, 0)
+
+  const homeRouter = createDevice('wireless', 0, 0, 'HomeRouter-PT-AC')
+  assert.equal(collectAssessmentCandidates([homeRouter]).filter(item => item.spec.kind === 'wireless').length, 0)
+  homeRouter.config.wirelessChannel = 11
+  assert.equal(collectAssessmentCandidates([homeRouter]).find(item => item.spec.kind === 'wireless')!.expected, 'linksys · channel 11 · Open')
+
+  const lightweight = createDevice('wireless', 0, 0, 'LAP-PT')
+  lightweight.config.wirelessSsid = 'Managed'
+  lightweight.config.wirelessAuthentication = 'wpa2-psk'
+  lightweight.config.wirelessPassphrase = 'managed1'
+  assert.equal(collectAssessmentCandidates([lightweight]).filter(item => item.spec.kind === 'wireless').length, 0)
+
+  const cellTower = createDevice('wireless', 0, 0, 'Cell-Tower')
+  cellTower.config.wirelessSsid = 'Cellular'
+  assert.equal(collectAssessmentCandidates([cellTower]).filter(item => item.spec.kind === 'wireless').length, 0)
+})
+
+test('activity files round-trip wireless snapshots and reject malformed ones', () => {
+  const ap = wirelessAp()
+  const activity = activityFrom([ap])
+  const parsed = parseActivity(JSON.parse(serializeActivity(activity)))
+  assert.deepEqual(parsed.items, activity.items)
+
+  const raw = JSON.parse(serializeActivity(activity)) as { items: Array<{ spec: { kind: string; snapshot?: string } }> }
+  const wireless = raw.items.find(item => item.spec.kind === 'wireless')!
+  wireless.spec.snapshot = JSON.stringify({ ssid: 'SecureLab', channel: 99, authentication: 'open', encryption: null, key: '' })
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+  wireless.spec.snapshot = JSON.stringify({ ssid: 'SecureLab', channel: 6, authentication: 'open', encryption: 'aes', key: '' })
+  assert.throws(() => parseActivity(raw), /invalid assessment item/)
+  wireless.spec.snapshot = JSON.stringify({ ssid: 'SecureLab', channel: 6, authentication: 'wpa2-psk', encryption: 'aes', key: '' })
+  assert.doesNotThrow(() => parseActivity(raw))
+})
