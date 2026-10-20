@@ -1654,6 +1654,68 @@ function ConfigInterfacePage({ device, t, portId, updateDeviceConfig, updatePort
           </div>
         </div>
       )}
+
+      {device.type === 'switch' && (
+        <div className="mt-3 border-t border-[#c0c0c0] pt-2">
+          <h4 className="mb-1.5 text-[11px] font-bold text-[#222]">{t('Spanning Tree')}</h4>
+          <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2">
+            <label className="flex items-center gap-1.5 text-[11px]">
+              <input
+                type="checkbox"
+                checked={port.portfast === true}
+                onChange={(event) => updatePortConfig(device.id, port.id, { portfast: event.target.checked ? true : undefined })}
+                className="h-3.5 w-3.5"
+              />
+              {t('PortFast')}
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px]">
+              <input
+                type="checkbox"
+                checked={port.rootGuard === true}
+                onChange={(event) => updatePortConfig(device.id, port.id, { rootGuard: event.target.checked ? true : undefined })}
+                className="h-3.5 w-3.5"
+              />
+              {t('Root Guard')}
+            </label>
+            <div className="min-w-0">
+              <label htmlFor={`${device.id}-${port.id}-bpdu-guard`} className={configFieldLabel}>{t('BPDU Guard')}</label>
+              <select
+                id={`${device.id}-${port.id}-bpdu-guard`}
+                value={port.bpduGuard === undefined ? 'default' : port.bpduGuard ? 'enabled' : 'disabled'}
+                onChange={(event) => updatePortConfig(device.id, port.id, { bpduGuard: event.target.value === 'default' ? undefined : event.target.value === 'enabled' })}
+                className={configFieldSelect}
+              >
+                <option value="default">{t('Default')}</option>
+                <option value="enabled">{t('Enabled')}</option>
+                <option value="disabled">{t('Disabled')}</option>
+              </select>
+            </div>
+            <div className="min-w-0">
+              <label htmlFor={`${device.id}-${port.id}-bpdu-filter`} className={configFieldLabel}>{t('BPDU Filter')}</label>
+              <select
+                id={`${device.id}-${port.id}-bpdu-filter`}
+                value={port.bpduFilter === undefined ? 'default' : port.bpduFilter ? 'enabled' : 'disabled'}
+                onChange={(event) => updatePortConfig(device.id, port.id, { bpduFilter: event.target.value === 'default' ? undefined : event.target.value === 'enabled' })}
+                className={configFieldSelect}
+              >
+                <option value="default">{t('Default')}</option>
+                <option value="enabled">{t('Enabled')}</option>
+                <option value="disabled">{t('Disabled')}</option>
+              </select>
+            </div>
+          </div>
+          {port.errDisabled === 'bpduguard' && (
+            <p className="mt-1.5 border border-[#d0b060] bg-[#fff8dc] px-2 py-1 text-[11px] text-[#5a4500]">
+              {t('BPDU Guard disabled this port. Recover the port to clear this state.')}
+            </p>
+          )}
+          {port.rootInconsistentVlans && Object.keys(port.rootInconsistentVlans).length > 0 && (
+            <p className="mt-1.5 border border-[#d0b060] bg-[#fff8dc] px-2 py-1 text-[11px] text-[#5a4500]">
+              {t('Root Guard is blocking this port.')}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

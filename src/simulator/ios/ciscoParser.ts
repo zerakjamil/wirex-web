@@ -1191,6 +1191,8 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
         if (!['pvst', 'rapid-pvst', 'mst'].includes(body[1] ?? '')) return { output: '% Specify spanning-tree mode pvst|rapid-pvst|mst.' }
         return { output: '', newDeviceConfig: { stpMode: body[1] as 'pvst' | 'rapid-pvst' | 'mst' } }
       }
+      if (body[0] === 'portfast' && body[1] === 'bpduguard' && body[2] === 'default') return { output: '', newDeviceConfig: { bpduGuardDefault: !negated } }
+      if (body[0] === 'portfast' && body[1] === 'bpdufilter' && body[2] === 'default') return { output: '', newDeviceConfig: { bpduFilterDefault: !negated } }
       if (body[0] === 'portfast' && body[1] === 'default') return { output: '', newDeviceConfig: { portfastDefault: !negated } }
       if (body[0] === 'mst' && body[1] === 'configuration') {
         if (negated) return { output: '', newDeviceConfig: { mstName: undefined, mstRevision: undefined, mstInstances: [] } }
@@ -1376,7 +1378,7 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
 
     // Shutdown / No Shutdown
     if (cmd === 'no' && (parts[1]?.toLowerCase() === 'shutdown' || parts[1]?.toLowerCase() === 'shut' || parts[1]?.toLowerCase() === 'sh')) {
-      const mods = targetPortIds.map((pid) => ({ portId: pid, adminStatus: 'up' as const }))
+      const mods = targetPortIds.map((pid) => ({ portId: pid, adminStatus: 'up' as const, errDisabled: undefined, rootInconsistentVlans: undefined }))
       const operational = interfaceOperational(device, { ...activePort, adminStatus: 'up' })
       const state = operational ? 'up' : 'down'
       return {
@@ -1386,7 +1388,7 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
     }
 
     if (cmd === 'shutdown' || cmd === 'shut') {
-      const mods = targetPortIds.map((pid) => ({ portId: pid, adminStatus: 'down' as const }))
+      const mods = targetPortIds.map((pid) => ({ portId: pid, adminStatus: 'down' as const, rootInconsistentVlans: undefined }))
       return {
         output: `%LINK-5-CHANGED: Interface ${activePort.name}, changed state to administratively down\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ${activePort.name}, changed state to down`,
         modifiedPorts: mods,
@@ -1649,11 +1651,26 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
       }
     }
 
-    // Spanning-Tree on interface (portfast, link-type, bpduguard)
+    // Spanning-Tree on interface (portfast, link-type, BPDU Guard/Filter, Root Guard)
     if (cmd === 'spanning-tree' || cmd === 'span' || (cmd === 'no' && (parts[1] === 'spanning-tree' || parts[1] === 'span'))) {
-      const negated=cmd==='no',body=negated?parts.slice(2):parts.slice(1)
-      const sub=body[0]?.toLowerCase()
-      if(sub==='portfast')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,portfast:negated?undefined:true}))}
+      const negated=cmd==='no',body=(negated?parts.slice(2):parts.slice(1)).map(token=>token.toLowerCase())
+      const sub=body[0]
+      if(sub==='portfast'){
+        if(body[1]&&body[1]!=='trunk')return {output:'% Use spanning-tree portfast [trunk].'}
+        return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,portfast:negated?undefined:true}))}
+      }
+      if(sub==='bpduguard'||sub==='bpdufilter'){
+        const value=body[1]
+        if(negated&&!value)return {output:'',modifiedPorts:targetPortIds.map(portId=>sub==='bpduguard'?{portId,bpduGuard:undefined}:{portId,bpduFilter:undefined})}
+        if(value!=='enable'&&value!=='disable')return {output:`% Use spanning-tree ${sub} enable|disable.`}
+        const enabled=value==='enable'
+        return {output:'',modifiedPorts:targetPortIds.map(portId=>sub==='bpduguard'?{portId,bpduGuard:enabled}:{portId,bpduFilter:enabled})}
+      }
+      if(sub==='guard'){
+        if(negated&&!body[1]||body[1]==='root')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,rootGuard:negated?undefined:true}))}
+        if(body[1]==='none')return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,rootGuard:undefined}))}
+        return {output:'% Use spanning-tree guard root.'}
+      }
       if(sub==='cost'&&(negated||Number(body[1])>0))return {output:'',modifiedPorts:targetPortIds.map(portId=>({portId,stpCost:negated?undefined:Number(body[1])}))}
       if(sub==='mst'){
         const instance=Number(body[1]),value=Number(body[3])
@@ -2416,6 +2433,8 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
     if (device.config.snmpSystemLocation) out += `snmp-server location ${device.config.snmpSystemLocation}\n`
     for(const [vlan,priority] of Object.entries(device.config.stpPriorities||{}))out+=`spanning-tree vlan ${vlan} priority ${priority}\n`
     if(device.config.portfastDefault)out+='spanning-tree portfast default\n'
+    if(device.config.bpduGuardDefault)out+='spanning-tree portfast bpduguard default\n'
+    if(device.config.bpduFilterDefault)out+='spanning-tree portfast bpdufilter default\n'
     if(device.config.stpMode)out+=`spanning-tree mode ${device.config.stpMode}\n`
     for(const [instance,priority] of Object.entries(device.config.mstPriorities||{}))out+=`spanning-tree mst ${instance} priority ${priority}\n`
     if(device.config.mstName!==undefined||device.config.mstRevision!==undefined||(device.config.mstInstances?.length??0)>0){
@@ -2465,6 +2484,9 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
       if (p.voiceVlan) out += ` switchport voice vlan ${p.voiceVlan}\n`
       if(p.channelGroup)out+=` channel-group ${p.channelGroup} mode ${p.channelMode}\n`
       if(p.portfast)out+=' spanning-tree portfast\n'
+      if(p.bpduGuard!==undefined)out+=` spanning-tree bpduguard ${p.bpduGuard?'enable':'disable'}\n`
+      if(p.bpduFilter!==undefined)out+=` spanning-tree bpdufilter ${p.bpduFilter?'enable':'disable'}\n`
+      if(p.rootGuard)out+=' spanning-tree guard root\n'
       if(p.stpCost)out+=` spanning-tree cost ${p.stpCost}\n`
       for(const [instance,cost] of Object.entries(p.mstCost??{}))out+=` spanning-tree mst ${instance} cost ${cost}\n`
       if(p.stpLinkType)out+=` spanning-tree link-type ${p.stpLinkType}\n`

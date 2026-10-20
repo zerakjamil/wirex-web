@@ -2,8 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createDevice } from './deviceFactory'
 import { createTrainingLab } from './trainingLabs'
-import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates } from './spanningTree'
-import type { NetworkLink } from '../types/network'
+import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates,effectiveBpduGuard,effectiveBpduFilter,applyStpIngressGuard,STP_MAX_AGE_TICKS } from './spanningTree'
+import type { InFlightPacket, NetworkLink } from '../types/network'
+import { stepSimulationTick } from './engine'
 
 function twoVlanTrunk(){
  const a=createDevice('switch',0,0),b=createDevice('switch',200,0)
@@ -218,4 +219,94 @@ test('a newly carried VLAN starts in listening when the trunk already has runtim
  const advanced=advanceStpPortStates(devices,links,260)
  const states=advanced.find(device=>device.id===a.id)!.ports.find(port=>port.id===ap.id)!.stpVlanStates!
  assert.deepEqual(states['20'],{state:'listening',sinceTick:260})
+})
+
+
+test('BPDU Guard err-disables an edge port that receives a BPDU',()=>{
+ const {devices,links,a}=twoVlanTrunk()
+ const b=devices[1],bp=b.ports[0]
+ bp.portfast=true;bp.bpduGuard=true
+ const prepared=prepareStpTick(devices,links,1)
+ const frame=prepared.outbound.find(candidate=>candidate.deviceId===a.id&&candidate.vlan===10)!
+ const receiver=prepared.devices.find(device=>device.id===b.id)!
+ assert.equal(applyStpIngressGuard(receiver,bp.id,frame.pdu,1),'bpdu-guard')
+ const port=receiver.ports.find(candidate=>candidate.id===bp.id)!
+ assert.equal(port.adminStatus,'down')
+ assert.equal(port.status,'down')
+ assert.equal(port.errDisabled,'bpduguard')
+ assert.equal(port.stpState,'blocking')
+})
+
+test('BPDU Filter suppresses outbound advertisements and drops inbound BPDUs',()=>{
+ const {devices,links,a,ap}=twoVlanTrunk()
+ const b=devices[1]
+ ap.portfast=true;ap.bpduFilter=true
+ const prepared=prepareStpTick(devices,links,1)
+ assert.equal(prepared.outbound.filter(candidate=>candidate.deviceId===a.id).length,0)
+ const inbound=prepared.outbound.find(candidate=>candidate.deviceId===b.id&&candidate.vlan===10)!
+ const receiver=prepared.devices.find(device=>device.id===a.id)!
+ assert.equal(applyStpIngressGuard(receiver,ap.id,inbound.pdu,1),'bpdu-filter')
+ assert.equal(receiver.ports.find(candidate=>candidate.id===ap.id)!.adminStatus,'up')
+})
+
+test('PortFast BPDU Guard and Filter defaults apply only to edge ports and explicit values win',()=>{
+ const device=createDevice('switch',0,0),port=device.ports[0]
+ device.config.bpduGuardDefault=true;device.config.bpduFilterDefault=true;device.config.portfastDefault=true
+ assert.equal(effectiveBpduGuard(device,port),true)
+ assert.equal(effectiveBpduFilter(device,port),true)
+ device.config.portfastDefault=false;port.portfast=false
+ assert.equal(effectiveBpduGuard(device,port),false)
+ assert.equal(effectiveBpduFilter(device,port),false)
+ port.portfast=true
+ assert.equal(effectiveBpduGuard(device,port),true)
+ port.bpduGuard=false;port.bpduFilter=false
+ assert.equal(effectiveBpduGuard(device,port),false)
+ assert.equal(effectiveBpduFilter(device,port),false)
+})
+
+test('Root Guard blocks a superior BPDU and recovers after the max-age window',()=>{
+ const {devices,links,a}=twoVlanTrunk()
+ const b=devices[1],bp=b.ports[0]
+ bp.rootGuard=true
+ const prepared=prepareStpTick(devices,links,1)
+ const frame=prepared.outbound.find(candidate=>candidate.deviceId===a.id&&candidate.vlan===10)!
+ const receiver=prepared.devices.find(device=>device.id===b.id)!
+ assert.equal(applyStpIngressGuard(receiver,bp.id,frame.pdu,1),'root-guard')
+ const port=receiver.ports.find(candidate=>candidate.id===bp.id)!
+ assert.deepEqual(port.rootInconsistentVlans,{'10':1})
+ assert.equal(port.stpVlanStates?.['10']?.state,'blocking')
+ const guardedDevices=prepared.devices.map(device=>device.id===b.id?receiver:device)
+ assert.equal(getStpTopology(guardedDevices,links,10).ports.get(`${b.id}|${bp.id}`)?.role,'Altn')
+ const held=advanceStpPortStates(guardedDevices,links,2).find(device=>device.id===b.id)!.ports.find(candidate=>candidate.id===bp.id)!
+ assert.deepEqual(held.rootInconsistentVlans,{'10':1})
+ const recovered=advanceStpPortStates(guardedDevices,links,1+STP_MAX_AGE_TICKS).find(device=>device.id===b.id)!.ports.find(candidate=>candidate.id===bp.id)!
+ assert.equal(recovered.rootInconsistentVlans,undefined)
+})
+
+test('Root Guard ignores an inferior BPDU',()=>{
+ const {devices,links,a}=twoVlanTrunk()
+ const b=devices[1],bp=b.ports[0]
+ bp.rootGuard=true
+ b.config.stpPriorities={'10':4096}
+ const prepared=prepareStpTick(devices,links,1)
+ const frame=prepared.outbound.find(candidate=>candidate.deviceId===a.id&&candidate.vlan===10)!
+ const receiver=prepared.devices.find(device=>device.id===b.id)!
+ assert.equal(applyStpIngressGuard(receiver,bp.id,frame.pdu,1),null)
+ assert.equal(receiver.ports.find(candidate=>candidate.id===bp.id)!.rootInconsistentVlans,undefined)
+})
+
+
+test('the engine drops a guarded BPDU and err-disables the receiving port',()=>{
+ const {devices,links}=twoVlanTrunk()
+ const b=devices[1],bp=b.ports[0]
+ bp.portfast=true;bp.bpduGuard=true
+ let current=devices,packets:InFlightPacket[]=[]
+ for(let tick=1;tick<=12;tick++){
+  const step=stepSimulationTick(current,links,packets,[],[],tick)
+  current=step.updatedDevices;packets=step.newInFlightPackets
+  if(current.find(device=>device.id===b.id)!.ports.find(port=>port.id===bp.id)!.errDisabled)break
+ }
+ const guarded=current.find(device=>device.id===b.id)!.ports.find(port=>port.id===bp.id)!
+ assert.equal(guarded.errDisabled,'bpduguard')
+ assert.equal(guarded.adminStatus,'down')
 })

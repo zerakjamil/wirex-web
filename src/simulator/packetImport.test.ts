@@ -87,6 +87,20 @@ test('PKT import applies IOS logging host and trap commands to the live model', 
   assert.deepEqual(router.importedRunningConfig, lines)
 })
 
+test('PKT import applies spanning-tree edge guard configuration to the live switch model',()=>{
+  const lines=['hostname GuardSwitch','spanning-tree portfast bpduguard default','spanning-tree portfast bpdufilter default','interface FastEthernet0/1','spanning-tree portfast','spanning-tree bpduguard enable','spanning-tree bpdufilter enable','spanning-tree guard root','!','end']
+  const running=`<RUNNINGCONFIG>${lines.map(line=>`<LINE>${line}</LINE>`).join('')}</RUNNINGCONFIG>`
+  const sw=parsePktXml(project(device('34','GuardSwitch','Switch','2960-24TT',port('FastEthernet0/1','00:11:22:33:44:08'),running))).devices[0]
+  assert.equal(sw.config.bpduGuardDefault,true)
+  assert.equal(sw.config.bpduFilterDefault,true)
+  const iface=sw.ports.find(candidate=>candidate.name==='FastEthernet0/1')!
+  assert.equal(iface.portfast,true)
+  assert.equal(iface.bpduGuard,true)
+  assert.equal(iface.bpduFilter,true)
+  assert.equal(iface.rootGuard,true)
+  assert.deepEqual(sw.importedRunningConfig,lines)
+})
+
 test('PKT import applies HSRP interface configuration to the live gateway model',()=>{
   const lines=['interface FastEthernet0/0','ip address 192.0.2.2 255.255.255.0','standby 10 ip 192.0.2.1','standby 10 priority 120','standby 10 preempt','!','end']
   const running=`<RUNNINGCONFIG>${lines.map(line=>`<LINE>${line}</LINE>`).join('')}</RUNNINGCONFIG>`

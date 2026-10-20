@@ -308,3 +308,70 @@ test('spanning-tree mst <instance> cost is configured per interface and shown in
   assert.deepEqual(sw.ports.find(candidate => candidate.id === port.id)?.mstCost, { '2': 50 })
   assert.match(runCli(sw, 'spanning-tree mst 1 cost 0').output, /cost <1-200000000>/)
 })
+
+
+test('spanning-tree edge guards configure real port state and appear in the running config', () => {
+  const sw = createDevice('switch', 0, 0)
+  sw.id = 'guard-sw'
+  sw.name = 'GUARD-SW'
+  sw.config.hostname = 'GUARD-SW'
+  sw.currentCliMode = 'config'
+  const port = sw.ports.find(candidate => candidate.shortName === 'Fa0/1')!
+
+  runCli(sw, 'spanning-tree portfast bpduguard default')
+  runCli(sw, 'spanning-tree portfast bpdufilter default')
+  assert.equal(sw.config.bpduGuardDefault, true)
+  assert.equal(sw.config.bpduFilterDefault, true)
+
+  runCli(sw, 'interface FastEthernet0/1')
+  assert.equal(runCli(sw, 'spanning-tree bpduguard enable').output, '')
+  assert.equal(runCli(sw, 'spanning-tree bpdufilter enable').output, '')
+  assert.equal(runCli(sw, 'spanning-tree guard root').output, '')
+  assert.equal(sw.ports.find(candidate => candidate.id === port.id)?.bpduGuard, true)
+  assert.equal(sw.ports.find(candidate => candidate.id === port.id)?.bpduFilter, true)
+  assert.equal(sw.ports.find(candidate => candidate.id === port.id)?.rootGuard, true)
+  assert.match(runCli(sw, 'spanning-tree bpduguard maybe').output, /bpduguard enable\|disable/)
+
+  sw.currentCliMode = 'priv'
+  const config = runCli(sw, 'show running-config').output
+  assert.match(config, /spanning-tree portfast bpduguard default/)
+  assert.match(config, /spanning-tree portfast bpdufilter default/)
+  assert.match(config, /spanning-tree bpduguard enable/)
+  assert.match(config, /spanning-tree bpdufilter enable/)
+  assert.match(config, /spanning-tree guard root/)
+
+  sw.currentCliMode = 'config'
+  runCli(sw, 'interface FastEthernet0/1')
+  runCli(sw, 'spanning-tree bpduguard disable')
+  runCli(sw, 'no spanning-tree bpdufilter')
+  runCli(sw, 'no spanning-tree guard root')
+  const cleared = sw.ports.find(candidate => candidate.id === port.id)!
+  assert.equal(cleared.bpduGuard, false)
+  assert.equal(cleared.bpduFilter, undefined)
+  assert.equal(cleared.rootGuard, undefined)
+  sw.currentCliMode = 'config'
+  runCli(sw, 'no spanning-tree portfast bpduguard default')
+  runCli(sw, 'no spanning-tree portfast bpdufilter default')
+  assert.equal(sw.config.bpduGuardDefault, false)
+  assert.equal(sw.config.bpduFilterDefault, false)
+})
+
+test('no shutdown clears a BPDU Guard err-disable and Root Guard blocking state', () => {
+  const sw = createDevice('switch', 0, 0)
+  sw.id = 'guard-recovery-sw'
+  sw.config.hostname = 'GUARD-RECOVERY'
+  sw.currentCliMode = 'config'
+  const port = sw.ports.find(candidate => candidate.shortName === 'Fa0/1')!
+  port.adminStatus = 'down'
+  port.errDisabled = 'bpduguard'
+  port.rootInconsistentVlans = { '10': 4 }
+  runCli(sw, 'interface FastEthernet0/1')
+  runCli(sw, 'no shutdown')
+  const recovered = sw.ports.find(candidate => candidate.id === port.id)!
+  assert.equal(recovered.adminStatus, 'up')
+  assert.equal(recovered.errDisabled, undefined)
+  assert.equal(recovered.rootInconsistentVlans, undefined)
+  recovered.rootInconsistentVlans = { '10': 5 }
+  runCli(sw, 'shutdown')
+  assert.equal(sw.ports.find(candidate => candidate.id === port.id)?.rootInconsistentVlans, undefined)
+})

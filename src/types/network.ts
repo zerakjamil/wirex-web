@@ -93,6 +93,16 @@ export interface NetworkPort {
   channelGroup?: number
   channelMode?: 'active' | 'passive' | 'desirable' | 'auto' | 'on'
   portfast?: boolean
+  /** Interface BPDU Guard. undefined inherits the device's PortFast BPDU Guard default. */
+  bpduGuard?: boolean
+  /** Interface BPDU Filter. undefined inherits the device's PortFast BPDU Filter default. */
+  bpduFilter?: boolean
+  /** Root Guard blocks superior BPDUs on this port. */
+  rootGuard?: boolean
+  /** VLANs currently held root-inconsistent by Root Guard, keyed by VLAN, valued by the last superior BPDU tick. */
+  rootInconsistentVlans?: Record<string, number>
+  /** Runtime reason a port was taken down by a guard feature. Cleared by shutdown/no shutdown. */
+  errDisabled?: 'bpduguard'
   stpCost?: number
   /** Per-MST-instance path cost, keyed by instance number. */
   mstCost?: Record<string, number>
@@ -238,6 +248,10 @@ export interface DeviceConfig {
   mstInstances?: Array<{ instance: number; vlans: number[] }>
   mstPriorities?: Record<string,number>
   portfastDefault?: boolean
+  /** Global PortFast BPDU Guard default for edge ports. */
+  bpduGuardDefault?: boolean
+  /** Global PortFast BPDU Filter default for edge ports. */
+  bpduFilterDefault?: boolean
   hostname: string
   banner?: string
   /** Packet Tracer's GLOBAL / Algorithm Settings page (simulation-only knobs). */

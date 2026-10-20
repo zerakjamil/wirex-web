@@ -272,6 +272,15 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
       if (port.dot1qVlan !== undefined && (!Number.isInteger(port.dot1qVlan) || Number(port.dot1qVlan) < 1 || Number(port.dot1qVlan) > 4094)) throw new Error('Invalid subinterface VLAN.')
       for (const field of ['ospfCost', 'ospfHelloInterval', 'ospfDeadInterval', 'ospfPriority']) if (port[field] !== undefined && (!Number.isInteger(port[field]) || Number(port[field]) < (field === 'ospfPriority' ? 0 : 1) || Number(port[field]) > (field === 'ospfPriority' ? 255 : 65535))) throw new Error('Invalid OSPF interface setting.')
       if (port.ospfNetworkType !== undefined) oneOf(port.ospfNetworkType, ['broadcast', 'point-to-point'])
+      for (const key of ['bpduGuard', 'bpduFilter', 'rootGuard']) if (port[key] !== undefined && typeof port[key] !== 'boolean') throw new Error('Invalid spanning-tree guard interface flag.')
+      if (port.errDisabled !== undefined) oneOf(port.errDisabled, ['bpduguard'])
+      if (port.rootInconsistentVlans !== undefined) {
+        const blocked = object(port.rootInconsistentVlans)
+        for (const [vlanKey, sinceTick] of Object.entries(blocked)) {
+          if (!/^[1-9]\d{0,3}$/.test(vlanKey) || Number(vlanKey) > 4094 || !Number.isFinite(sinceTick) || Number(sinceTick) < 0) throw new Error('Invalid Root Guard VLAN state.')
+        }
+        delete port.rootInconsistentVlans
+      }
     }
     for (const route of array(device.routingTable, 10000).map(object)) { textFields(route, ['network', 'netmask', 'nextHop', 'interfaceName']); finite(route.metric); oneOf(route.type, ['C', 'S', 'O', 'R']) }
     delete device.ospf
@@ -283,6 +292,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     array(device.cliHistory, 10000).forEach(string)
     oneOf(device.currentCliMode, ['user', 'priv', 'config', 'config-if', 'config-subif', 'config-vlan', 'config-line', 'config-router', 'config-dhcp', 'config-telephony', 'config-ephone', 'config-ephone-dn'])
     for (const key of ['modules', 'importedRunningConfig', 'importedStartupConfig']) if (device[key] !== undefined) array(device[key], 10000).forEach(string)
+    for (const key of ['bpduGuardDefault', 'bpduFilterDefault']) if (config[key] !== undefined && typeof config[key] !== 'boolean') throw new Error('Invalid spanning-tree guard default.')
     for (const key of ['vlans', 'ospfNetworks', 'dhcpPools', 'dhcpBindings', 'dnsRecords', 'tftpFiles', 'tftpClientFiles', 'asaNatRules', 'accessLists']) if (config[key] !== undefined) array(config[key], 4096).forEach(object)
     for (const vlan of (config.vlans ?? []) as RecordValue[]) { finite(vlan.id); string(vlan.name) }
     for (const pool of (config.dhcpPools ?? []) as RecordValue[]) {

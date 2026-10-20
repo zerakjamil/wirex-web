@@ -93,6 +93,10 @@ function applyConfig(device: NetworkDevice, lines: string[]) {
       }
       if(/^Vlan\d+$/i.test(port.name)){port.virtualVlan=Number(port.name.slice(4));port.shortName=`Vl${port.virtualVlan}`}
     } else if(line==='ip routing'||line==='no ip routing')device.config.ipRouting=line==='ip routing'
+    else if(line==='spanning-tree portfast bpduguard default')device.config.bpduGuardDefault=true
+    else if(line==='no spanning-tree portfast bpduguard default')device.config.bpduGuardDefault=false
+    else if(line==='spanning-tree portfast bpdufilter default')device.config.bpduFilterDefault=true
+    else if(line==='no spanning-tree portfast bpdufilter default')device.config.bpduFilterDefault=false
     else if(parts[0]==='vlan'&&/^\d+$/.test(parts[1])){
       port=undefined;vlanId=Number(parts[1])
       device.config.vlans=[...(device.config.vlans??[]).filter(v=>v.id!==vlanId),{id:vlanId,name:`VLAN${String(vlanId).padStart(4,'0')}`}]
@@ -151,6 +155,14 @@ function applyConfig(device: NetworkDevice, lines: string[]) {
       if (parts[2] === 'network' && ['point-to-point', 'broadcast'].includes(parts[3])) port.ospfNetworkType = parts[3] as 'point-to-point' | 'broadcast'
       else if (parts[2] in fields) port[fields[parts[2] as keyof typeof fields]] = Number(parts[3])
     }
+    else if (port && line === 'spanning-tree portfast') port.portfast = true
+    else if (port && line === 'no spanning-tree portfast') port.portfast = undefined
+    else if (port && parts[0] === 'spanning-tree' && parts[1] === 'bpduguard' && (parts[2] === 'enable' || parts[2] === 'disable')) port.bpduGuard = parts[2] === 'enable'
+    else if (port && line === 'no spanning-tree bpduguard') port.bpduGuard = undefined
+    else if (port && parts[0] === 'spanning-tree' && parts[1] === 'bpdufilter' && (parts[2] === 'enable' || parts[2] === 'disable')) port.bpduFilter = parts[2] === 'enable'
+    else if (port && line === 'no spanning-tree bpdufilter') port.bpduFilter = undefined
+    else if (port && line === 'spanning-tree guard root') port.rootGuard = true
+    else if (port && (line === 'no spanning-tree guard root' || line === 'spanning-tree guard none')) port.rootGuard = undefined
     else if (port && line === 'switchport mode trunk') port.portMode = 'trunk'
     else if (port && line === 'switchport mode access') port.portMode = 'access'
     else if(port&&parts.slice(0,4).join(' ')==='switchport trunk native vlan')port.nativeVlan=Number(parts[4])

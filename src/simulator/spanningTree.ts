@@ -26,7 +26,7 @@ export function getOperationalChannels(devices:NetworkDevice[],links:NetworkLink
 }
 
 const STP_HELLO_TICKS=34
-const STP_MAX_AGE_TICKS=Math.ceil(20_000/60)
+export const STP_MAX_AGE_TICKS=Math.ceil(20_000/60)
 const STP_FORWARD_DELAY_TICKS=Math.ceil(15_000/60)
 const STP_HOLD_TICKS=Math.ceil(1_000/60)
 /** Rapid PVST+/MSTP sync window that replaces the two 15-second 802.1D forward delays (models proposal/agreement). */
@@ -38,6 +38,12 @@ const sameVlanStates=(a:NetworkPort['stpVlanStates'],b:NetworkPort['stpVlanState
  const keys=Object.keys(a)
  return keys.length===Object.keys(b).length&&keys.every(key=>a[key]?.state===b[key]?.state&&a[key]?.sinceTick===b[key]?.sinceTick)
 }
+const sameRootInconsistent=(a:NetworkPort['rootInconsistentVlans'],b:NetworkPort['rootInconsistentVlans'])=>{
+ if(a===b)return true
+ if(!a||!b)return false
+ const keys=Object.keys(a)
+ return keys.length===Object.keys(b).length&&keys.every(key=>a[key]===b[key])
+}
 const bridgeId=(device:NetworkDevice,vlan:number)=>`${String(stpPriorityForVlan(device,vlan)).padStart(5,'0')}:${(device.macAddress||device.ports[0]?.macAddress||device.id).replace(/[:.]/g,'').toLowerCase()}:${device.id}`
 const portCost=(port:NetworkPort)=>port.stpCost??(port.type==='gigabitethernet'?4:19)
 /** Path cost for a VLAN: MST reads the instance-specific cost first, PVST modes read the port cost. */
@@ -48,6 +54,82 @@ const vlanPortCost=(device:NetworkDevice,vlan:number,port:NetworkPort)=>{
   if(cost!==undefined)return cost
  }
  return portCost(port)
+}
+
+/** Whether BPDU Guard is active on a port. An explicit interface value overrides the global edge default. */
+export function effectiveBpduGuard(device:NetworkDevice,port:NetworkPort):boolean{
+ if(port.bpduGuard!==undefined)return port.bpduGuard
+ return !!(device.config.bpduGuardDefault&&(port.portfast||device.config.portfastDefault))
+}
+
+/** Whether BPDU Filter is active on a port. An explicit interface value overrides the global edge default. */
+export function effectiveBpduFilter(device:NetworkDevice,port:NetworkPort):boolean{
+ if(port.bpduFilter!==undefined)return port.bpduFilter
+ return !!(device.config.bpduFilterDefault&&(port.portfast||device.config.portfastDefault))
+}
+
+/**
+ * Root Guard protects a port from a superior BPDU. A superior vector has a lower root bridge ID,
+ * or the same root with a lower path cost through this port.
+ */
+function superiorBpdu(device:NetworkDevice,port:NetworkPort,pdu:PacketPdu):boolean{
+ if(pdu.protocol!=='STP')return false
+ const {stpVlan:vlan,stpRootBridgeId:rootBridgeId,stpRootPathCost:rootPathCost}=pdu.payload
+ if(!Number.isInteger(vlan)||!rootBridgeId||!Number.isInteger(rootPathCost)||rootPathCost!<0)return false
+ const current=device.stpRuntime?.vlans[String(vlan)]
+ const currentRoot=current?.rootBridgeId??bridgeId(device,vlan!)
+ const currentCost=current?.rootPathCost??0
+ const order=rootBridgeId.localeCompare(currentRoot)
+ if(order!==0)return order<0
+ return rootPathCost!+vlanPortCost(device,vlan!,port)<currentCost
+}
+
+export type StpIngressGuard='bpdu-guard'|'bpdu-filter'|'root-guard'
+
+/** Classify how an ingress STP BPDU is handled before it reaches the Spanning Tree runtime. */
+export function stpIngressGuard(device:NetworkDevice,port:NetworkPort,pdu:PacketPdu):StpIngressGuard|null{
+ if(pdu.protocol!=='STP')return null
+ if(effectiveBpduFilter(device,port))return 'bpdu-filter'
+ if(effectiveBpduGuard(device,port))return 'bpdu-guard'
+ if(port.rootGuard&&superiorBpdu(device,port,pdu))return 'root-guard'
+ return null
+}
+
+/**
+ * Apply the ingress guard state change to a device clone. The caller is responsible for dropping
+ * the BPDU; this helper only updates port/STP state so it stays independently testable.
+ */
+export function applyStpIngressGuard(device:NetworkDevice,portId:string,pdu:PacketPdu,tick:number):StpIngressGuard|null{
+ const port=device.ports.find(candidate=>candidate.id===portId)
+ if(!port)return null
+ const guard=stpIngressGuard(device,port,pdu)
+ if(!guard)return null
+ if(guard==='bpdu-guard'){
+  port.adminStatus='down'
+  port.status='down'
+  port.errDisabled='bpduguard'
+  port.stpState='blocking'
+  port.stpSinceTick=tick
+  port.stpVlanStates=undefined
+  port.rootInconsistentVlans=undefined
+  if(device.stpRuntime){
+   const vlans=Object.fromEntries(Object.entries(device.stpRuntime.vlans).map(([key,runtime])=>[key,{...runtime,neighbors:runtime.neighbors.filter(neighbor=>neighbor.portId!==port.id)}]))
+   device.stpRuntime={vlans}
+  }
+  return guard
+ }
+ if(guard==='root-guard'){
+  const vlan=pdu.payload.stpVlan
+  if(!Number.isInteger(vlan))return null
+  const key=String(vlan)
+  const previous=port.stpVlanStates?.[key]
+  port.rootInconsistentVlans={...(port.rootInconsistentVlans??{}),[key]:tick}
+  port.stpState='blocking'
+  port.stpSinceTick=tick
+  port.stpVlanStates={...(port.stpVlanStates??{}),[key]:{state:'blocking',sinceTick:previous?.state==='blocking'?previous.sinceTick??tick:tick}}
+  return guard
+ }
+ return guard
 }
 
 export type StpMode='pvst'|'rapid-pvst'|'mst'
@@ -127,10 +209,18 @@ export function advanceStpPortStates(devices:NetworkDevice[],links:NetworkLink[]
    const link=links.find(candidate=>candidate.id===port.connectedLinkId)
    const ends=link&&endpoints(devices,link)
    const physicalUp=!!ends&&link!.status!=='down'&&ends.a.power!==false&&ends.b.power!==false&&ends.ap.adminStatus==='up'&&ends.bp.adminStatus==='up'
-   if(!physicalUp)continue
+   if(!physicalUp){
+    if(port.rootInconsistentVlans){
+     if(nextPorts===original.ports)nextPorts=original.ports.slice()
+     nextPorts[nextPorts.indexOf(port)]={...port,rootInconsistentVlans:undefined};portsChanged=true
+    }
+    continue
+   }
    const peerPort=ends!.a.id===original.id?ends!.bp:ends!.ap
    const vlans=knownVlans.filter(vlan=>carriesVlan(port,vlan)&&(!isBridge(ends!.a.id===original.id?ends!.b:ends!.a)||carriesVlan(peerPort,vlan)))
    const previousStates=port.stpVlanStates
+   const activeRootInconsistent=port.rootInconsistentVlans?Object.fromEntries(Object.entries(port.rootInconsistentVlans).filter(([,sinceTick])=>tick-sinceTick<STP_MAX_AGE_TICKS)):undefined
+   const rootInconsistentChanged=!sameRootInconsistent(activeRootInconsistent,port.rootInconsistentVlans)
    const nextStates:NonNullable<NetworkPort['stpVlanStates']>={}
    const fast=port.portfast||original.config.portfastDefault
    const mode=stpModeOf(original)
@@ -139,6 +229,10 @@ export function advanceStpPortStates(devices:NetworkDevice[],links:NetworkLink[]
    for(const vlan of vlans){
     if(!roleCache.has(vlan))roleCache.set(vlan,getStpTopology(devices,links,vlan))
     const role=roleCache.get(vlan)!.ports.get(`${original.id}|${port.id}`)?.role
+    if(activeRootInconsistent?.[String(vlan)]!==undefined){
+     nextStates[String(vlan)]={state:'blocking',sinceTick:activeRootInconsistent[String(vlan)]}
+     continue
+    }
     const previous=previousStates?.[String(vlan)]
     let state=previous?.state??(previousStates?'listening':port.stpState)
     if(!state)continue
@@ -165,9 +259,9 @@ export function advanceStpPortStates(devices:NetworkDevice[],links:NetworkLink[]
    const aggregateState=states.some(state=>state.state==='blocking')?'blocking':states.some(state=>state.state==='listening')?'listening':states.some(state=>state.state==='learning')?'learning':states.length?'forwarding':undefined
    const aggregateSince=aggregateState?Math.min(...states.filter(state=>state.state===aggregateState).map(state=>state.sinceTick??tick)):undefined
    const nextVlanStates=states.length?nextStates:undefined
-   if(aggregateState===port.stpState&&aggregateSince===port.stpSinceTick&&sameVlanStates(nextVlanStates,previousStates))continue
+   if(aggregateState===port.stpState&&aggregateSince===port.stpSinceTick&&sameVlanStates(nextVlanStates,previousStates)&&!rootInconsistentChanged)continue
    if(nextPorts===original.ports)nextPorts=original.ports.slice()
-   nextPorts[nextPorts.indexOf(port)]={...port,stpState:aggregateState,stpSinceTick:aggregateSince,stpVlanStates:nextVlanStates};portsChanged=true
+   nextPorts[nextPorts.indexOf(port)]={...port,stpState:aggregateState,stpSinceTick:aggregateSince,stpVlanStates:nextVlanStates,rootInconsistentVlans:activeRootInconsistent&&Object.keys(activeRootInconsistent).length?activeRootInconsistent:undefined};portsChanged=true
   }
   if(portsChanged){
    if(nextDevices===devices)nextDevices=devices.slice()
@@ -225,6 +319,7 @@ export function prepareStpTick(devices:NetworkDevice[],links:NetworkLink[],tick:
    for(const link of stpLinks){
     const ends=activeSwitchLink(devices,link)!,localPort=ends.a.id===original.id?ends.ap:ends.b.id===original.id?ends.bp:null
     if(!localPort||!carriesVlan(localPort,vlan)||!carriesVlan(ends.a.id===original.id?ends.bp:ends.ap,vlan))continue
+    if(effectiveBpduFilter(original,localPort))continue
     const last=state.lastSent[localPort.id],elapsed=last?tick-last.tick:Infinity
     const due=!last||elapsed>=STP_HOLD_TICKS&&(last.signature!==signature||elapsed>=STP_HELLO_TICKS)
     if(!due)continue
@@ -359,6 +454,7 @@ export function getStpTopology(devices:NetworkDevice[],links:NetworkLink[],vlan:
      }
     }
    }
+   if(port.rootInconsistentVlans?.[String(vlan)]!==undefined)role='Altn'
    const portState=port.stpVlanStates?port.stpVlanStates[String(vlan)]?.state??'listening':port.stpState
    const state=role==='Altn'||portState==='blocking'?'BLK':portState==='listening'?'LIS':portState==='learning'?'LRN':'FWD'
    ports.set(`${id}|${portId}`,{role,state,cost:effective?.rootPathCost??runtime?.rootPathCost??costs.get(id)??0});if(state!=='FWD')blocked=true
@@ -433,5 +529,6 @@ export function formatStpSummary(device:NetworkDevice){
   const active=counts.blocking+counts.listening+counts.learning+counts.forwarding
   return `${unit.padEnd(22)}${String(counts.blocking).padStart(8)}${String(counts.listening).padStart(10)}${String(counts.learning).padStart(9)}${String(counts.forwarding).padStart(11)}${String(active).padStart(11)}`
  })
- return `Switch is in ${mode} mode\nRoot bridge for: ${[...roots].sort().join(', ')||'none'}\nPortfast Default             ${device.config.portfastDefault?'is enabled':'is disabled'}\n\nName                   Blocking Listening Learning Forwarding STP Active\n---------------------- -------- --------- -------- ---------- ----------\n${rows.join('\n')}`
+ const blocked=device.ports.flatMap(port=>Object.keys(port.rootInconsistentVlans??{}).map(vlan=>`${port.name} VLAN${vlan}`))
+ return `Switch is in ${mode} mode\nRoot bridge for: ${[...roots].sort().join(', ')||'none'}\nPortfast Default             ${device.config.portfastDefault?'is enabled':'is disabled'}\nBPDU Guard Default           ${device.config.bpduGuardDefault?'is enabled':'is disabled'}\nBPDU Filter Default          ${device.config.bpduFilterDefault?'is enabled':'is disabled'}\n${blocked.length?`Root Guard Blocking          ${blocked.join(', ')}\n`:''}\nName                   Blocking Listening Learning Forwarding STP Active\n---------------------- -------- --------- -------- ---------- ----------\n${rows.join('\n')}`
 }

@@ -224,6 +224,10 @@ export function equivalentIosCommands(device: NetworkDevice, pageId: string): st
       lines.push(`${config}switchport mode access`)
       if (port.vlan !== 1) lines.push(`${config}switchport access vlan ${port.vlan}`)
     }
+    if (port.portfast) lines.push(`${config}spanning-tree portfast`)
+    if (port.bpduGuard !== undefined) lines.push(`${config}spanning-tree bpduguard ${port.bpduGuard ? 'enable' : 'disable'}`)
+    if (port.bpduFilter !== undefined) lines.push(`${config}spanning-tree bpdufilter ${port.bpduFilter ? 'enable' : 'disable'}`)
+    if (port.rootGuard) lines.push(`${config}spanning-tree guard root`)
     if (port.ipAddress && port.subnetMask) lines.push(`${config}ip address ${port.ipAddress} ${port.subnetMask}`)
     lines.push(`${config}${port.adminStatus === 'up' ? 'no shutdown' : 'shutdown'}`)
     lines.push(`${config}exit`)

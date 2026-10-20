@@ -1,7 +1,7 @@
 import type { AsaNatTranslation, EmailMessage, EmailTransactionResult, NetworkDevice, NetworkLink, NetworkPort, PacketPdu, InFlightPacket, SimulationEvent, HttpTransactionResult, DnsTransactionResult, UdpTransactionResult, DhcpTransactionResult, TcpReassemblyBuffer, TcpOutstandingSegment, WlcApEntry, IotThingState, SyslogDeliveryResult } from '@/types/network'
 import { isInSameSubnet, ipToNumber, isValidIpv4 } from './protocols/ip'
 import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAddress, ipv6SolicitedNodeMulticastMac, isValidIpv6, parseIpv6, formatIpv6, ipv6PrefixMask, ipv6AddressFromPrefixAndInterfaceId, ipv6InterfaceIdFromMac, isIpv6LinkLocal, isIpv6Multicast } from './protocols/ipv6'
-import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates } from './spanningTree'
+import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates,applyStpIngressGuard } from './spanningTree'
 import { ageLearnedMacTables } from './macLearning'
 import { evaluateAcl } from './acl'
 import { allocateDhcpLease } from './dhcp'
@@ -1730,7 +1730,15 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
         drop(packet,'Invalid or ineligible STP BPDU on this interface.')
         continue
       }
-      const accepted=receiveStpBpdu(editDevice(receiver.id),receivingPort.id,link.id,senderId,packet.pdu,simulationTick)
+      const guarded=editDevice(receiver.id)
+      const guard=applyStpIngressGuard(guarded,receivingPort.id,packet.pdu,simulationTick)
+      if(guard){
+        const guardedPort=guarded.ports.find(port=>port.id===receivingPort.id)
+        const name=guardedPort?.name??receivingPort.name
+        drop(packet,guard==='bpdu-guard'?`BPDU Guard disabled ${name} after receiving a BPDU.`:guard==='bpdu-filter'?`BPDU Filter dropped an inbound BPDU on ${name}.`:`Root Guard blocked a superior BPDU on ${name}.`)
+        continue
+      }
+      const accepted=receiveStpBpdu(guarded,receivingPort.id,link.id,senderId,packet.pdu,simulationTick)
       if(!accepted){drop(packet,'Malformed STP BPDU was rejected.');continue}
       packetDeliveries.push({packetId:packet.id,status:'delivered',receiverDeviceId:receiver.id,reason:`${receiver.name} received an STP BPDU from ${byId.get(senderId)?.name??senderId}.`})
       continue

@@ -1184,7 +1184,13 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
           ...d,
           ports: d.ports.map((p) => {
             if (p.id !== portId) return p
-            return { ...p, ...updates }
+            const next = { ...p, ...updates }
+            if (updates.adminStatus === 'up') {
+              next.errDisabled = undefined
+              next.rootInconsistentVlans = undefined
+            }
+            if ('rootGuard' in updates && !updates.rootGuard) next.rootInconsistentVlans = undefined
+            return next
           }),
         }
       })
@@ -2068,7 +2074,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
 
   loadLab: (devices, links, annotations, physical) => {
     const restoredDevices=devices.map(device=>{
-      const ports=device.ports.map(port=>port.stpState||port.stpSinceTick!==undefined||port.stpVlanStates?{...port,stpState:undefined,stpSinceTick:undefined,stpVlanStates:undefined}:port)
+      const ports=device.ports.map(port=>port.stpState||port.stpSinceTick!==undefined||port.stpVlanStates||port.rootInconsistentVlans?{...port,stpState:undefined,stpSinceTick:undefined,stpVlanStates:undefined,rootInconsistentVlans:undefined}:port)
       const macTable=stripMacAgingRuntime(device.macTable)
       const changed=!!device.stpRuntime||ports.some((port,index)=>port!==device.ports[index])||macTable.some((entry,index)=>entry!==device.macTable[index])
       return changed?{...device,stpRuntime:undefined,ports,macTable}:device

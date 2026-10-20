@@ -9,7 +9,7 @@ interface BrowserStpDevice {
   name?: string
   type?: string
   config?: { ipRouting?: boolean; defaultGateway?: string; dnsServer?: string; dhcpLease?: { serverId: string }; dhcpPools?: Array<{ name: string }>; vlans?: Array<{ id: number }>; stpPriorities?: Record<string, number> }
-  ports?: Array<{ id: string; vlan?: number; virtualVlan?: number; ipAddress?: string; subnetMask?: string; helperAddress?: string; portMode?: string; allowedVlans?: number[]; hsrpGroups?:BrowserHsrpGroup[]; hsrpRuntime?:Record<string,BrowserHsrpRuntime> }>
+  ports?: Array<{ id: string; vlan?: number; virtualVlan?: number; ipAddress?: string; subnetMask?: string; helperAddress?: string; portMode?: string; allowedVlans?: number[]; portfast?: boolean; bpduGuard?: boolean; bpduFilter?: boolean; rootGuard?: boolean; errDisabled?: string; adminStatus?: string; rootInconsistentVlans?: Record<string,number>; hsrpGroups?:BrowserHsrpGroup[]; hsrpRuntime?:Record<string,BrowserHsrpRuntime> }>
   stpRuntime?: { vlans: Record<string, BrowserStpVlan> }
 }
 interface BrowserCampusLink { id: string; fromDeviceId: string; fromPortId: string; toDeviceId: string; toPortId: string; isEtherChannel?: boolean }
@@ -23,6 +23,7 @@ interface BrowserNetworkState {
   sendPing: (sourceDeviceId: string, targetIp: string) => string | null
   requestDhcp: (deviceId: string) => string
   toggleDevicePower: (deviceId:string)=>void
+  updatePortConfig: (deviceId:string, portId:string, updates: Record<string,unknown>) => void
   stepSimulation: () => void
 }
 interface BrowserNetworkStore { getState: () => BrowserNetworkState; setState: (state: Partial<BrowserNetworkState>) => void }
@@ -217,4 +218,54 @@ test('production enterprise VLAN 20 client receives a relayed DHCP lease',async(
   expect(lease.clientMask).toBe('255.255.255.0')
   expect(lease.clientGateway).toBe('192.168.20.1')
   expect(lease.clientDns).toBe('192.168.10.11')
+})
+
+
+test('BPDU Guard trips on an edge switch port and the Config tab reports the real state', async ({ page, baseURL }) => {
+  const switchDevice = (id: string, name: string, mac: string, x: number) => ({
+    id, name, type: 'switch', model: '2960-24TT', x, y: 280, power: true, modules: [], macAddress: mac,
+    ports: [{
+      id: `${id}-gi0/1`, name: 'GigabitEthernet0/1', shortName: 'Gi0/1', type: 'gigabitethernet', status: 'up', adminStatus: 'up',
+      macAddress: mac, portMode: 'access', vlan: 1,
+      connectedLinkId: 'guard-link', connectedDeviceId: id === 'guard-a' ? 'guard-b' : 'guard-a',
+      connectedPortId: id === 'guard-a' ? 'guard-b-gi0/1' : 'guard-a-gi0/1',
+    }],
+    config: { hostname: name, vlans: [{ id: 1, name: 'default' }] },
+    routingTable: [], arpTable: [], macTable: [], cliHistory: [], currentCliMode: 'user',
+  })
+  const lab = Buffer.from(JSON.stringify({
+    version: 1,
+    fileName: 'BPDU Guard browser acceptance',
+    devices: [
+      switchDevice('guard-a', 'Guard-A', '0000.0000.00a1', 280),
+      switchDevice('guard-b', 'Guard-B', '0000.0000.00b2', 650),
+    ],
+    links: [{ id: 'guard-link', type: 'straight', status: 'up', fromDeviceId: 'guard-a', fromPortId: 'guard-a-gi0/1', toDeviceId: 'guard-b', toPortId: 'guard-b-gi0/1' }],
+    annotations: [],
+  }), 'utf8').toString('base64')
+
+  await page.goto(`${baseURL}/#lab=${lab}`)
+  await expect(page.getByRole('heading', { name: /Devices 2/i })).toBeVisible()
+  await page.waitForFunction(() => Boolean((window as unknown as { __wireforgeNetworkStore?: BrowserNetworkStore }).__wireforgeNetworkStore))
+  const tripped = await page.evaluate(() => {
+    const store = (window as unknown as { __wireforgeNetworkStore: BrowserNetworkStore }).__wireforgeNetworkStore
+    store.setState({ simulationMode: 'simulation', simulationPlaying: false })
+    const b = store.getState().devices.find(device => device.id === 'guard-b')!
+    store.getState().updatePortConfig(b.id, b.ports![0].id, { portfast: true, bpduGuard: true })
+    for (let tick = 0; tick < 12; tick++) store.getState().stepSimulation()
+    const port = store.getState().devices.find(device => device.id === 'guard-b')!.ports!.find(candidate => candidate.id === 'guard-b-gi0/1')!
+    return { adminStatus: port.adminStatus, errDisabled: port.errDisabled, bpduGuard: port.bpduGuard, portfast: port.portfast }
+  })
+  expect(tripped).toEqual({ adminStatus: 'down', errDisabled: 'bpduguard', bpduGuard: true, portfast: true })
+
+  await page.getByRole('button', { name: 'Open Guard-B' }).dblclick()
+  const deviceWindow = page.locator('.pt-device-window[aria-label="Guard-B window"]')
+  await expect(deviceWindow).toBeVisible()
+  await deviceWindow.getByRole('tab', { name: 'Config', exact: true }).click()
+  const interfacePages = deviceWindow.locator('[data-config-group="INTERFACE"] [data-config-page]')
+  await expect(interfacePages.first()).toBeVisible()
+  await interfacePages.first().click()
+  await expect(deviceWindow.getByLabel('BPDU Guard')).toHaveValue('enabled')
+  await expect(deviceWindow.getByLabel('PortFast')).toBeChecked()
+  await expect(deviceWindow.getByText('BPDU Guard disabled this port. Recover the port to clear this state.')).toBeVisible()
 })

@@ -173,11 +173,19 @@ test('interface page shows address, state and switchport commands', () => {
   const port = device.ports[0]
   port.vlan = 20
   port.adminStatus = 'down'
+  port.portfast = true
+  port.bpduGuard = true
+  port.bpduFilter = false
+  port.rootGuard = true
   const commands = equivalentIosCommands(device, `interface:${port.id}`)
   assert.match(commands, new RegExp(`interface ${port.name}`))
   assert.match(commands, /switchport mode access/)
   assert.match(commands, /switchport access vlan 20/)
   assert.match(commands, /^SW1\(config\)#shutdown$/m)
+  assert.match(commands, /spanning-tree portfast/)
+  assert.match(commands, /spanning-tree bpduguard enable/)
+  assert.match(commands, /spanning-tree bpdufilter disable/)
+  assert.match(commands, /spanning-tree guard root/)
 
   const routerDevice = router()
   const routedPort = routerDevice.ports[0]

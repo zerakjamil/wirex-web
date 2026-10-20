@@ -242,3 +242,25 @@ test('workspace validation rejects malformed physical containers, assignments an
   assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'C', deviceIds: [pc.id, pc.id] }] } }), /twice/)
   assert.throws(() => parseWorkspace({ ...base, physical: { containers, assignment: {}, clusters: [{ id: 'c1', name: 'x'.repeat(65), deviceIds: [pc.id] }] } }), /too long/)
 })
+
+
+test('spanning-tree guard settings survive restore while transient Root Guard state is cleared', () => {
+  const sw = createDevice('switch', 10, 20)
+  const port = sw.ports[0]
+  Object.assign(port, { portfast: true, bpduGuard: true, bpduFilter: false, rootGuard: true, rootInconsistentVlans: { '10': 5 }, errDisabled: 'bpduguard' })
+  sw.config.bpduGuardDefault = true
+  sw.config.bpduFilterDefault = true
+  const restored = parseWorkspace(JSON.parse(JSON.stringify({ version: 1, devices: [sw], links: [] })))
+  const restoredPort = restored.devices[0].ports[0]
+  assert.equal(restoredPort.portfast, true)
+  assert.equal(restoredPort.bpduGuard, true)
+  assert.equal(restoredPort.bpduFilter, false)
+  assert.equal(restoredPort.rootGuard, true)
+  assert.equal(restoredPort.errDisabled, 'bpduguard')
+  assert.equal(restoredPort.rootInconsistentVlans, undefined)
+  assert.equal(restored.devices[0].config.bpduGuardDefault, true)
+  assert.equal(restored.devices[0].config.bpduFilterDefault, true)
+  const bad = JSON.parse(JSON.stringify({ version: 1, devices: [sw], links: [] }))
+  bad.devices[0].ports[0].bpduGuard = 'yes'
+  assert.throws(() => parseWorkspace(bad), /guard/i)
+})
