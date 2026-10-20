@@ -26,7 +26,7 @@ import {
   NetworkCluster,
 } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
-import { apAdvertisedWlans } from '@/simulator/capwap'
+import { apAdvertisedWlans, isWifiAccessPoint } from '@/simulator/capwap'
 import {
   addContainer,
   addCluster,
@@ -232,7 +232,7 @@ export function simulationHistoryLimitFor(deviceCount: number) {
 
 /** Auto-association is only safe for an access point that advertises an open network. */
 function isOpenAccessPoint(device: NetworkDevice): boolean {
-  if (device.type !== 'wireless') return false
+  if (!isWifiAccessPoint(device)) return false
   const advertised = apAdvertisedWlans(device)[0]
   return !advertised || advertised.security === 'none'
 }

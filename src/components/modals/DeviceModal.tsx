@@ -14,7 +14,7 @@ import { usePingFeedback } from './usePingFeedback'
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { WlcConfigTab, WlcWebTab } from './WlcTabs'
-import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, wirelessKeyAccepted } from '@/simulator/capwap'
+import { AP_CHANNELS, apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isLightweightAp, isWifiAccessPoint, wirelessKeyAccepted } from '@/simulator/capwap'
 import { algorithmFields, algorithmSettings, configGroups, equivalentIosCommands } from '@/simulator/configPages'
 import { deviceAttributes } from '@/simulator/deviceAttributes'
 import { getTerminalSuggestions } from './terminalSuggestions'
@@ -1561,7 +1561,7 @@ function ConfigInterfacePage({ device, t, portId, updateDeviceConfig, updatePort
   const [ipv6Draft, setIpv6Draft] = useState<{ portId: string; text: string } | null>(null)
   const port = device.ports.find((candidate) => candidate.id === portId)
   if (!port) return null
-  if (device.type === 'wireless' && port.type === 'wireless') {
+  if (isWifiAccessPoint(device) && port.type === 'wireless') {
     return <ConfigWirelessPage device={device} t={t} port={port} updateDeviceConfig={updateDeviceConfig} updatePortConfig={updatePortConfig} />
   }
 
@@ -2506,7 +2506,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
       )
     }
 
-    const availableAps = devices.filter((d) => d.type === 'wireless' && d.ports.some((p) => p.type === 'wireless'))
+    const availableAps = devices.filter((d) => isWifiAccessPoint(d) && d.ports.some((p) => p.type === 'wireless'))
     const connectedAp = activeWirelessLink
       ? devices.find((d) => d.id === (activeWirelessLink.fromDeviceId === device.id ? activeWirelessLink.toDeviceId : activeWirelessLink.fromDeviceId))
       : null

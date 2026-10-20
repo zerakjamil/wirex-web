@@ -122,6 +122,12 @@ test('WLC and lightweight AP factory defaults and catalog entries', () => {
   assert.ok((deviceCatalog.wireless ?? []).some(entry => entry.type === 'wlc' && entry.models.includes('WLC-PT')))
 })
 
+test('a cell tower does not advertise a Wi-Fi network', () => {
+  const tower = createDevice('wireless', 0, 0, 'Cell-Tower')
+  assert.equal(tower.config.wirelessSsid, undefined)
+  assert.deepEqual(apAdvertisedWlans(tower), [])
+})
+
 test('powering on a wireless client only auto-joins an open access point', () => {
   const ap = createDevice('wireless', 0, 0, 'AccessPoint-PT')
   const laptop = createDevice('laptop', 0, 0, 'Laptop-PT')

@@ -92,7 +92,8 @@ such as `Wireless0`.
 
 Lightweight access points show a read-only note in place of the autonomous
 fields because their SSID and security come from the WLC. Channel values are
-advertised to clients but do not model RF interference.
+advertised to clients but do not model RF interference. The Cell-Tower is a
+WWAN model and is excluded from Wi-Fi configuration and site surveys.
 
 ## Server Services
 

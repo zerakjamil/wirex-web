@@ -64,6 +64,9 @@ export const wlcRuntimeOf = (device: NetworkDevice): WlcRuntime =>
 
 export const AP_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const
 
+/** Devices that broadcast a Wi-Fi network. The cell tower is a WWAN model, not an AP. */
+export const isWifiAccessPoint = (device: NetworkDevice) => device.type === 'wireless' && device.model !== 'Cell-Tower'
+
 /** Radio settings exposed by an autonomous access point's wireless interface. */
 export function apWirelessSettings(device: NetworkDevice) {
   const rawChannel = device.config.wirelessChannel
@@ -95,7 +98,7 @@ export function wirelessKeyAccepted(profile: WlanProfile, key: string): boolean 
  *  wireless LANs pushed by their controller while they are in the CAPWAP Run state. */
 export function apAdvertisedWlans(device: NetworkDevice): WlanProfile[] {
   if (!isLightweightAp(device)) {
-    if (device.type !== 'wireless') return []
+    if (!isWifiAccessPoint(device)) return []
     const settings = apWirelessSettings(device)
     const security: WlanProfile['security'] = settings.authentication === 'open'
       ? 'none'

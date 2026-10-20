@@ -421,7 +421,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         ? [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
-      ...(type === 'wireless' && ports.some(port => port.type === 'wireless')
+      ...(type === 'wireless' && model !== 'Cell-Tower' && ports.some(port => port.type === 'wireless')
         ? {
             wirelessSsid: ['WRT300N', 'Linksys-WRT300N', 'HomeRouter-PT-AC'].includes(model) ? 'linksys' : 'Default',
             wirelessChannel: 6,
