@@ -73,8 +73,9 @@ Refresh action.
 The server Services tab uses PT's left service list. Implemented services are
 HTTP (enable flag plus the HTML served at `/`), DHCP (address-pool editor writing
 `config.dhcpPools`, including a starting IP that seeds the first lease), DNS,
-TFTP, Email, IoT Server, SNMP and UDP Echo. The same service panes open from the
-server Desktop tiles, with a Back to Desktop control. NTP, AAA, Syslog and FTP
+TFTP, Email, NTP (master flag plus stratum, served over UDP 123), IoT Server,
+SNMP and UDP Echo. The same service panes open from the
+server Desktop tiles, with a Back to Desktop control. AAA, Syslog and FTP
 are not listed because the simulator does not implement them yet.
 
 ## Command sequences
@@ -99,10 +100,10 @@ with no IOS rendering and shows the explanatory notice instead.
   attributes table, aliases and catalog coverage.
 - `src/simulator/dhcp.test.ts` — pool starting-IP coverage alongside the
   existing DHCP lifecycle tests.
-- `e2e/config-parity.spec.ts` — 12 browser tests: tree + Settings + pane,
+- `e2e/config-parity.spec.ts` — 13 browser tests: tree + Settings + pane,
   static-route round trip, algorithm override, Attributes, display name vs
   hostname, PC/CLI tab rules, PC Static/DHCP and IPv6 controls, server Services
-  list with HTTP/DHCP editing, server Desktop service tiles, and the interface
+  list with HTTP/DHCP/NTP editing, server Desktop service tiles, and the interface
   port-status switch.
 - `e2e/flows.spec.ts` F08 navigates GLOBAL → Settings → INTERFACE before
   filling the IPv6 field, matching the new default page.

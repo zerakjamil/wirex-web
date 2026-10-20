@@ -199,6 +199,23 @@ test.describe('Packet Tracer config tab parity', () => {
     await expect(poolRow).toContainText('255.255.255.0')
   })
 
+  test('server NTP service enables the master and sets its stratum', async ({ page }) => {
+    const modal = await openDeviceConfig(page, /Web Server/i)
+    await modal.getByRole('tab', { name: 'Services', exact: true }).click()
+    const services = modal.getByRole('tablist', { name: 'Server services' })
+    await services.getByRole('tab', { name: 'NTP', exact: true }).click()
+
+    const enable = modal.getByLabel('Enable NTP Master')
+    const stratum = modal.getByLabel('Stratum')
+    await expect(enable).not.toBeChecked()
+    await expect(stratum).toBeDisabled()
+
+    await enable.check()
+    await expect(stratum).toBeEnabled()
+    await stratum.fill('5')
+    await expect(stratum).toHaveValue('5')
+  })
+
   test('server Desktop service tile opens the matching service pane', async ({ page }) => {
     const modal = await openDeviceConfig(page, /Web Server/i)
     await modal.getByRole('tab', { name: 'Desktop', exact: true }).click()

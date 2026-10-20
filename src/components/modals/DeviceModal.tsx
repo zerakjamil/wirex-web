@@ -1393,23 +1393,23 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
   return (
     <div>
       <ConfigPageHeader title={port.name} />
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#c0c0c0] pb-2">
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[#c0c0c0] pb-1">
         <div className="min-w-0">
           <p className="truncate font-mono text-[11px] text-[#444]">MAC: {port.macAddress}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-xs font-medium text-slate-500">{t('Port Status')}</span>
+          <span className="text-[11px] text-[#222]">{t('Port Status')}</span>
           <button
             type="button"
             role="switch"
             aria-checked={port.adminStatus === 'up'}
             aria-label={t('Port Status')}
             onClick={() => updatePortConfig(device.id, port.id, { adminStatus: port.adminStatus === 'up' ? 'down' : 'up' })}
-            className="inline-flex items-center gap-2 rounded-md py-1 text-xs font-medium transition-colors hover:text-slate-900"
+            className="inline-flex items-center gap-1.5 py-0.5 text-[11px] transition-colors"
           >
-            <span className={`relative h-5 w-9 rounded-full transition-colors ${port.adminStatus === 'up' ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true">
-              <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-[0_1px_2px_rgba(15,23,42,0.18)] transition-transform ${port.adminStatus === 'up' ? 'translate-x-4' : 'translate-x-0'}`} />
+            <span className={`relative h-4 w-8 rounded-full transition-colors ${port.adminStatus === 'up' ? 'bg-emerald-500' : 'bg-slate-300'}`} aria-hidden="true">
+              <span className={`absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-[0_1px_2px_rgba(15,23,42,0.18)] transition-transform ${port.adminStatus === 'up' ? 'translate-x-4' : 'translate-x-0'}`} />
             </span>
             <span className={port.adminStatus === 'up' ? 'text-emerald-700' : 'text-slate-500'}>
               {port.adminStatus === 'up' ? t('Port On') : t('Port Off')}
@@ -1418,7 +1418,7 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 @sm:grid-cols-2">
+      <div className="mt-2 grid grid-cols-1 gap-2 @sm:grid-cols-2">
         <div className="min-w-0">
           <label className={configFieldLabel}>{t('IPv4 Address')}</label>
           <input
@@ -1465,9 +1465,9 @@ function ConfigInterfacePage({ device, t, portId, updatePortConfig }: {
       </div>
 
       {device.type === 'switch' && (
-        <div className="mt-5 border-t border-slate-200 pt-5">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Switchport Settings')}</h4>
-          <div className="grid grid-cols-1 gap-4 @sm:grid-cols-2">
+        <div className="mt-3 border-t border-[#c0c0c0] pt-2">
+          <h4 className="mb-1.5 text-[11px] font-bold text-[#222]">{t('Switchport Settings')}</h4>
+          <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2">
             <div className="min-w-0">
               <label className={configFieldLabel}>{t('Port Mode')}</label>
               <select
@@ -1564,7 +1564,7 @@ function ServicesTab({ deviceId }: { deviceId: string }) {
   return device ? <ServicesSession key={device.id} device={device} /> : null
 }
 
-type ServerService = 'http' | 'dhcp' | 'dns' | 'tftp' | 'email' | 'iot' | 'snmp' | 'udp-echo'
+type ServerService = 'http' | 'dhcp' | 'dns' | 'tftp' | 'email' | 'ntp' | 'iot' | 'snmp' | 'udp-echo'
 
 const SERVER_SERVICES: Array<{ id: ServerService; label: string }> = [
   { id: 'http', label: 'HTTP' },
@@ -1572,6 +1572,7 @@ const SERVER_SERVICES: Array<{ id: ServerService; label: string }> = [
   { id: 'dns', label: 'DNS' },
   { id: 'tftp', label: 'TFTP' },
   { id: 'email', label: 'Email' },
+  { id: 'ntp', label: 'NTP' },
   { id: 'iot', label: 'IoT Server' },
   { id: 'snmp', label: 'SNMP' },
   { id: 'udp-echo', label: 'UDP Echo' },
@@ -1696,6 +1697,38 @@ function ServicesSession({ device, initialService, onBack }: { device: NetworkDe
                 ))}
                 {(device.config.dhcpPools ?? []).length === 0 && <p className="text-[11px] text-[#555]">{t('No DHCP pools configured.')}</p>}
               </div>
+            </section>
+          )}
+          {service === 'ntp' && (
+            <section className="max-w-[760px] space-y-2" aria-labelledby={`ntp-config-${device.id}`}>
+              <div>
+                <h4 id={`ntp-config-${device.id}`} className="text-[11px] font-bold text-[#222]">{t('NTP')}</h4>
+                <p className="mt-0.5 text-[11px] text-[#555]">{t('Serve time to clients that request it over UDP port 123.')}</p>
+              </div>
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-[#222]">
+                <input
+                  type="checkbox"
+                  checked={device.config.ntpMaster === true}
+                  onChange={event => updateDeviceConfig(device.id, { ntpMaster: event.target.checked })}
+                  className="h-[13px] w-[13px] accent-[#316ac5]"
+                />
+                {t('Enable NTP Master')}
+              </label>
+              <label className="block w-[120px] text-[11px] text-[#222]">
+                {t('Stratum')}
+                <input
+                  type="number"
+                  min={1}
+                  max={15}
+                  disabled={device.config.ntpMaster !== true}
+                  value={device.config.ntpMasterStratum ?? 8}
+                  onChange={event => {
+                    const value = Number(event.target.value)
+                    updateDeviceConfig(device.id, { ntpMasterStratum: Number.isFinite(value) ? value : 8 })
+                  }}
+                  className="mt-0.5 h-[22px] w-full border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5] disabled:bg-[#f4f4f4] disabled:text-[#777]"
+                />
+              </label>
             </section>
           )}
           {service === 'snmp' && (
@@ -2971,7 +3004,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
         </button>}
 
         {/* Command Prompt App */}
-        <button
+        {device.type !== 'tablet' && device.type !== 'smartphone' && <button
           type="button"
           onClick={() => setActiveApp('cmd')}
           className="min-h-[125px] p-5 bg-white hover:bg-sky-50/50 border border-slate-200 hover:border-[#0284c7] rounded-xl flex flex-col items-center justify-center gap-3 transition cursor-pointer shadow-xs hover:shadow-md"
@@ -2980,7 +3013,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
             &gt;_
           </div>
           <span className="text-xs font-bold text-slate-800">{t('Command Prompt')}</span>
-        </button>
+        </button>}
 
         {/* Terminal Console App */}
         {(device.type === 'pc' || device.type === 'laptop' || device.type === 'server') && <button

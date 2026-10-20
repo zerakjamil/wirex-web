@@ -940,6 +940,10 @@ export const messages = {
   'Invalid DHCP pool. Enter a pool name, a starting IPv4 address, and a subnet mask.':['Invalid DHCP pool. Enter a pool name, a starting IPv4 address, and a subnet mask.','تجمع DHCP غير صالح. أدخل اسم التجمع وعنوان IPv4 البدائي وقناع الشبكة الفرعية.','کۆمەڵەی DHCP نادروستە. ناوی کۆمەڵە، ناونیشانی IPv4ی دەستپێک و ماسکی ژێرتۆڕ بنووسە.'],
   'DHCP Pools':['DHCP Pools','تجمعات DHCP','کۆمەڵەکانی DHCP'],
   'Server services':['Server services','خدمات الخادم','خزمەتگوزارییەکانی ڕاژەکار'],
+  'NTP':['NTP','بروتوكول NTP','پرۆتۆکۆلی NTP'],
+  'Enable NTP Master':['Enable NTP Master','تفعيل سيد NTP','چالاککردنی سەروەری NTP'],
+  'Stratum':['Stratum','الطبقة','چین'],
+  'Serve time to clients that request it over UDP port 123.':['Serve time to clients that request it over UDP port 123.','قدّم الوقت للعملاء الذين يطلبونه عبر منفذ UDP 123.','کات بۆ ئەو کڕایەنەرانە پێشکەش بکە کە بە پۆرتی UDP 123 داواکاری دەکەن.'],
 } as const
 
 export type MessageKey=keyof typeof messages
