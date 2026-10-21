@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ccnaSectionNotes,
   ccnaSections,
@@ -81,11 +81,13 @@ export function AcademyReader() {
   const completedSections = useAcademyStore(state => state.completedSections)
   const markSectionRead = useAcademyStore(state => state.markSectionRead)
   const openSection = useAcademyStore(state => state.openSection)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const section = sectionId ? getSection(sectionId) : ccnaSections[0]
 
   useEffect(() => {
     const scroller = document.querySelector<HTMLElement>('.ccna-main')
     if (scroller) scroller.scrollTop = 0
+    headingRef.current?.focus({ preventScroll: true })
   }, [section?.id])
 
   if (!section) return null
@@ -110,7 +112,7 @@ export function AcademyReader() {
     </div>
 
     <header className="ccna-reader-head">
-      <h1 className="ccna-content-title" dir="ltr">{section.title}</h1>
+      <h1 ref={headingRef} className="ccna-content-title" dir="ltr" tabIndex={-1}>{section.title}</h1>
       <div className="ccna-reader-meta">
         <span><AcademyIcon name="clock" size={12} />{readingMinutes} {t('min read')}</span>
         <span className="ccna-badge">{t('English source')}</span>

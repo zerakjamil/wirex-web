@@ -70,6 +70,10 @@ test('academy accessibility audit light', async ({ page }) => {
   await expect(page.getByTestId('academy-rescue')).toBeVisible()
   await page.waitForTimeout(300)
   await assertA11y(page, 'rescue-light')
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('ccna-academy')).toBeHidden()
+  await expect(page.getByTestId('academy-open')).toBeFocused()
 })
 
 test('academy accessibility audit dark', async ({ page }) => {

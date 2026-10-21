@@ -318,6 +318,7 @@ html[data-theme="dark"] .ccna-academy {
 .ccna-practice, .ccna-rescue { max-width: 900px; margin: 0 auto; padding: 30px 42px 60px; }
 .ccna-practice-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .ccna-practice-head h1, .ccna-rescue-head h1, .ccna-result-card h1 { margin: 4px 0 0; color: var(--ac-ink); font-family: var(--ac-serif); font-size: 32px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+.ccna-reader-head h1:focus, .ccna-result-card h1:focus { outline: 2px solid var(--ac-teal); outline-offset: 5px; border-radius: 4px; }
 .ccna-practice-sub, .ccna-rescue-head > p { max-width: 560px; margin: 7px 0 0; color: var(--ac-muted); font-size: 11.5px; line-height: 1.55; }
 .ccna-practice-count { display: flex; flex-direction: column; align-items: flex-end; color: var(--ac-muted); white-space: nowrap; }
 .ccna-practice-count strong { color: var(--ac-ink); font-family: var(--ac-serif); font-size: 28px; font-weight: 600; line-height: 1; }

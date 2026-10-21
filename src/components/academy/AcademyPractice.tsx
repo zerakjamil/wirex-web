@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { ccnaChecks, getChapter, getSection } from '@/content/ccnaCourse'
 import { useAcademyStore } from '@/store/academyStore'
 import { useI18n } from '@/i18n/useI18n'
@@ -36,6 +36,11 @@ export function AcademyPractice() {
   const [submitted, setSubmitted] = useState(false)
   const [answers, setAnswers] = useState<PracticeAnswer[]>([])
   const [finished, setFinished] = useState(false)
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    if (finished) resultHeadingRef.current?.focus({ preventScroll: true })
+  }, [finished])
 
   const question = questions[index]
   const section = question ? getSection(question.sectionId) : undefined
@@ -97,7 +102,7 @@ export function AcademyPractice() {
           <ProgressRing value={score} size={116} stroke={7} label={`${score}%`} />
           <strong>{score}%</strong>
         </div>
-        <h1>{t('Practice complete')}</h1>
+        <h1 ref={resultHeadingRef} tabIndex={-1}>{t('Practice complete')}</h1>
         <p>{t('Practice score is a checkpoint, not a certification.')}</p>
         <div className="ccna-result-stats">
           <div><strong>{correctCount}</strong><span>{t('correct answers')}</span></div>

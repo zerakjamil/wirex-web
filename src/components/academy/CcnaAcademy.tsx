@@ -88,6 +88,7 @@ function CourseRail({ onNavigate, open }: { onNavigate: () => void; open: boolea
 export function CcnaAcademy() {
   const { t, dir } = useI18n()
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
   const view = useAcademyStore(state => state.view)
   const sectionId = useAcademyStore(state => state.sectionId)
   const completedSections = useAcademyStore(state => state.completedSections)
@@ -102,9 +103,16 @@ export function CcnaAcademy() {
 
   useEffect(() => {
     const dialog = dialogRef.current
+    const active = document.activeElement
+    returnFocusRef.current = active instanceof HTMLElement && active !== document.body ? active : null
     if (dialog && !dialog.open) dialog.showModal()
     return () => {
       if (dialog?.open) dialog.close()
+      const target = returnFocusRef.current
+      window.requestAnimationFrame(() => {
+        if (target?.isConnected) target.focus()
+        else document.querySelector<HTMLElement>('[data-testid="academy-open"]')?.focus()
+      })
     }
   }, [])
 

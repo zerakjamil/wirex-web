@@ -59,7 +59,14 @@ test('reads a concept, checks understanding, persists progress, and resets clean
 
 test('opens from the title bar, searches the course, and launches a guided lab', async ({ page }) => {
   await startNewWorkspace(page)
-  await page.getByTestId('academy-open').click()
+  const opener = page.getByTestId('academy-open')
+  await opener.focus()
+  await page.keyboard.press('Enter')
+  await expect(academy(page)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(academy(page)).toBeHidden()
+  await expect(opener).toBeFocused()
+  await opener.click()
   await expect(academy(page)).toBeVisible()
 
   await page.getByTestId('academy-search').fill('Data Encapsulation')
@@ -102,6 +109,7 @@ test('completes a practice round and enters a rescue path', async ({ page }) => 
   }
 
   await expect(page.getByTestId('academy-practice-result')).toBeVisible()
+  await expect(page.getByTestId('academy-practice-result').getByRole('heading', { level: 1 })).toBeFocused()
   await page.getByTestId('academy-practice-rescue').click()
   await expect(page.getByTestId('academy-rescue')).toBeVisible()
   await page.getByTestId('academy-rescue-start-vlans-45').click()
@@ -155,6 +163,7 @@ test.describe('mobile layout', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
     await page.getByTestId('academy-section-1.2').click()
     await expect(page.getByTestId('academy-reader')).toBeVisible()
+    await expect(page.getByTestId('academy-reader').getByRole('heading', { level: 1 })).toBeFocused()
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
 
     const overflow = await academy(page).evaluate(element => element.scrollWidth - element.clientWidth)
