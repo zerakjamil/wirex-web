@@ -142,6 +142,7 @@ recorded in [`docs/HANDOFF.md`](docs/HANDOFF.md) and
 ## Documentation
 
 - [CCNA Academy](docs/CCNA_ACADEMY.md)
+- [Academy evaluation kit](docs/evaluation/README.md)
 - [CCNA source knowledge base](docs/CCNA_NETWORKING_KNOWLEDGE_BASE.md)
 - [PT ↔ wireX gap map](docs/PT_PARITY_GAP_MAP.md)
 - [Replacement gates](docs/REPLACEMENT_GATES.md)

@@ -217,12 +217,16 @@ These are deliberate boundaries, not hidden gaps:
 - **Educational efficacy is not yet validated.** Unit and browser tests prove
   that the reading, checks, navigation, persistence, lab handoff, RTL layout,
   and mobile drawer work. They do not prove that novices learn more. A credible
-  pilot needs 5–8 target novices and 2 CCNA instructors, a pre-test, a
-  post-test, a delayed transfer task, blind instructor grading, and a comparison
-  against the same students using the simulator alone.
+  pilot needs 5–8 target novices, 2 CCNA instructors, a pre-test, a post-test, a
+  delayed transfer task, and blind instructor grading. A comparison condition
+  is needed before claiming superiority over simulator-only study; the
+  single-group feasibility kit in [`docs/evaluation/`](evaluation/README.md) can
+  find fatal problems but cannot establish that stronger claim.
 - **Content is English only.** The UI chrome is translated to English, Arabic,
   and Central Kurdish, but the course prose is English. Native-speaker
-  proofreading of the Arabic and Central Kurdish UI strings is still required.
+  proofreading of the Arabic and Central Kurdish UI strings is still required;
+  the packet and protocol are in
+  [`docs/evaluation/STRINGS_REVIEW.md`](evaluation/STRINGS_REVIEW.md).
 - **No LMS and no gradebook.** Progress is local to the browser. There is no
   account, cohort, teacher dashboard, certificate, or server-side reporting.
 - **No new simulator surface.** The Academy uses existing lessons, workspace

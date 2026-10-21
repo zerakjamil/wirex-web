@@ -17,7 +17,8 @@
     "electron:dist": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "electron:verify": "node scripts/verifyMacApp.mjs",
     "electron:icon": "node scripts/buildAppIcon.mjs",
-    "content:ccna": "node scripts/buildCcnaCourse.mjs"
+    "content:ccna": "node scripts/buildCcnaCourse.mjs",
+    "review:export": "tsx scripts/exportAcademyReviewPackets.ts"
   },
   "build": {
     "appId": "com.wireforge.simulator",

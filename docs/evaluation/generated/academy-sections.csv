@@ -1,0 +1,47 @@
+﻿section_id,number,title,chapter_id,chapter_label,chapter_title,words,check_ids,lab_lesson
+1.1,1.1,Enterprise Network Topology,ch1,Chapter 1,Introduction to TCP/IP Networking,130,ch1-ap,
+1.2,1.2,Evolution of Networking Models,ch1,Chapter 1,Introduction to TCP/IP Networking,76,,
+1.3,1.3,TCP/IP Architecture: Original vs. Updated Models,ch1,Chapter 1,Introduction to TCP/IP Networking,143,ch1-layer3,
+1.4,1.4,OSI 7-Layer Reference Model vs. TCP/IP Models,ch1,Chapter 1,Introduction to TCP/IP Networking,179,,
+1.5,1.5,OSI Layer Definitions & Functional Architecture,ch1,Chapter 1,Introduction to TCP/IP Networking,213,ch1-presentation,
+1.6,1.6,OSI Model Protocols and Physical Devices,ch1,Chapter 1,Introduction to TCP/IP Networking,126,,
+1.7,1.7,Layer Interaction: Same-Layer vs. Adjacent-Layer,ch1,Chapter 1,Introduction to TCP/IP Networking,167,,
+1.8,1.8,Data Encapsulation Hierarchy & Protocol Data Units (PDUs),ch1,Chapter 1,Introduction to TCP/IP Networking,246,ch1-pdu; ch1-encapsulation,tcpip
+1.9,1.9,Application Layer Mechanics (HTTP Example),ch1,Chapter 1,Introduction to TCP/IP Networking,131,,
+1.10,1.10,Transport Layer Mechanics (TCP Error Recovery),ch1,Chapter 1,Introduction to TCP/IP Networking,126,ch1-tcp,
+1.11,1.11,Network Layer Routing & Hop-by-Hop Forwarding Logic,ch1,Chapter 1,Introduction to TCP/IP Networking,275,ch1-arp,tcpip
+2.1,2.1,LAN Architectural Topologies: SOHO to Multi-Tier Campus,ch2,Chapter 2,Fundamentals of Ethernet LANs,138,,
+2.2,2.2,IEEE 802.3 Ethernet Standards & Physical Media,ch2,Chapter 2,Fundamentals of Ethernet LANs,160,ch2-distance,
+2.3,2.3,"UTP Cabling, Transceivers, and Circuit Fundamentals",ch2,Chapter 2,Fundamentals of Ethernet LANs,116,,
+2.4,2.4,UTP Pinouts: Straight-Through vs. Crossover Rules,ch2,Chapter 2,Fundamentals of Ethernet LANs,328,ch2-straight; ch2-pins,
+2.5,2.5,Gigabit UTP (1000BASE-T) 4-Pair Bi-Directional Operation,ch2,Chapter 2,Fundamentals of Ethernet LANs,46,ch2-pairs,
+2.6,2.6,Fiber-Optic Cabling: Multimode vs. Single-Mode,ch2,Chapter 2,Fundamentals of Ethernet LANs,268,ch2-fiber,
+2.7,2.7,10-Gbps Optical Ethernet Standards,ch2,Chapter 2,Fundamentals of Ethernet LANs,78,,
+2.8,2.8,Comprehensive Physical Media Comparison,ch2,Chapter 2,Fundamentals of Ethernet LANs,88,,
+2.9,2.9,IEEE 802.3 Ethernet Frame Format,ch2,Chapter 2,Fundamentals of Ethernet LANs,260,ch2-fcs,ethernet
+2.10,2.10,"MAC Addressing: Structure, Types, and Terminology",ch2,Chapter 2,Fundamentals of Ethernet LANs,132,ch2-broadcast,ethernet
+2.11,2.11,EtherType Protocol Identification,ch2,Chapter 2,Fundamentals of Ethernet LANs,30,,
+2.12,2.12,Switch Forwarding vs. Legacy Hub Collisions (Duplex Modes),ch2,Chapter 2,Fundamentals of Ethernet LANs,179,ch2-unknown,ethernet
+3.1,3.1,Cisco IOS CLI Privilege Modes & Navigation,ch6,Chapter 6,Configuring Basic Switch Management,83,ch6-mode,campus
+3.2,3.2,Simple Password Authentication Configuration,ch6,Chapter 6,Configuring Basic Switch Management,71,ch6-secret,
+3.3,3.3,Local Username Database Authentication,ch6,Chapter 6,Configuring Basic Switch Management,75,ch6-login-local,
+3.4,3.4,Centralized AAA Server Authentication (RADIUS / TACACS+),ch6,Chapter 6,Configuring Basic Switch Management,115,,
+3.5,3.5,Secure Shell (SSH v2) Configuration & Verification,ch6,Chapter 6,Configuring Basic Switch Management,163,ch6-ssh,
+3.6,3.6,Switch Virtual Interface (SVI) Management IP,ch6,Chapter 6,Configuring Basic Switch Management,149,ch6-svi,campus
+3.7,3.7,Switch Default Gateway Requirement,ch6,Chapter 6,Configuring Basic Switch Management,70,ch6-gateway,campus
+3.8,3.8,Static vs. Dynamic (DHCP) Switch IP Configuration,ch6,Chapter 6,Configuring Basic Switch Management,126,,
+3.9,3.9,CLI History Buffer Management,ch6,Chapter 6,Configuring Basic Switch Management,85,ch6-history,
+3.10,3.10,Productivity & Safety Commands for Lab/Production,ch6,Chapter 6,Configuring Basic Switch Management,93,ch6-dns,campus
+4.1,4.1,VLAN Concept & Broadcast Domain Segmentation,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),177,ch8-vlan,vlans
+4.2,4.2,Multi-Switch VLANs & The Necessity of Trunking,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),159,,vlans
+4.3,4.3,IEEE 802.1Q Frame Tagging Architecture,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),239,ch8-tag-size; ch8-tag-place,vlans
+4.4,4.4,Inter-VLAN Routing Requirement (Layer 2 vs. Layer 3),ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),130,ch8-routing,
+4.5,4.5,Configuring VLANs and Access Ports,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),174,ch8-access,vlans
+4.6,4.6,Dynamic Trunking Protocol (DTP) & Administrative Modes,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),127,ch8-dtp,vlans
+4.7,4.7,Trunking Operational Negotiation Matrix,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),136,ch8-mismatch,vlans
+4.8,4.8,IP Telephony & Voice VLAN Integration,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),312,ch8-voice,vlans
+4.9,4.9,Administrative & Operational VLAN States (Active vs. Shutdown),ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),100,ch8-lshut,
+4.10,4.10,Trunking Verification & Operational Mismatch Troubleshooting,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),278,ch8-nonegotiate,vlans
+5.1,5.1,"System, Security, and Management Setup",appendix,Appendix,Cisco IOS Command Quick Reference,85,,
+5.2,5.2,VLAN & Trunking Setup,appendix,Appendix,Cisco IOS Command Quick Reference,94,,
+5.3,5.3,Verification & Inspection,appendix,Appendix,Cisco IOS Command Quick Reference,39,,
