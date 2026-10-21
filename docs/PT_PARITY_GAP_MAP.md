@@ -34,13 +34,13 @@ Classification legend:
 | Cyber Observer | Two-NIC monitoring appliance with browser setup/login, discovery, inventory, findings and Assurance topology | The appliance is a real `security`-class device with two fixed copper gigabit interfaces and no modules, ASA defaults or native Desktop/CLI/ASDM. Management opens from another PC's **Desktop → Web Browser**. It stores a classroom account digest, runs connected-topology or IPv4-range discovery over active links, persists up to 20 snapshots, and shows inventory, severity-ranked configuration findings and a topology coloured by worst finding. It includes itself in the snapshot and explicitly reports no external CVE or firmware matching | `cyberObserver.ts`, `CyberObserverApp.tsx`, `DeviceModal.tsx`, `httpService.ts`, `managementAddresses.ts`, `topologyReachability.ts`, `deviceFactory.ts`, `deviceCatalog.ts`, `physicalHardware.ts`, `HardwareChassis.tsx`, `physical.css`, `Cisco3DIcons.tsx`, `workspaceSchema.ts`; `cyberObserver.test.ts` (14), `workspaceSchema.test.ts`; `e2e/cyber-observer.spec.ts`; `docs/CYBER_OBSERVER_IMPLEMENTATION.md` |
 
 Every item above is exercised by the automated suites: unit 702/702, Playwright
-E2E **82/82** flows against the production build on the 2026-10-21 rerun. Every
+E2E **84/84** flows against the production build on the 2026-10-21 rerun. Every
 functional flow passes, including Cyber Observer, the palette Wireless PC,
-generic end-device, Sniffer, ISA-3000 and Network Controller specs, the Activity
+generic end-device, Sniffer, ISA-3000, Network Controller and Academy accessibility specs, the Activity
 Wizard routing-option and wireless-item unit coverage, the Traffic Generator raw-injector and
 run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
 the four physical specs. The realtime scale case now passes its unchanged
-`<500 ms` pacing bound at **410 ms** (8/8 pings, p95 tick 74 ms, engine p95
+`<500 ms` pacing bound at **416 ms** (8/8 pings, p95 tick 81.4 ms, engine p95
 8.4 ms, queue peak 2,132, drained clean, no warnings). Earlier host-load runs
 measured 916 ms, with a same-host A/B against `80bfc03` at 692 ms; those were
 environment artifacts, and the bound was not weakened. The PT parity gate stays

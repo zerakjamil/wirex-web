@@ -129,10 +129,10 @@ At the 2026-10-21 checkpoint:
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
-- The full production-browser suite passes **82/82**, including the targeted
-  CCNA Academy scenarios **6/6**.
+- The full production-browser suite passes **84/84**, including the targeted
+  CCNA Academy scenarios **6/6** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound passes at
-  **410 ms** (8/8 pings, p95 tick 74 ms, engine p95 8.4 ms, queue peak 2,132).
+  **416 ms** (8/8 pings, p95 tick 81.4 ms, engine p95 8.6 ms, queue peak 2,132).
 
 Instructor/educational acceptance, native AR/CKB proofreading, and external
 Packet Tracer interoperability remain open. Current evidence and caveats are

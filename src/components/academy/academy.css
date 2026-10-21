@@ -5,7 +5,7 @@
   --ac-rail: #f0f4f3;
   --ac-ink: #15262b;
   --ac-ink-2: #34474d;
-  --ac-muted: #64767c;
+  --ac-muted: #5b6d73;
   --ac-line: #d8e1df;
   --ac-line-soft: #e8eeec;
   --ac-line-strong: #b9c8c5;
@@ -116,7 +116,7 @@ html[data-theme="dark"] .ccna-academy {
 .ccna-rail-scroll { flex: 1; min-height: 0; overflow: auto; padding: 6px 8px 14px; scrollbar-width: thin; scrollbar-color: var(--ac-line-strong) transparent; }
 .ccna-rail-group { margin-top: 8px; }
 .ccna-rail-chapter { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 5px; color: var(--ac-muted); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-.ccna-rail-chapter span:last-child { font-weight: 600; letter-spacing: .02em; opacity: .8; }
+.ccna-rail-chapter span:last-child { font-weight: 600; letter-spacing: .02em; }
 .ccna-rail-section { display: flex; align-items: flex-start; gap: 7px; width: 100%; border: 0; border-radius: 7px; background: transparent; padding: 6px 7px; text-align: start; color: var(--ac-ink-2); transition: background .12s ease, color .12s ease; }
 .ccna-rail-section:hover { background: var(--ac-surface-2); color: var(--ac-ink); }
 .ccna-rail-section[aria-current="page"] { background: var(--ac-teal-soft); color: var(--ac-teal-strong); }

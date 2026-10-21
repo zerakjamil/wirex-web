@@ -365,10 +365,10 @@ export const ccnaChecks: CcnaCheck[] = [
   {
     id: 'ch2-pins',
     sectionId: '2.4',
-    prompt: 'Which pins does 100BASE-TX use for transmission?',
+    prompt: 'Which pins does 100BASE-TX use on an MDI interface?',
     options: ['1, 2, 3, and 6', '1, 2, 4, and 5', '3, 6, 7, and 8', 'All eight pins'],
     answer: 0,
-    explanation: '10BASE-T and 100BASE-TX use two pairs: pins 1–2 and 3–6. Pins 4, 5, 7, and 8 are unused.',
+    explanation: '100BASE-TX uses two pairs: pins 1–2 and 3–6. On an MDI port, 1 and 2 transmit while 3 and 6 receive; a crossover cable swaps the pairs. Pins 4, 5, 7, and 8 are unused.',
   },
   {
     id: 'ch2-pairs',
@@ -528,7 +528,7 @@ export const ccnaChecks: CcnaCheck[] = [
     prompt: 'A port configured as access connects to a port configured as trunk. What is the result?',
     options: ['A working trunk', 'A severe mismatch; tagged frames are dropped', 'Automatic negotiation to access', 'Automatic negotiation to trunk'],
     answer: 1,
-    explanation: 'The trunk side sends tagged frames, but the access side does not interpret them as trunk traffic. Connectivity fails.',
+    explanation: 'The trunk side sends tagged frames, but the access side does not interpret them as trunk traffic. Tagged VLANs fail; only untagged traffic on the trunk’s native VLAN may still pass.',
   },
   {
     id: 'ch8-voice',
