@@ -129,13 +129,14 @@ At the 2026-10-21 checkpoint:
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
-- The targeted CCNA Academy browser suite passes **6/6**.
-- The last full browser run before the Academy spec was **75/76**. The only red
-  is the unchanged `simulation-scale` `longestTaskMs < 500` wall-clock bound
-  under host load; the bound was not weakened.
+- The full production-browser suite passes **82/82**, including the targeted
+  CCNA Academy scenarios **6/6**.
+- The unchanged `simulation-scale` `longestTaskMs < 500` bound passes at
+  **410 ms** (8/8 pings, p95 tick 74 ms, engine p95 8.4 ms, queue peak 2,132).
 
-The full browser gate and instructor acceptance remain open. Current evidence
-and caveats are recorded in [`docs/HANDOFF.md`](docs/HANDOFF.md) and
+Instructor/educational acceptance, native AR/CKB proofreading, and external
+Packet Tracer interoperability remain open. Current evidence and caveats are
+recorded in [`docs/HANDOFF.md`](docs/HANDOFF.md) and
 [`docs/LAUNCH_READINESS.md`](docs/LAUNCH_READINESS.md).
 
 ## Documentation

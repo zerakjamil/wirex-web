@@ -34,17 +34,19 @@ Classification legend:
 | Cyber Observer | Two-NIC monitoring appliance with browser setup/login, discovery, inventory, findings and Assurance topology | The appliance is a real `security`-class device with two fixed copper gigabit interfaces and no modules, ASA defaults or native Desktop/CLI/ASDM. Management opens from another PC's **Desktop → Web Browser**. It stores a classroom account digest, runs connected-topology or IPv4-range discovery over active links, persists up to 20 snapshots, and shows inventory, severity-ranked configuration findings and a topology coloured by worst finding. It includes itself in the snapshot and explicitly reports no external CVE or firmware matching | `cyberObserver.ts`, `CyberObserverApp.tsx`, `DeviceModal.tsx`, `httpService.ts`, `managementAddresses.ts`, `topologyReachability.ts`, `deviceFactory.ts`, `deviceCatalog.ts`, `physicalHardware.ts`, `HardwareChassis.tsx`, `physical.css`, `Cisco3DIcons.tsx`, `workspaceSchema.ts`; `cyberObserver.test.ts` (14), `workspaceSchema.test.ts`; `e2e/cyber-observer.spec.ts`; `docs/CYBER_OBSERVER_IMPLEMENTATION.md` |
 
 Every item above is exercised by the automated suites: unit 702/702, Playwright
-E2E 75 of 76 flows against the production build on the 2026-10-21 rerun. Every
+E2E **82/82** flows against the production build on the 2026-10-21 rerun. Every
 functional flow passes, including Cyber Observer, the palette Wireless PC,
 generic end-device, Sniffer, ISA-3000 and Network Controller specs, the Activity
 Wizard routing-option and wireless-item unit coverage, the Traffic Generator raw-injector and
 run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
-the four physical specs. The realtime scale case passes every functional
-assertion (8/8 pings, queue peak 2,132, drained clean, no warnings) but its
-unchanged pacing bound failed under host load in the latest run (916 ms vs
-500 ms; a same-host A/B against `80bfc03` measured 692 ms). The gate stays
-open. The BPDU Guard browser flow is among the passing specs. `tsc` clean,
-ESLint 0 errors / 28 existing warnings, `npm run electron:prep` green.
+the four physical specs. The realtime scale case now passes its unchanged
+`<500 ms` pacing bound at **410 ms** (8/8 pings, p95 tick 74 ms, engine p95
+8.4 ms, queue peak 2,132, drained clean, no warnings). Earlier host-load runs
+measured 916 ms, with a same-host A/B against `80bfc03` at 692 ms; those were
+environment artifacts, and the bound was not weakened. The PT parity gate stays
+open on scope and external acceptance, not on a browser failure. The BPDU Guard
+browser flow is among the passing specs. `tsc` clean, ESLint 0 errors / 28
+existing warnings, `npm run electron:prep` green.
 
 ## Product-level learning layer (not PT parity)
 

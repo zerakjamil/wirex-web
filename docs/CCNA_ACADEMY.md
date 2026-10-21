@@ -193,11 +193,14 @@ At the 2026-10-21 checkpoint:
 - Light, dark, RTL, reader, practice, rescue, and mobile layouts were reviewed
   in a real Chromium production build.
 
-The last full browser run before the Academy spec was 75/76. The only failure
-was the unchanged `simulation-scale` `longestTaskMs < 500` wall-clock bound
-under host load (916 ms; a same-host A/B against `80bfc03` measured 692 ms).
-The bound was not weakened. The Academy spec was run targeted against the
-production server at `127.0.0.1:3005`.
+The full production-browser suite now passes **82/82**, including these six
+Academy scenarios. The formerly host-load-sensitive `simulation-scale`
+`longestTaskMs < 500` bound passes at **410 ms** (8/8 pings, p95 tick 74 ms,
+engine p95 8.4 ms, queue peak 2,132). Earlier runs measured 916 ms, with a
+same-host A/B against `80bfc03` at 692 ms under heavy host load; those were
+environment artifacts, and the bound was never weakened. The targeted Academy
+spec was also run separately against the production server at
+`127.0.0.1:3005`.
 
 ## Limits and open evidence
 
