@@ -192,9 +192,10 @@ At the 2026-10-21 checkpoint:
   6. mobile course drawer closes after section selection.
 - The axe accessibility audit `e2e/academy-a11y.spec.ts` passes **2/2** across
   light-theme home, reader, practice, and rescue plus dark-theme home and
-  reader at WCAG 2.1 A/AA, with no serious or critical violations. The light
-  muted text token was darkened from `#64767c` to `#5b6d73` to reach AA on the
-  rail.
+  reader at WCAG 2.1 A/AA, with no serious or critical violations. The view
+  switcher uses a labelled tabpanel, `aria-controls`, a roving tab stop, and
+  direction-aware Left/Right/Home/End keys. The light muted text token was
+  darkened from `#64767c` to `#5b6d73` to reach AA on the rail.
 - Light, dark, RTL, reader, practice, rescue, and mobile layouts were reviewed
   in a real Chromium production build.
 

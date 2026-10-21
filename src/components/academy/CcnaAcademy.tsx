@@ -109,6 +109,23 @@ export function CcnaAcademy() {
   }, [])
 
   const learnSelected = view === 'home' || view === 'reader'
+  const selectedTab = view === 'reader' ? 'home' : view
+  const tabOrder = ['home', 'practice', 'rescue'] as const
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const current = tabOrder.indexOf(selectedTab)
+    let next = current
+    if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = tabOrder.length - 1
+    else {
+      const direction = event.key === 'ArrowRight' ? 1 : -1
+      next = (current + (dir === 'rtl' ? -direction : direction) + tabOrder.length) % tabOrder.length
+    }
+    setView(tabOrder[next])
+    const tabs = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    tabs[next]?.focus()
+  }
 
   return <dialog
     ref={dialogRef}
@@ -126,10 +143,10 @@ export function CcnaAcademy() {
           <div className="ccna-brand-text"><strong>wireX Academy</strong><span>CCNA 200-301 · Volume 1</span></div>
         </div>
         <button type="button" className="ccna-mobile-course" onClick={toggleRail} aria-label={t('Open course navigation')} aria-expanded={railOpen} data-testid="academy-course-toggle"><AcademyIcon name="menu" size={16} /><span>{t('Course')}</span></button>
-        <nav className="ccna-view-tabs" role="tablist" aria-label={t('Academy views')}>
-          <button type="button" role="tab" aria-selected={learnSelected} onClick={() => setView('home')} data-testid="academy-view-learn"><AcademyIcon name="book" size={13} />{t('Learn')}</button>
-          <button type="button" role="tab" aria-selected={view === 'practice'} onClick={() => setView('practice')} data-testid="academy-view-practice"><AcademyIcon name="target" size={13} />{t('Practice')}</button>
-          <button type="button" role="tab" aria-selected={view === 'rescue'} onClick={() => setView('rescue')} data-testid="academy-view-rescue"><AcademyIcon name="flame" size={13} />{t('Rescue')}</button>
+        <nav className="ccna-view-tabs" role="tablist" aria-label={t('Academy views')} onKeyDown={handleTabKeyDown}>
+          <button type="button" role="tab" id="academy-tab-home" aria-controls="academy-panel" aria-selected={learnSelected} tabIndex={learnSelected ? 0 : -1} onClick={() => setView('home')} data-testid="academy-view-learn"><AcademyIcon name="book" size={13} />{t('Learn')}</button>
+          <button type="button" role="tab" id="academy-tab-practice" aria-controls="academy-panel" aria-selected={view === 'practice'} tabIndex={view === 'practice' ? 0 : -1} onClick={() => setView('practice')} data-testid="academy-view-practice"><AcademyIcon name="target" size={13} />{t('Practice')}</button>
+          <button type="button" role="tab" id="academy-tab-rescue" aria-controls="academy-panel" aria-selected={view === 'rescue'} tabIndex={view === 'rescue' ? 0 : -1} onClick={() => setView('rescue')} data-testid="academy-view-rescue"><AcademyIcon name="flame" size={13} />{t('Rescue')}</button>
         </nav>
         <div className="ccna-top-actions">
           <div className="ccna-top-progress" title={t('Academy progress')} data-testid="academy-progress"><ProgressRing value={percent} size={27} stroke={3} label={`${percent}%`} /><span>{percent}%</span></div>
@@ -141,10 +158,12 @@ export function CcnaAcademy() {
         <CourseRail onNavigate={closeRail} open={railOpen} />
         {railOpen && <button type="button" className="ccna-rail-backdrop" aria-label={t('Close course navigation')} onClick={closeRail} />}
         <main className="ccna-main">
-          {view === 'home' && <AcademyHome />}
-          {view === 'reader' && <AcademyReader />}
-          {view === 'practice' && <AcademyPractice />}
-          {view === 'rescue' && <AcademyRescue />}
+          <div role="tabpanel" id="academy-panel" aria-labelledby={`academy-tab-${selectedTab}`} className="ccna-tabpanel" data-testid="academy-tabpanel">
+            {view === 'home' && <AcademyHome />}
+            {view === 'reader' && <AcademyReader />}
+            {view === 'practice' && <AcademyPractice />}
+            {view === 'rescue' && <AcademyRescue />}
+          </div>
         </main>
         {view === 'reader' && <AcademyReaderSide />}
       </div>

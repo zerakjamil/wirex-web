@@ -127,6 +127,10 @@ test('Arabic chrome keeps English course content LTR', async ({ page }) => {
 
   await expect(academy(page)).toHaveAttribute('dir', 'rtl')
   await expect(page.getByTestId('academy-view-learn')).toContainText(/[\u0600-\u06FF]/)
+  await page.getByTestId('academy-view-learn').focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.getByTestId('academy-view-practice')).toBeFocused()
+  await page.getByTestId('academy-view-learn').click()
   const description = page.locator('.ccna-chapter-desc').first()
   await expect(description).toHaveAttribute('dir', 'ltr')
   await expect(description).toHaveCSS('direction', 'ltr')
