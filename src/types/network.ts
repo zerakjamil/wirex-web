@@ -237,6 +237,34 @@ export interface SyslogDeliveryResult extends Omit<SyslogMessage, 'id'> {
   serverDeviceId: string
 }
 
+export interface NetworkControllerAccount {
+  username: string
+  /** Classroom-only local digest; never the plaintext password. */
+  passwordHash: string
+  role: 'admin'
+}
+
+export type NetworkControllerDiscoveryMode = 'cdp' | 'ip-range'
+
+export interface NetworkControllerDiscovery {
+  id: string
+  name: string
+  mode: NetworkControllerDiscoveryMode
+  rangeStart?: string
+  rangeEnd?: string
+  createdAtMs: number
+  status: 'complete' | 'failed'
+  /** Stable machine-readable reason for a failed run. */
+  reason?: 'power-off' | 'no-ip' | 'no-active-link' | 'invalid-range'
+  deviceIds: string[]
+}
+
+export interface NetworkControllerState {
+  accounts?: NetworkControllerAccount[]
+  discoveries?: NetworkControllerDiscovery[]
+  lastDiscoveryId?: string
+}
+
 export interface DeviceConfig {
   ipRouting?: boolean
   ipv6Routing?: boolean
@@ -320,6 +348,8 @@ export interface DeviceConfig {
   snifferPorts?: Record<string, boolean>
   /** Number of packets retained in the Sniffer capture buffer. */
   snifferBufferSize?: number
+  /** Local web-management state for a Network Controller. */
+  networkController?: NetworkControllerState
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]
@@ -1115,6 +1145,8 @@ export interface PacketPdu {
 export interface HttpTransactionResult {
   requestId: string
   sourceDeviceId: string
+  /** Responding HTTP server, when the transaction completed. */
+  destinationDeviceId?: string
   status: 'successful' | 'failed'
   response?: string
   httpStatus?: number

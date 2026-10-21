@@ -10,9 +10,10 @@ export function getHardwareProfile(device:NetworkDevice){
   const empty=['PT-Empty','Router-PT-Empty','Switch-PT-Empty','Cloud-Empty','Cloud-PT-Empty'].includes(device.model)
   const genericEndDevice=isGenericEndDevice(device)
   const sniffer=device.type==='hub'&&device.model==='Sniffer'
-  const slots=genericEndDevice?0:sniffer?2:Math.max(device.modules?.length??0,empty||device.type==='cloud'?10:device.type==='router'&&!compact?2:device.type==='switch'&&(device.model.includes('PS')||device.model==='PT-Switch'||device.model==='Switch-PT')?2:['laptop','pc','server'].includes(device.type)?1:0)
-  const moduleIds=genericEndDevice?[]:Object.values(MODULE_CATALOG).filter(m=>(m.portType||m.id==='PT-REPEATER-NM-COVER')&&m.id!=='PT-LAPTOP-NM-3G/4G'&&m.applicableTypes.includes(device.type)&&slots>0).map(m=>m.id)
-  return {shape:genericEndDevice?'enddevice' as const:sniffer?'sniffer' as const:shapes[device.type],slots,moduleIds,portFace:genericEndDevice||sniffer?'front' as const:['router','pc','server','laptop','printer','phone','tv','modem'].includes(device.type)?'rear' as const:'front' as const}
+  const networkController=device.type==='pc'&&device.model==='NetworkController'
+  const slots=genericEndDevice||networkController?0:sniffer?2:Math.max(device.modules?.length??0,empty||device.type==='cloud'?10:device.type==='router'&&!compact?2:device.type==='switch'&&(device.model.includes('PS')||device.model==='PT-Switch'||device.model==='Switch-PT')?2:['laptop','pc','server'].includes(device.type)?1:0)
+  const moduleIds=genericEndDevice||networkController?[]:Object.values(MODULE_CATALOG).filter(m=>(m.portType||m.id==='PT-REPEATER-NM-COVER')&&m.id!=='PT-LAPTOP-NM-3G/4G'&&m.applicableTypes.includes(device.type)&&slots>0).map(m=>m.id)
+  return {shape:genericEndDevice?'enddevice' as const:sniffer?'sniffer' as const:networkController?'rack' as const:shapes[device.type],slots,moduleIds,portFace:genericEndDevice||sniffer||networkController?'front' as const:['router','pc','server','laptop','printer','phone','tv','modem'].includes(device.type)?'rear' as const:'front' as const}
 }
 
 export function getPhysicalPorts(device:NetworkDevice){return device.ports.filter(port=>!port.isGreTunnel&&port.virtualVlan===undefined&&!port.parentPortId&&!port.name.includes('.'))}

@@ -325,6 +325,12 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       } else if (model === 'WiredEndDevice-PT') {
         name = `WiredEndDevice${index}`
         ports = [createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up')]
+      } else if (model === 'NetworkController') {
+        name = `NetworkController${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet1', 'Gi1', 'gigabitethernet', 'up'),
+        ]
       } else {
         name = `PC${index}`
         ports = [model === 'Wireless PC'
@@ -427,7 +433,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   const isaSecurity = type === 'security' && model === ISA_MODEL
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
-    pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
+    pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' || model === 'NetworkController' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
     router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
     switch: [],
     wireless: [],
@@ -451,7 +457,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   }
   ports = ports.map(port => ({
     ...port,
-    ...((!isGenericEndDeviceModel(model) && ['laptop', 'pc'].includes(type)) || (type === 'server' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
+    ...((!isGenericEndDeviceModel(model) && model !== 'NetworkController' && ['laptop', 'pc'].includes(type)) || (type === 'server' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
   }))
   return {
     id,
@@ -471,6 +477,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
       ...(model === 'Sniffer' ? { snifferServiceEnabled: true, snifferPorts: {}, snifferBufferSize: 100 } : {}),
+      ...(model === 'NetworkController' ? { networkController: { accounts: [], discoveries: [] } } : {}),
       ...(type === 'wireless' && model !== 'Cell-Tower' && ports.some(port => port.type === 'wireless')
         ? {
             wirelessSsid: ['WRT300N', 'Linksys-WRT300N', 'HomeRouter-PT-AC'].includes(model) ? 'linksys' : 'Default',

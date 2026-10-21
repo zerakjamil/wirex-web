@@ -82,6 +82,29 @@ function execute(devices: NetworkDevice[], links: NetworkLink[], packets: InFlig
   return { devices, packets, results, trace, pdus: [...seenPdus.values()], droppedPacket, duplicatedPacket, tcpOutstandingSegments }
 }
 
+test('a Network Controller answers HTTP and identifies itself as the response destination', () => {
+  const pc = device('pc', 'client', '192.168.1.10')
+  const nc = createDevice('pc', 200, 0, 'NetworkController')
+  nc.id = 'nc'
+  nc.name = 'NetworkController0'
+  nc.ports.forEach((port, index) => {
+    port.macAddress = `02:00:00:00:6e:${index.toString(16).padStart(2, '0')}`
+    port.adminStatus = 'up'
+    port.status = 'up'
+  })
+  nc.ports[0].ipAddress = '192.168.1.20'
+  nc.ports[0].subnetMask = '255.255.255.0'
+  const devices = [pc, nc]
+  const links = [connect(pc, 0, nc, 0)]
+  const packets = createHttpGetPackets(pc, devices, links, 'http-nc', '192.168.1.20', '/')
+  assert.ok(packets.length > 0)
+  const result = execute(devices, links, packets)
+  const completed = result.results.find(item => item.requestId === 'http-nc' && item.status === 'successful')
+  assert.ok(completed)
+  assert.equal(completed.destinationDeviceId, 'nc')
+  assert.match(completed.response ?? '', /Network Controller/)
+})
+
 test('HTTP GET returns configured page only after a routed request and response traverse the topology', () => {
   const { pc, devices, links } = topology(true)
   const packets = createHttpGetPackets(pc, devices, links, 'http-1', '192.168.2.10', '/index.html')

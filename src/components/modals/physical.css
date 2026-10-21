@@ -429,3 +429,44 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-other-isa .hw-other-plate strong {color:#d5e4d7}
 .hw-isa-terminal {display:grid;grid-template-columns:repeat(2,14px);grid-auto-rows:14px;gap:4px;padding:7px;border:1px solid #536259;border-radius:2px;background:linear-gradient(#2c3a2f,#17211a);box-shadow:inset 0 1px 2px #000}
 .hw-isa-terminal i {border-radius:1px;border:1px solid #202b23;background:linear-gradient(#a7b3a9,#4c594f)}
+
+/* ---------- Network Controller 2U appliance ---------- */
+.hw-rack-controller .hw-rack-ear {background:linear-gradient(90deg,#17262f,#2f4c5c 42%,#17262f);border-color:#08131a}
+.hw-rack-controller .hw-rack-ear:last-child {background:linear-gradient(270deg,#17262f,#2f4c5c 42%,#17262f)}
+.hw-rack-controller .hw-rack-body {background:linear-gradient(#3b5565,#243945 8%,#172832 92%,#0e1b23);border-color:#08131a}
+.hw-rack-controller .hw-rack-head {background:linear-gradient(90deg,rgba(42,112,122,.24),rgba(10,27,35,.1));border-bottom-color:#08131a}
+.hw-rack-controller .hw-rack-title strong {color:#ecf7fa}
+.hw-rack-controller .hw-rack-title span {color:#94b6c1}
+.hw-rack-controller .hw-mark {color:#6fd7d2}
+.hw-rack-controller .hw-rack-face {background:
+  linear-gradient(180deg,rgba(255,255,255,.05),transparent 24%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px),
+  linear-gradient(#182c36,#0e1e27)}
+.hw-rack-controller .hw-rack-foot {color:#8baeba;border-top-color:#08131a}
+.hw-rack-controller .hw-rack-foot-note,.hw-rack-controller .hw-rack-serial {color:#648793}
+.hw-controller-face {display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:11px;min-height:132px;align-items:stretch}
+.hw-controller-storage,.hw-controller-panel {display:flex;flex-direction:column;gap:7px;min-width:0;padding:9px 10px;border:1px solid #304b58;border-radius:2px;background:linear-gradient(#1c313b,#101f28)}
+.hw-controller-drives {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.hw-controller-drives i {position:relative;display:block;height:24px;border:1px solid #3b5562;border-radius:2px;background:linear-gradient(#263e49,#132630);box-shadow:inset 0 1px 2px rgba(0,0,0,.55)}
+.hw-controller-drives i::before {content:'';position:absolute;left:3px;right:3px;top:3px;height:3px;border-radius:1px;background:#0a151b}
+.hw-controller-drives i b {position:absolute;left:4px;bottom:4px;width:12px;height:3px;border-radius:1px;background:#5d7883}
+.hw-controller-drives i em {position:absolute;right:4px;bottom:4px;width:4px;height:4px;border-radius:50%;background:#4b6874;box-shadow:0 0 0 1px #0b151a}
+.hw-controller-drives i[data-on=true] em {background:#5ad7a9;box-shadow:0 0 0 1px #0b151a,0 0 6px rgba(90,215,169,.65)}
+.hw-controller-storage-note {display:flex;gap:12px;margin-top:auto;color:#7f9ca8;font:700 6px/1 "Arial Narrow",Arial,sans-serif;letter-spacing:.1em}
+.hw-controller-storage-note span {display:flex;align-items:center;gap:4px}
+.hw-controller-storage-note i {width:5px;height:5px;border-radius:50%;background:#465b65;box-shadow:0 0 0 1px #09141a}
+.hw-controller-storage-note i[data-on=true] {background:#5ad7a9;box-shadow:0 0 0 1px #09141a,0 0 6px rgba(90,215,169,.6)}
+.hw-controller-panel {justify-content:space-between}
+.hw-controller-badge {display:flex;align-items:center;gap:8px;min-width:0;padding-bottom:6px;border-bottom:1px solid #29424e}
+.hw-controller-badge .hw-mark {width:34px;height:16px;color:#6fd7d2}
+.hw-controller-badge div {display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.hw-controller-badge strong {color:#dff0f4;font:700 7px/1.2 Arial,sans-serif;letter-spacing:.11em;white-space:nowrap}
+.hw-controller-badge span {color:#7f9ca8;font:700 6px/1.3 Arial,sans-serif;letter-spacing:.06em}
+.hw-controller-panel .hw-builtin {padding:0;border:0;background:transparent;display:flex;flex-direction:column;gap:4px}
+.hw-controller-panel .hw-port-row {gap:7px}
+.hw-controller-panel .hw-port {width:44px}
+.hw-controller-meta {display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;color:#6f8c98;font:700 5.5px/1 Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.hw-controller-meta span {padding:2px 4px;border:1px solid #2d4755;border-radius:2px;background:#11232c}
+.hw-other-controller {background:radial-gradient(120% 150% at 30% 0%,#203843,#11242d 62%,#0b1820);border-color:#08131a}
+.hw-other-controller .hw-other-plate {color:#9db8c2}
+.hw-other-controller .hw-other-plate strong {color:#dbecef}

@@ -4,6 +4,7 @@ import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAdd
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates,applyStpIngressGuard } from './spanningTree'
 import { ageLearnedMacTables } from './macLearning'
 import { captureSnifferPacket, isSniffer } from './sniffer'
+import { httpResponseBody, isHttpServerDevice, isHttpServiceEnabled } from './networkController'
 import { evaluateAcl } from './acl'
 import { allocateDhcpLease } from './dhcp'
 import { prepareOspfTick, receiveOspfPacket, hasOspf, ospfArea } from './ospf'
@@ -2337,7 +2338,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           const localAddress = localIp?.ipAddress ?? pdu.destIp
           const sendTcp = (segment: PacketPdu) => sendIp(byId.get(receiver.id)!, segment, 0, packet)
           if (tcp.tcpFlags === 'SYN') {
-            const listener = servicePort === 80 && receiver.type === 'server' && receiver.config.httpServiceEnabled === true
+            const listener = servicePort === 80 && isHttpServerDevice(receiver) && isHttpServiceEnabled(receiver)
             const response = createTcpSegment(pdu, {
               flags: listener ? 'SYN-ACK' : 'RST-ACK', sourceDeviceId: receiver.id, serverDeviceId: receiver.id,
               sourcePort: servicePort, destinationPort: clientPort,
@@ -2368,11 +2369,11 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
           const isServer = receiver.id === serverDeviceId
           const serverInitialSequence = tcp.tcpServerInitialSequence ?? 1
           const sendTcp = (segment: PacketPdu) => sendIp(byId.get(receiver.id)!, segment, 0, packet)
-          const httpServiceError = () => receiver.type !== 'server'
+          const httpServiceError = () => !isHttpServerDevice(receiver)
             ? `${receiver.name} has no HTTP service at ${localIp.ipAddress}:80.`
             : tcp.tcpDestinationPort !== 80
               ? `No TCP service is listening on ${localIp.ipAddress}:${tcp.tcpDestinationPort ?? 'unknown'}.`
-              : !receiver.config.httpServiceEnabled
+              : !isHttpServiceEnabled(receiver)
                 ? `HTTP service is disabled on ${receiver.name} at ${localIp.ipAddress}:80.`
                 : undefined
           const resetHttpConnection = (reason: string) => {
@@ -2457,7 +2458,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
                 packetDeliveries.push({ packetId: packet.id, status: 'delivered', receiverDeviceId: receiver.id, reason: `${receiver.name} buffered an HTTP request segment.` })
                 continue
               }
-              const configuredBody = receiver.config.htmlContent || '<h1>wireX Web Server</h1><p>HTTP service operational.</p>'
+              const configuredBody = httpResponseBody(receiver)
               const tooLarge = new TextEncoder().encode(configuredBody).byteLength > 65536
               const body = tooLarge ? '<h1>413 Content Too Large</h1>' : configuredBody
               const status = tooLarge ? 413 : 200
@@ -2491,7 +2492,7 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
             }
             const status = received.httpStatus ?? tcp.httpStatus ?? 500
             if (!applicationResults.some(result => result.requestId === requestId)) {
-              applicationResults.push({ requestId, sourceDeviceId: receiver.id, status: status === 200 ? 'successful' : 'failed', response: received.data, httpStatus: status, reason: status === 200 ? undefined : `HTTP ${status}.` })
+              applicationResults.push({ requestId, sourceDeviceId: receiver.id, destinationDeviceId: serverDeviceId, status: status === 200 ? 'successful' : 'failed', response: received.data, httpStatus: status, reason: status === 200 ? undefined : `HTTP ${status}.` })
             }
             const clientNext = tcp.tcpAcknowledgmentNumber ?? 0
             const serverNext = (received.acknowledgment) >>> 0
@@ -3146,8 +3147,8 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
             udpResults.push({ requestId: pdu.payload.udpRequestId, sourceDeviceId: receiver.id, targetIp: pdu.sourceIp, port: pdu.payload.udpSourcePort ?? 0, service, status: validNtpResponse ? 'successful' : 'failed', response: pdu.payload.udpData ?? '', stratum: service === 'ntp' ? serverStratum + 1 : undefined, offsetMs, oid: service === 'snmp' ? pdu.payload.snmpOid : undefined, value: service === 'snmp' ? pdu.payload.snmpValue : undefined, operation: service === 'snmp' ? pdu.payload.snmpOperation : undefined, reason: validNtpResponse ? undefined : `NTP server stratum ${serverStratum} cannot synchronize a client.` })
           }
         } else if (pdu.protocol === 'HTTP' && pdu.payload.httpMethod === 'GET') {
-          if (receiver.type !== 'server' || !receiver.config.httpServiceEnabled) { drop(packet, `HTTP service is disabled on ${receiver.name} at ${localIp.ipAddress}:80.`); continue }
-          const body = receiver.config.htmlContent || '<h1>wireX Web Server</h1><p>HTTP service operational.</p>'
+          if (!isHttpServerDevice(receiver) || !isHttpServiceEnabled(receiver)) { drop(packet, `HTTP service is disabled on ${receiver.name} at ${localIp.ipAddress}:80.`); continue }
+          const body = httpResponseBody(receiver)
           const tooLarge = new TextEncoder().encode(body).byteLength > 65536
           const response: PacketPdu = {
             ...pdu, id: packetId('http-response'), summary: `HTTP ${tooLarge ? 413 : 200} response for ${pdu.payload.httpPath ?? '/'}`,

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useNetworkStore } from '@/store/networkStore'
 import { getPrompt } from '@/simulator/ios/ciscoParser'
 import { Cisco3DIcon } from '@/components/canvas/Cisco3DIcons'
@@ -14,6 +15,18 @@ import { usePingFeedback } from './usePingFeedback'
 import { isGenericEndDevice } from '@/simulator/endDevice'
 import { isSniffer } from '@/simulator/sniffer'
 import { isIsa3000 } from '@/simulator/isa'
+import { isNetworkController, networkControllerState, primaryNetworkControllerAddress } from '@/simulator/networkController'
+const NetworkControllerApp = dynamic(
+  () => import('./NetworkControllerApp').then(module => module.NetworkControllerApp),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center" aria-busy="true">
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-teal-700 border-t-transparent" />
+      </div>
+    ),
+  }
+)
 import { PhoneGui } from './PhoneGui'
 import { AsdmTab } from './AsdmTab'
 import { IsaFirewallTab } from './IsaFirewallTab'
@@ -35,7 +48,7 @@ import { IotTab, IotServiceSection } from './IotTabs'
 type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'isa' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
 
 function usesDesktop(device: NetworkDevice): boolean {
-  if (isGenericEndDevice(device)) return false
+  if (isGenericEndDevice(device) || isNetworkController(device)) return false
   return device.type === 'pc' || device.type === 'server' || device.type === 'laptop' || device.type === 'tablet' || device.type === 'smartphone'
 }
 
@@ -51,6 +64,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
     const initial=state.devices.find(candidate=>candidate.id===deviceId)
     if(initial && isSniffer(initial) && state.activeTab==='gui')return 'gui'
     if(initial && isGenericEndDevice(initial) && (state.activeTab==='gui'||state.activeTab==='html'))return state.activeTab
+    if(initial && isNetworkController(initial) && (state.activeTab==='desktop'||state.activeTab==='gui'||state.activeTab==='cli'))return 'config'
     if(initial && usesDesktop(initial) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
     if(initial && !usesCli(initial.type) && state.activeTab==='cli')return 'config'
     if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
@@ -1149,6 +1163,23 @@ function ConfigSettingsPage({ device, t, updateDeviceConfig, renameDevice, execu
                 className={`${configFieldInput} max-w-[260px] disabled:bg-[#f4f4f4] disabled:text-[#777]`}
               />
             </SettingsRow>
+          </>
+        )}
+        {isNetworkController(device) && (
+          <>
+            <div className="pt-2 text-[11px] font-bold text-[#222]">{t('Web management')}</div>
+            <SettingsRow label={t('Management URL')}>
+              {(() => {
+                const address = primaryNetworkControllerAddress(device)
+                return address
+                  ? <span dir="ltr" className="font-mono text-[11px] text-[#1e3a5f]">http://{address.ip}</span>
+                  : <span className="text-[11px] text-[#777]">{t('No management IP')}</span>
+              })()}
+            </SettingsRow>
+            <SettingsRow label={t('Administrator account')}>
+              <span className="text-[11px]">{(networkControllerState(device).accounts?.length ?? 0) > 0 ? t('Configured') : t('Not configured')}</span>
+            </SettingsRow>
+            <p className="max-w-[520px] text-[11px] text-[#555]">{t('Manage this controller from a PC Web Browser on the same network.')}</p>
           </>
         )}
       </div>
@@ -3147,6 +3178,9 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
   if (activeApp === 'browser') {
     const transaction = httpTransactions.find(item => item.requestId === activeHttpRequestId)
     const dnsTransaction = dnsTransactions.find(item => item.requestId === activeHttpRequestId)
+    const controllerDestination = transaction?.status === 'successful' && transaction.destinationDeviceId
+      ? devices.find(item => item.id === transaction.destinationDeviceId && isNetworkController(item))
+      : undefined
     const dnsFailureDocument = dnsTransaction?.status === 'failed'
       ? (() => {
           const reason = (dnsTransaction.reason || 'The DNS query did not receive a valid answer.').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
@@ -3241,8 +3275,10 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
             Go
           </button>
         </div>
-        <div className="flex-1 p-6 bg-white overflow-y-auto">
-          {transactionDocument || browserRender ? (
+        <div className={`flex-1 bg-white overflow-y-auto ${controllerDestination ? 'p-0' : 'p-6'}`}>
+          {controllerDestination ? (
+            <NetworkControllerApp deviceId={controllerDestination.id} />
+          ) : transactionDocument || browserRender ? (
             <iframe title="Simulated server page" sandbox="" referrerPolicy="no-referrer" srcDoc={transactionDocument || browserRender || ''} style={{width:'100%',height:'100%',minHeight:240,border:0,background:'#fff'}} />
           ) : (
             <div className="text-slate-500 text-center mt-12 text-xs font-medium">

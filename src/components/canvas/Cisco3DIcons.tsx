@@ -30,7 +30,7 @@ export function Cisco3DIcon({
     >
       {type === 'router' && <Router3DIcon size={size} model={model} />}
       {type === 'switch' && <Switch3DIcon size={size} model={model} />}
-      {type === 'pc' && <Pc3DIcon size={size} />}
+      {type === 'pc' && (model === 'NetworkController' ? <NetworkController3DIcon /> : <Pc3DIcon size={size} />)}
       {type === 'laptop' && <Laptop3DIcon size={size} />}
       {type === 'wireless' && <AccessPoint3DIcon size={size} model={model} />}
       {type === 'smartphone' && <Smartphone3DIcon size={size} />}
@@ -384,6 +384,63 @@ function Pc3DIcon({ size }: { size: number }) {
         strokeWidth="1"
       />
       <ellipse cx="86" cy="74" rx="4" ry="2.5" fill="#94a3b8" stroke="#475569" strokeWidth="0.8" />
+    </svg>
+  )
+}
+
+/**
+ * Network Controller: a compact 2U appliance with eight drive bays and two
+ * management interfaces. Built from the same in-house visual language as the
+ * rest of the device set, not traced from vendor artwork.
+ */
+function NetworkController3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible">
+      <defs>
+        <radialGradient id="nc-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="nc-body" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#355568" />
+          <stop offset="18%" stopColor="#1d3a4a" />
+          <stop offset="100%" stopColor="#0d1f29" />
+        </linearGradient>
+        <linearGradient id="nc-lip" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#4a6f80" />
+          <stop offset="100%" stopColor="#19303d" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="67" rx="41" ry="9" fill="url(#nc-shadow)" />
+      <path d="M 9 24 L 16 17 L 84 17 L 91 24 L 91 58 L 84 65 L 16 65 L 9 58 Z" fill="#10242e" stroke="#08141b" strokeWidth="1" />
+      <path d="M 12 25 L 18 20 L 82 20 L 88 25 L 88 55 L 82 60 L 18 60 L 12 55 Z" fill="url(#nc-body)" stroke="#08141b" strokeWidth="1.2" />
+      <path d="M 14 22 L 18 20 L 82 20 L 86 22 L 20 22 Z" fill="url(#nc-lip)" opacity=".8" />
+      <rect x="19" y="27" width="43" height="27" rx="2" fill="#0a1820" stroke="#365664" strokeWidth=".8" />
+      {Array.from({ length: 8 }, (_, index) => {
+        const col = index % 4
+        const row = Math.floor(index / 4)
+        const x = 22 + col * 10.2
+        const y = 30 + row * 11.5
+        return (
+          <g key={index}>
+            <rect x={x} y={y} width="8.6" height="9" rx="1" fill="#1c3542" stroke="#436472" strokeWidth=".6" />
+            <rect x={x + 1.2} y={y + 1.2} width="6.2" height="2.2" rx=".6" fill="#09161c" />
+            <rect x={x + 1.2} y={y + 5.7} width="3.6" height="1.2" rx=".4" fill="#688491" />
+            <circle cx={x + 7.1} cy={y + 6.5} r=".8" fill={index < 4 ? '#5ad7a9' : '#5d7883'} />
+          </g>
+        )
+      })}
+      <rect x="66" y="27" width="18" height="27" rx="2" fill="#0b1b23" stroke="#365664" strokeWidth=".8" />
+      <rect x="69.5" y="31" width="11" height="6" rx="1" fill="#203946" stroke="#4c6c7a" strokeWidth=".6" />
+      <rect x="71" y="33" width="3" height="2" rx=".4" fill="#0a1419" />
+      <rect x="76" y="33" width="3" height="2" rx=".4" fill="#0a1419" />
+      <rect x="69.5" y="40" width="11" height="6" rx="1" fill="#203946" stroke="#4c6c7a" strokeWidth=".6" />
+      <rect x="71" y="42" width="3" height="2" rx=".4" fill="#0a1419" />
+      <rect x="76" y="42" width="3" height="2" rx=".4" fill="#0a1419" />
+      <circle cx="75" cy="49.5" r="1.4" fill="#5ad7a9" />
+      <circle cx="79.5" cy="49.5" r="1.4" fill="#5d7883" />
+      <rect x="18" y="58" width="64" height="3" rx="1" fill="#0a171e" />
+      <path d="M 21 26 L 21 57 M 61 26 L 61 57" stroke="#496c7c" strokeWidth=".6" opacity=".5" />
     </svg>
   )
 }
