@@ -12,6 +12,10 @@ const TopologyCanvas = dynamic(
   () => import('@/components/canvas/TopologyCanvas').then((mod) => mod.TopologyCanvas),
   { ssr: false }
 )
+const CcnaAcademy = dynamic(
+  () => import('@/components/academy/CcnaAcademy').then((mod) => mod.CcnaAcademy),
+  { ssr: false }
+)
 import { CiscoBottomBar } from '@/components/cisco/CiscoBottomBar'
 import { DeviceWindows } from '@/components/modals/DeviceWindows'
 import { DeviceNavigator } from '@/components/cisco/DeviceNavigator'
@@ -34,12 +38,14 @@ import {useTrainingStore} from '@/store/trainingStore'
 import {initializeLocale,useI18n} from '@/i18n/useI18n'
 import {initializeTheme} from '@/store/themeStore'
 import { isLoopbackAutomationHost } from '@/store/testHost'
+import { initializeAcademy, useAcademyStore } from '@/store/academyStore'
 
 const WELCOME_DISMISSED_KEY = 'wireforge-welcome-dismissed-v1'
 
 export default function Home() {
   const activeModal = useNetworkStore(state => state.activeModal)
   const training=useTrainingStore(s=>s.active),{t}=useI18n()
+  const academyOpen=useAcademyStore(s=>s.open)
   const [diagnostics,setDiagnostics]=React.useState(false)
   const [welcomeOpen,setWelcomeOpen]=React.useState(false)
   const [trainingView,setTrainingView]=React.useState<'lesson'|'network'|'cli'>('network')
@@ -50,6 +56,8 @@ export default function Home() {
   useEffect(()=>initializeLocale(),[initializeLocale])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>initializeTheme(),[initializeTheme])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>initializeAcademy(),[initializeAcademy])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>initializeWorkspacePersistence(),[initializeWorkspacePersistence])
   useEffect(() => {
@@ -120,6 +128,7 @@ export default function Home() {
       <CiscoBottomBar />
       <WorkspaceDialog />
       <TrainingCatalog/>
+      {academyOpen && <CcnaAcademy/>}
       {welcomeOpen && <WelcomeModal onDismiss={dismissWelcome} />}
 
       <DeviceWindows />

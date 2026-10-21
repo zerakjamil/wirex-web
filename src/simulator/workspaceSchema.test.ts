@@ -35,6 +35,63 @@ test('Sniffer configuration survives workspace validation while its runtime capt
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...sniffer, config: { ...sniffer.config, snifferPorts: { 'port-1': 'yes' } } }], links: [] }), /Sniffer port/)
 })
 
+test('Cyber Observer accounts and discovery snapshots survive workspace validation', () => {
+  const observer = createDevice('security', 10, 20, 'CyberObserver')
+  observer.config.cyberObserver = {
+    accounts: [{ username: 'admin', passwordHash: '1a2b3c4d', role: 'admin' }],
+    discoveries: [
+      {
+        id: 'range-1',
+        name: 'OT range',
+        mode: 'range',
+        createdAtMs: 1700000000000,
+        status: 'complete',
+        deviceIds: [observer.id],
+        rangeStart: '10.0.0.1',
+        rangeEnd: '10.0.0.254',
+      },
+      {
+        id: 'failed-1',
+        name: 'No link',
+        mode: 'connected',
+        createdAtMs: 1700000000001,
+        status: 'failed',
+        reason: 'no-active-link',
+        deviceIds: [],
+      },
+    ],
+    lastDiscoveryId: 'range-1',
+  }
+  const restored = parseWorkspace({ version: 1, devices: [observer], links: [] }).devices[0]
+  assert.deepEqual(restored.config.cyberObserver, observer.config.cyberObserver)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...observer, config: { ...observer.config, cyberObserver: { accounts: [{ username: 'admin', passwordHash: 'plaintext', role: 'admin' }] } } }], links: [] }), /Cyber Observer account/)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...observer, config: { ...observer.config, cyberObserver: { discoveries: [{ ...observer.config.cyberObserver!.discoveries![0], rangeStart: '10.0.0.254', rangeEnd: '10.0.0.1' }] } } }], links: [] }), /Cyber Observer discovery range/)
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...observer, config: { ...observer.config, cyberObserver: { discoveries: [{ ...observer.config.cyberObserver!.discoveries![0], status: 'running' }] } } }], links: [] }))
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...observer, config: { ...observer.config, cyberObserver: { discoveries: [], lastDiscoveryId: 'missing' } } }], links: [] }), /Cyber Observer last discovery/)
+  const failedRange = {
+    ...observer,
+    config: {
+      ...observer.config,
+      cyberObserver: {
+        discoveries: [{
+          id: 'range-failed',
+          name: 'Reversed range',
+          mode: 'range',
+          rangeStart: '10.0.0.254',
+          rangeEnd: '10.0.0.1',
+          createdAtMs: 1700000000000,
+          status: 'failed',
+          reason: 'invalid-range',
+          deviceIds: [],
+        }],
+        lastDiscoveryId: 'range-failed',
+      },
+    },
+  }
+  assert.equal(parseWorkspace({ version: 1, devices: [failedRange], links: [] }).devices[0].config.cyberObserver?.discoveries?.[0].reason, 'invalid-range')
+  assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...failedRange, config: { ...failedRange.config, cyberObserver: { ...failedRange.config.cyberObserver, discoveries: [{ ...failedRange.config.cyberObserver.discoveries[0], reason: undefined }] } } }], links: [] }), /Cyber Observer discovery status/)
+})
+
 test('workspace validation rejects broken device types, coordinates, ports and nested config', () => {
   const device = createDevice('router', 10, 20)
   for (const change of [ { type: 'unknown' }, { x: Infinity }, { ports: [null] }, { config: { hostname: 'R1', dhcpPools: {} } }, { routingTable: [{network:42}] }, { config: {hostname:'R1',dhcpPools:[{network:42,mask:null}]} }, { config: {hostname:'R1',defaultGateway:42} } ]) {

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
-    "test": "tsx --test src/simulator/*.test.ts src/store/*.test.ts src/i18n/*.test.ts",
+    "test": "tsx --test src/simulator/*.test.ts src/store/*.test.ts src/i18n/*.test.ts src/content/*.test.ts src/components/academy/*.test.ts",
     "check": "npm test && npm run lint && npm run build && npm audit --omit=dev",
     "test:e2e": "playwright test",
     "electron:prep": "npm run build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
@@ -16,7 +16,8 @@
     "electron:pack": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
     "electron:dist": "npm run electron:prep && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "electron:verify": "node scripts/verifyMacApp.mjs",
-    "electron:icon": "node scripts/buildAppIcon.mjs"
+    "electron:icon": "node scripts/buildAppIcon.mjs",
+    "content:ccna": "node scripts/buildCcnaCourse.mjs"
   },
   "build": {
     "appId": "com.wireforge.simulator",

@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
 import {useTrainingStore} from '@/store/trainingStore'
 import {useActivityStore} from '@/store/activityStore'
+import {useAcademyStore} from '@/store/academyStore'
 import { parseWorkspace } from '@/simulator/workspaceSchema'
 export function CiscoMenuBar() {
   const {t}=useI18n()
@@ -37,6 +38,7 @@ export function CiscoMenuBar() {
     Options:[{label:'Preferences...',action:() => ws.setDialog('preferences')},{label:'Cluster Associations...',action:() => ws.setDialog('associations')}],
     View:[{label:'Zoom In',action:() => ws.command('zoom-in')},{label:'Zoom Out',action:() => ws.command('zoom-out')},{label:'Reset Zoom',action:() => ws.command('zoom-reset')},{label:'Fit workspace',action:() => ws.command('fit')},{label:'Port labels',action:net.togglePortLabels}],
     Tools:[
+      {label:'CCNA Academy...',action:() => useAcademyStore.getState().openAcademy()},
       {label:'Select',action:() => ws.setTool('select')},
       {label:'Exam Revision & Rollbacks...',action:() => ws.setDialog('revision')},
       {label:'Activity Wizard...',action:() => net.setActiveModal({type:'activity-wizard'})},
@@ -47,7 +49,7 @@ export function CiscoMenuBar() {
     ],
     Extensions:[{label:'Extensions availability...',action:() => ws.setDialog('extensions')}],
     Window:[{label:'Logical Workspace',action:() => ws.setView('logical')},{label:'Physical Workspace',action:() => ws.setView('physical')},{label:'PDU List Window',action:ws.togglePduList}],
-    Help:[{label:'Training',action:()=>useTrainingStore.getState().openCatalog()},{label:'Contents',action:() => ws.setDialog('help')},{label:'Practice Labs',action:() => net.setActiveModal({type:'labs'})},{label:'About',action:() => ws.setDialog('about')}],
+    Help:[{label:'CCNA Course & Checks',action:()=>useAcademyStore.getState().openAcademy()},{label:'Training',action:()=>useTrainingStore.getState().openCatalog()},{label:'Contents',action:() => ws.setDialog('help')},{label:'Practice Labs',action:() => net.setActiveModal({type:'labs'})},{label:'About',action:() => ws.setDialog('about')}],
   }
   return <nav ref={root} className="pt-menubar" aria-label="Application menus">{Object.entries(menus).map(([name,items]) => <div className="pt-menu" key={name}>
     <button aria-expanded={open===name} aria-haspopup="menu" onClick={() => setOpen(open===name?null:name)} onKeyDown={e => {if(e.key==='ArrowDown'){e.preventDefault();setOpen(name);requestAnimationFrame(() => root.current?.querySelector<HTMLButtonElement>('[role="menu"] button:not(:disabled)')?.focus())}}}>{t(name)}</button>

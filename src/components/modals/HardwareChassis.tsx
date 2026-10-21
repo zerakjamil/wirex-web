@@ -6,6 +6,7 @@ import type { getHardwareProfile } from '@/simulator/physicalHardware'
 import { useI18n } from '@/i18n/useI18n'
 import { isIsa3000 } from '@/simulator/isa'
 import { isNetworkController } from '@/simulator/networkController'
+import { isCyberObserver } from '@/simulator/cyberObserver'
 
 export type HardwareProfile = ReturnType<typeof getHardwareProfile>
 export type ChassisFace = 'front' | 'rear'
@@ -221,6 +222,7 @@ function RackChassis(props: ChassisProps) {
   const { device, ports, profile, face, power, onTogglePower } = props
   const { t } = useI18n()
   const kind = isNetworkController(device) ? 'controller'
+    : isCyberObserver(device) ? 'cyberobserver'
     : device.type === 'switch' ? 'switch'
     : device.type === 'router' ? 'router'
     : device.type === 'wlc' ? 'wlc'
@@ -228,6 +230,7 @@ function RackChassis(props: ChassisProps) {
     : device.type === 'security' ? 'security'
     : 'hub'
   const series = kind === 'controller' ? 'Network Controller'
+    : kind === 'cyberobserver' ? 'Cyber Observer Appliance'
     : kind === 'switch' ? 'Catalyst Switch'
     : kind === 'router' ? 'Integrated Services Router'
     : kind === 'wlc' ? 'Wireless LAN Controller'
@@ -265,6 +268,12 @@ function RackChassis(props: ChassisProps) {
                 <StatusLed label="SYS" on={power} />
                 <StatusLed label="NET" on={ports.some(port => port.status === 'up')} tone="learning" />
               </>
+            ) : kind === 'cyberobserver' ? (
+              <>
+                <StatusLed label="PWR" on={power} />
+                <StatusLed label="SYS" on={power} />
+                <StatusLed label="MON" on={portsActive(builtIn)} tone="learning" />
+              </>
             ) : kind === 'isa' ? (
               <>
                 <StatusLed label="PWR" on={power} />
@@ -288,6 +297,8 @@ function RackChassis(props: ChassisProps) {
               <SwitchFace {...props} builtIn={builtIn} bays={bays} />
             ) : kind === 'controller' ? (
               <ControllerFace {...props} builtIn={builtIn} />
+            ) : kind === 'cyberobserver' ? (
+              <CyberObserverFace {...props} builtIn={builtIn} />
             ) : kind === 'isa' ? (
               <IsaFace {...props} builtIn={builtIn} />
             ) : (
@@ -362,6 +373,62 @@ function ControllerFace(props: ChassisProps & { builtIn: NetworkPort[] }) {
 
 function portsActive(ports: NetworkPort[]): boolean {
   return ports.some(port => port.status === 'up')
+}
+
+function CyberObserverFace(props: ChassisProps & { builtIn: NetworkPort[] }) {
+  const { device, power, selectedPortId, onSelectPort } = props
+  return (
+    <div className="hw-controller-face hw-cyber-face" data-face={props.face}>
+      <div className="hw-cyber-radar">
+        <span className="hw-panel-label">MONITORING PLANE</span>
+        <div className="hw-cyber-scope" aria-hidden="true">
+          <i className="hw-cyber-ring hw-cyber-ring-a" data-on={power} />
+          <i className="hw-cyber-ring hw-cyber-ring-b" data-on={power} />
+          <i className="hw-cyber-ring hw-cyber-ring-c" data-on={power} />
+          <svg viewBox="0 0 32 38" className="hw-cyber-shield" data-on={power}>
+            <path d="M16 2 29 6v11c0 8-5.4 14.4-13 19C8.4 31.4 3 25 3 17V6Z" />
+            <path d="M9.5 18.2 14 22.7l8.8-9" />
+          </svg>
+          <span className="hw-cyber-scanline" data-on={power} />
+        </div>
+        <div className="hw-controller-storage-note">
+          <span><i data-on={power} /> ENGINE</span>
+          <span><i data-on={portsActive(props.builtIn)} /> SENSOR</span>
+        </div>
+      </div>
+      <div className="hw-controller-panel hw-cyber-panel">
+        <div className="hw-controller-badge">
+          <svg viewBox="0 0 24 28" className="h-7 w-6" aria-hidden="true">
+            <path d="M12 1.5 22 4.8v8.4c0 6-4 10.8-10 14.3C6 24 2 19.2 2 13.2V4.8Z" fill="none" stroke="currentColor" strokeWidth="1.7" />
+            <path d="M7.2 13.6 10.7 17l6.3-6.7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div>
+            <strong>CYBER OBSERVER</strong>
+            <span dir="ltr">{device.model}</span>
+          </div>
+        </div>
+        <div className="hw-builtin">
+          <span className="hw-panel-label">MONITORING INTERFACES</span>
+          <div className="hw-port-row">
+            {props.builtIn.map(port => (
+              <PortJack
+                key={port.id}
+                port={port}
+                power={power}
+                selected={selectedPortId === port.id}
+                onSelect={onSelectPort}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="hw-controller-meta">
+          <span>HTTP</span>
+          <span>DISCOVERY</span>
+          <span>2 x GbE</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function SwitchFace(props: ChassisProps & { builtIn: NetworkPort[]; bays: number[] }) {
@@ -551,6 +618,18 @@ function OtherFace({ kind, model, power }: { kind: string; model: string; power:
         <div className="hw-other-plate">
           <strong dir="ltr">{model}</strong>
           <span>100-240V~ · 50/60Hz</span>
+        </div>
+        <div className="hw-power-inlet" aria-hidden="true"><i /><i /><i /></div>
+      </div>
+    )
+  }
+  if (kind === 'cyberobserver') {
+    return (
+      <div className="hw-other-face hw-other-controller hw-other-cyberobserver">
+        <div className="hw-fan" aria-hidden="true"><i /><i /><i /></div>
+        <div className="hw-other-plate">
+          <strong dir="ltr">{model}</strong>
+          <span>MONITORING APPLIANCE · 100-240V~</span>
         </div>
         <div className="hw-power-inlet" aria-hidden="true"><i /><i /><i /></div>
       </div>

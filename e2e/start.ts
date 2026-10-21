@@ -35,8 +35,23 @@ export async function loadWirelessLab(page: Page) {
 export async function startNewWorkspace(page: Page) {
   await page.goto('/')
   const welcome = page.getByTestId('welcome-dialog')
-  await expect(welcome).toBeVisible({ timeout: 10_000 })
-  await welcome.getByRole('button', { name: /^New$/ }).click()
-  await expect(welcome).toBeHidden()
-  await expect(page.getByRole('heading', { name: /Devices 0/i })).toBeVisible()
+  const emptyWorkspace = page.getByRole('heading', { name: /Devices 0/i })
+
+  // Wait for the deferred first-visit check to finish. It either opens the
+  // chooser or confirms a persisted workspace. A fixed sleep races slow CI
+  // machines: the chooser can open after the sleep and then intercept clicks.
+  await page.waitForFunction(
+    () =>
+      Boolean(document.querySelector('[data-testid="welcome-dialog"][open]')) ||
+      Boolean(localStorage.getItem('wireforge-workspace-v1')),
+    undefined,
+    { timeout: 15_000 }
+  ).catch(() => undefined)
+
+  if (await welcome.isVisible()) {
+    await welcome.getByRole('button', { name: /^New$/ }).click()
+    await expect(welcome).toBeHidden()
+  }
+
+  await expect(emptyWorkspace).toBeVisible()
 }

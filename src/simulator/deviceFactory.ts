@@ -3,6 +3,7 @@ import { generateMacAddress } from './protocols/ip'
 import { defaultIotState, iotThingSpec } from './iot'
 import { isGenericEndDeviceModel } from './endDevice'
 import { ISA_MODEL, isaDefaultAclRules } from './isa'
+import { CYBER_OBSERVER_MODEL } from './cyberObserver'
 
 const deviceCounters: Record<DeviceType, number> = {
   router: 0,
@@ -258,6 +259,14 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     case 'security': {
       model = customModel || '5505'
       name = `ASA${index}`
+      if (model === CYBER_OBSERVER_MODEL) {
+        name = `CyberObserver${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet1', 'Gi1', 'gigabitethernet', 'up'),
+        ]
+        break
+      }
       if (model === ISA_MODEL) {
         name = `ISA${index}`
         const makeIsaPort = (
@@ -431,6 +440,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   }
 
   const isaSecurity = type === 'security' && model === ISA_MODEL
+  const cyberObserverSecurity = type === 'security' && model === CYBER_OBSERVER_MODEL
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
     pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' || model === 'NetworkController' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
@@ -470,14 +480,15 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     power: true,
     modules: emptyChassis ? [] : [...(defaultModules[type] || [])],
     config: {
-      hostname: type === 'security' ? 'ciscoasa' : name,
+      hostname: cyberObserverSecurity ? name : type === 'security' ? 'ciscoasa' : name,
       banner: 'Unauthorized access is prohibited!',
       vlans: type === 'security'
-        ? isaSecurity ? [] : [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
+        ? cyberObserverSecurity ? [{ id: 1, name: 'default' }] : isaSecurity ? [] : [{ id: 1, name: 'inside' }, { id: 2, name: 'outside' }]
         : [{ id: 1, name: 'default' }],
       ...(model === 'LAP-PT' || model === '3702i' ? { apMode: 'lightweight' as const } : {}),
       ...(model === 'Sniffer' ? { snifferServiceEnabled: true, snifferPorts: {}, snifferBufferSize: 100 } : {}),
       ...(model === 'NetworkController' ? { networkController: { accounts: [], discoveries: [] } } : {}),
+      ...(model === CYBER_OBSERVER_MODEL ? { cyberObserver: { accounts: [], discoveries: [] } } : {}),
       ...(type === 'wireless' && model !== 'Cell-Tower' && ports.some(port => port.type === 'wireless')
         ? {
             wirelessSsid: ['WRT300N', 'Linksys-WRT300N', 'HomeRouter-PT-AC'].includes(model) ? 'linksys' : 'Default',
@@ -494,7 +505,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
             dhcpEnabled: true,
           }
         : {}),
-      ...(type === 'security'
+      ...(type === 'security' && !cyberObserverSecurity
         ? {
             asaInspection: { icmp: true, http: true, tcp: true, dns: true, udp: true, tftp: true },
             ...(isaSecurity
@@ -520,7 +531,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           }
         : {}),
     },
-    routingTable: type === 'security' && !isaSecurity
+    routingTable: type === 'security' && !isaSecurity && !cyberObserverSecurity
       ? [
           {
             network: '192.168.1.0',

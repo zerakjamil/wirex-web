@@ -38,7 +38,7 @@ export function Cisco3DIcon({
       {type === 'server' && <Server3DIcon size={size} />}
       {type === 'cloud' && <Cloud3DIcon size={size} />}
       {type === 'hub' && (model === 'Sniffer' ? <Sniffer3DIcon /> : <Hub3DIcon size={size} />)}
-      {type === 'security' && (model === 'ISA-3000' ? <Isa3DIcon size={size} /> : <Security3DIcon size={size} />)}
+      {type === 'security' && (model === 'ISA-3000' ? <Isa3DIcon size={size} /> : model === 'CyberObserver' ? <CyberObserver3DIcon /> : <Security3DIcon size={size} />)}
       {type === 'printer' && <Printer3DIcon size={size} />}
       {type === 'phone' && <Phone3DIcon size={size} />}
       {type === 'tv' && <Tv3DIcon size={size} />}
@@ -384,6 +384,55 @@ function Pc3DIcon({ size }: { size: number }) {
         strokeWidth="1"
       />
       <ellipse cx="86" cy="74" rx="4" ry="2.5" fill="#94a3b8" stroke="#475569" strokeWidth="0.8" />
+    </svg>
+  )
+}
+
+/**
+ * Cyber Observer: a 2U monitoring appliance with a radar/shield face and two
+ * copper monitoring interfaces. In-house geometry, not traced from vendor art.
+ */
+function CyberObserver3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible">
+      <defs>
+        <radialGradient id="co-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#1c150c" stopOpacity="0.45" />
+          <stop offset="80%" stopColor="#1c150c" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="co-body" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#5d5140" />
+          <stop offset="18%" stopColor="#3a3125" />
+          <stop offset="100%" stopColor="#1b1610" />
+        </linearGradient>
+        <linearGradient id="co-lip" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#8a7554" />
+          <stop offset="100%" stopColor="#2c251b" />
+        </linearGradient>
+        <linearGradient id="co-screen" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#26221a" />
+          <stop offset="100%" stopColor="#100e0a" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="68" rx="42" ry="8.5" fill="url(#co-shadow)" />
+      <path d="M 8 23 L 16 15 L 84 15 L 92 23 L 92 60 L 84 68 L 16 68 L 8 60 Z" fill="#17120c" stroke="#0d0a06" strokeWidth="1" />
+      <path d="M 11 24 L 18 18 L 82 18 L 89 24 L 89 57 L 82 64 L 18 64 L 11 57 Z" fill="url(#co-body)" stroke="#0d0a06" strokeWidth="1.2" />
+      <path d="M 13 21 L 18 18 L 82 18 L 87 21 L 20 21 Z" fill="url(#co-lip)" opacity=".72" />
+      <rect x="18" y="25" width="38" height="32" rx="2" fill="url(#co-screen)" stroke="#6a583d" strokeWidth=".8" />
+      <circle cx="37" cy="41" r="12.5" fill="none" stroke="#f0b74b" strokeWidth=".7" opacity=".28" />
+      <circle cx="37" cy="41" r="8.2" fill="none" stroke="#f0b74b" strokeWidth=".7" opacity=".48" strokeDasharray="2 2" />
+      <path d="M 37 30.5 45 33.2v5.6c0 4.2-3.1 7.5-8 10.1-4.9-2.6-8-5.9-8-10.1v-5.6Z" fill="#2b2418" stroke="#f0b74b" strokeWidth="1.1" />
+      <path d="M 32.8 41.2 35.7 44l5.1-5.4" fill="none" stroke="#f0b74b" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="61" y="26" width="22" height="13" rx="1.5" fill="#1b1711" stroke="#6a583d" strokeWidth=".7" />
+      <rect x="61" y="42" width="22" height="13" rx="1.5" fill="#1b1711" stroke="#6a583d" strokeWidth=".7" />
+      <rect x="65" y="30" width="9" height="5" rx=".7" fill="#0b0906" stroke="#8a7554" strokeWidth=".5" />
+      <rect x="77" y="30" width="2.2" height="5" rx=".4" fill="#0b0906" />
+      <rect x="65" y="46" width="9" height="5" rx=".7" fill="#0b0906" stroke="#8a7554" strokeWidth=".5" />
+      <rect x="77" y="46" width="2.2" height="5" rx=".4" fill="#0b0906" />
+      <circle cx="63.5" cy="32.5" r="1" fill="#f0b74b" />
+      <circle cx="63.5" cy="48.5" r="1" fill="#f0b74b" />
+      <rect x="18" y="60" width="64" height="2.5" rx=".8" fill="#0d0a06" />
+      <path d="M 22 24 L 22 59 M 55 24 L 55 59 M 85 24 L 85 59" stroke="#7c6849" strokeWidth=".5" opacity=".32" />
     </svg>
   )
 }

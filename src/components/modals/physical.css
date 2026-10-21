@@ -470,3 +470,46 @@ html[data-theme=dark] .hardware-scroll {background:
 .hw-other-controller {background:radial-gradient(120% 150% at 30% 0%,#203843,#11242d 62%,#0b1820);border-color:#08131a}
 .hw-other-controller .hw-other-plate {color:#9db8c2}
 .hw-other-controller .hw-other-plate strong {color:#dbecef}
+
+/* ---------- Cyber Observer 2U monitoring appliance ---------- */
+.hw-rack-cyberobserver .hw-rack-ear {background:linear-gradient(90deg,#241f18,#54493a 42%,#241f18);border-color:#100d09}
+.hw-rack-cyberobserver .hw-rack-ear:last-child {background:linear-gradient(270deg,#241f18,#54493a 42%,#241f18)}
+.hw-rack-cyberobserver .hw-rack-body {background:linear-gradient(#554b3c,#332c23 8%,#211c16 92%,#15110d);border-color:#100d09}
+.hw-rack-cyberobserver .hw-rack-head {background:linear-gradient(90deg,rgba(146,94,20,.3),rgba(32,25,16,.12));border-bottom-color:#100d09}
+.hw-rack-cyberobserver .hw-rack-title strong {color:#fbf4e7}
+.hw-rack-cyberobserver .hw-rack-title span {color:#c2ae8c}
+.hw-rack-cyberobserver .hw-mark {color:#f0b74b}
+.hw-rack-cyberobserver .hw-rack-face {background:
+  linear-gradient(180deg,rgba(255,255,255,.05),transparent 24%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px),
+  linear-gradient(#2d2821,#1a1712)}
+.hw-rack-cyberobserver .hw-rack-foot {color:#b9a686;border-top-color:#100d09}
+.hw-rack-cyberobserver .hw-rack-foot-note,.hw-rack-cyberobserver .hw-rack-serial {color:#8f7c5e}
+.hw-cyber-face {grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:11px;min-height:132px;align-items:stretch;display:grid}
+.hw-cyber-radar,.hw-cyber-panel {display:flex;flex-direction:column;gap:7px;min-width:0;padding:9px 10px;border:1px solid #4a4032;border-radius:2px;background:linear-gradient(#302a22,#1b1712)}
+.hw-cyber-radar {position:relative;overflow:hidden}
+.hw-cyber-scope {position:relative;flex:1;min-height:72px;border:1px solid #4a4032;border-radius:2px;background:
+  radial-gradient(circle at 50% 50%,rgba(240,183,75,.13),transparent 64%),
+  linear-gradient(#1b1812,#12100c);box-shadow:inset 0 1px 5px #000}
+.hw-cyber-ring {position:absolute;left:50%;top:50%;border:1px solid rgba(240,183,75,.28);border-radius:50%;transform:translate(-50%,-50%)}
+.hw-cyber-ring-a {width:34px;height:34px}
+.hw-cyber-ring-b {width:58px;height:58px;border-style:dashed;opacity:.72}
+.hw-cyber-ring-c {width:84px;height:84px;opacity:.42}
+.hw-cyber-ring[data-on=true] {border-color:rgba(240,183,75,.55)}
+.hw-cyber-shield {position:absolute;left:50%;top:50%;width:30px;height:36px;transform:translate(-50%,-50%);color:#6d5a3a;filter:drop-shadow(0 1px 1px #000)}
+.hw-cyber-shield[data-on=true] {color:#f0b74b;filter:drop-shadow(0 0 5px rgba(240,183,75,.38))}
+.hw-cyber-scanline {position:absolute;left:9%;right:9%;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(240,183,75,.7),transparent);opacity:0}
+.hw-cyber-scanline[data-on=true] {opacity:.8}
+.hw-cyber-panel {justify-content:space-between;background:linear-gradient(#352e24,#211b14)}
+.hw-cyber-panel .hw-controller-badge {border-bottom-color:#4a4032}
+.hw-cyber-panel .hw-controller-badge svg {color:#f0b74b}
+.hw-cyber-panel .hw-controller-badge strong {color:#fbf4e7}
+.hw-cyber-panel .hw-controller-badge span {color:#bda983}
+.hw-cyber-panel .hw-panel-label {color:#bda983}
+.hw-cyber-panel .hw-controller-meta {color:#a99572}
+.hw-cyber-panel .hw-controller-meta span {border-color:#4a4032;background:#1a1610}
+.hw-cyber-radar .hw-controller-storage-note {color:#a99572}
+.hw-cyber-radar .hw-controller-storage-note i[data-on=true] {background:#f0b74b;box-shadow:0 0 0 1px #100d09,0 0 6px rgba(240,183,75,.55)}
+.hw-other-cyberobserver {background:radial-gradient(120% 150% at 30% 0%,#3a3125,#211b14 62%,#15110d);border-color:#100d09}
+.hw-other-cyberobserver .hw-other-plate {color:#c2ae8c}
+.hw-other-cyberobserver .hw-other-plate strong {color:#fbf4e7}

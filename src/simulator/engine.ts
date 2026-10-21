@@ -4,7 +4,7 @@ import { isInSameIpv6Subnet, ipv6LinkLocalFromMac, ipv6SolicitedNodeMulticastAdd
 import { getStpTopology,getOperationalChannels,prepareStpTick,receiveStpBpdu,advanceStpPortStates,applyStpIngressGuard } from './spanningTree'
 import { ageLearnedMacTables } from './macLearning'
 import { captureSnifferPacket, isSniffer } from './sniffer'
-import { httpResponseBody, isHttpServerDevice, isHttpServiceEnabled } from './networkController'
+import { httpResponseBody, isHttpServerDevice, isHttpServiceEnabled } from './httpService'
 import { evaluateAcl } from './acl'
 import { allocateDhcpLease } from './dhcp'
 import { prepareOspfTick, receiveOspfPacket, hasOspf, ospfArea } from './ospf'

@@ -265,6 +265,34 @@ export interface NetworkControllerState {
   lastDiscoveryId?: string
 }
 
+export interface CyberObserverAccount {
+  username: string
+  /** Classroom-only local digest; never the plaintext password. */
+  passwordHash: string
+  role: 'admin'
+}
+
+export type CyberObserverDiscoveryMode = 'connected' | 'range'
+
+export interface CyberObserverDiscovery {
+  id: string
+  name: string
+  mode: CyberObserverDiscoveryMode
+  rangeStart?: string
+  rangeEnd?: string
+  createdAtMs: number
+  status: 'complete' | 'failed'
+  /** Stable machine-readable reason for a failed run. */
+  reason?: 'power-off' | 'no-ip' | 'no-active-link' | 'invalid-range'
+  deviceIds: string[]
+}
+
+export interface CyberObserverState {
+  accounts?: CyberObserverAccount[]
+  discoveries?: CyberObserverDiscovery[]
+  lastDiscoveryId?: string
+}
+
 export interface DeviceConfig {
   ipRouting?: boolean
   ipv6Routing?: boolean
@@ -350,6 +378,7 @@ export interface DeviceConfig {
   snifferBufferSize?: number
   /** Local web-management state for a Network Controller. */
   networkController?: NetworkControllerState
+  cyberObserver?: CyberObserverState
   vlans?: Array<{ id: number; name: string }>
   apMode?: 'autonomous' | 'lightweight'
   wlans?: WlanProfile[]

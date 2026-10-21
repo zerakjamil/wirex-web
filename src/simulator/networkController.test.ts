@@ -6,14 +6,13 @@ import {
   currentNetworkControllerDiscovery,
   discoverNetworkController,
   hashNetworkControllerPassword,
-  isHttpServerDevice,
-  isHttpServiceEnabled,
   isNetworkController,
   networkControllerAddresses,
   networkControllerDeviceStatus,
   networkControllerInventory,
   networkControllerState,
 } from './networkController'
+import { isHttpServerDevice, isHttpServiceEnabled } from './httpService'
 
 function controller(): NetworkDevice {
   const device = createDevice('pc', 100, 100, 'NetworkController')
@@ -76,6 +75,18 @@ test('NetworkController management addresses exclude unconfigured and down inter
   assert.equal(addresses.length, 1)
   assert.equal(addresses[0].ip, '192.168.10.2')
   assert.equal(addresses[0].portName, 'GigabitEthernet0')
+})
+
+test('NetworkController prefers an active management interface over a configured down link', () => {
+  const nc = controller()
+  nc.ports[0].status = 'down'
+  nc.ports[1].ipAddress = '10.10.10.2'
+  nc.ports[1].subnetMask = '255.255.255.0'
+  nc.ports[1].status = 'up'
+  const addresses = networkControllerAddresses(nc)
+  assert.equal(addresses.length, 2)
+  assert.equal(addresses[0].ip, '10.10.10.2')
+  assert.equal(addresses[0].portName, 'GigabitEthernet1')
 })
 
 test('connected discovery walks active links and omits unreachable devices', () => {

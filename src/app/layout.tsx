@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "@/components/academy/academy.css";
 
 export const metadata: Metadata = {
   title: "wireX - Interactive Network Topology Lab",

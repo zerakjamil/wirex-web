@@ -4,13 +4,14 @@ import { useEffect, useRef } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { newWorkspace } from '@/store/workspaceStore'
 import { useI18n } from '@/i18n/useI18n'
+import { useAcademyStore } from '@/store/academyStore'
 
 type WelcomeModalProps = {
   onDismiss: () => void
 }
 
 export function WelcomeModal({ onDismiss }: WelcomeModalProps) {
-  const { t } = useI18n()
+  const { t, dir } = useI18n()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const setActiveModal = useNetworkStore(state => state.setActiveModal)
 
@@ -34,6 +35,11 @@ export function WelcomeModal({ onDismiss }: WelcomeModalProps) {
 
   const openPracticeLabs = () => {
     setActiveModal({ type: 'labs' })
+  }
+
+  const openAcademy = () => {
+    onDismiss()
+    useAcademyStore.getState().openAcademy()
   }
 
   return (
@@ -87,7 +93,7 @@ export function WelcomeModal({ onDismiss }: WelcomeModalProps) {
               className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-md bg-sky-700 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 cursor-pointer"
             >
               {t('New')}
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" style={dir === 'rtl' ? { transform: 'rotate(180deg)' } : undefined} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
@@ -128,6 +134,32 @@ export function WelcomeModal({ onDismiss }: WelcomeModalProps) {
             </div>
           </section>
         </div>
+
+        <section className="border-t border-slate-200 bg-gradient-to-r from-teal-50 via-emerald-50 to-sky-50 px-6 py-5" aria-labelledby="welcome-academy-title" data-testid="welcome-academy">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-white shadow-sm">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 6.5C10.4 5 8.4 4.5 6 4.5H4v14h2c2.4 0 4.4.5 6 2 1.6-1.5 3.6-2 6-2h2v-14h-2c-2.4 0-4.4.5-6 2Z" />
+                <path d="M12 6.5v14" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 id="welcome-academy-title" className="text-sm font-semibold text-slate-900">{t('New to CCNA? Start with the Academy.')}</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{t('Read the concept, check yourself, then wire it up in the simulator.')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={openAcademy}
+              data-testid="welcome-academy-open"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-teal-700 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 cursor-pointer"
+            >
+              {t('Open Academy')}
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" style={dir === 'rtl' ? { transform: 'rotate(180deg)' } : undefined} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+        </section>
 
         <footer className="flex items-center gap-2 border-t border-slate-200 bg-slate-50/70 px-6 py-3">
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

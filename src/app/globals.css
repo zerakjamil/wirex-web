@@ -573,3 +573,8 @@ html[data-theme="dark"] .pt-app :focus-visible {outline-color:#89d8ed}
 .pt-activity-error { position:fixed; inset-block-start:112px; inset-inline:0; margin-inline:auto; width:min(420px,calc(100vw - 24px)); z-index:55; background:#fff7f4; border:1px solid #b43528; padding:10px; color:#5c1d14; font:13px/1.5 Arial,Tahoma,sans-serif; box-shadow:0 3px 10px #142c3e33; }
 .pt-activity-error p { margin:0; }
 .pt-activity-error button { border:1px solid #a4aeb4; background:#e6e9eb; padding:3px 8px; cursor:pointer; margin-top:6px; }
+
+
+/* CCNA Academy links inside the existing training flow */
+.pt-training-catalog li>.pt-training-concept-link,.pt-training-panel .pt-training-concept-link{display:inline-flex;align-items:center;gap:4px;width:auto;margin:4px 0 6px;padding:2px 0;border:0;background:transparent;color:#0b6f66;font:700 11px/1.4 Arial,Tahoma,sans-serif;text-decoration:underline;text-underline-offset:2px}
+.pt-training-catalog li>.pt-training-concept-link:hover,.pt-training-panel .pt-training-concept-link:hover{background:transparent;color:#0a4f4a}

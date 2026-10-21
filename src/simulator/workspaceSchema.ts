@@ -1,7 +1,7 @@
 import type { NetworkDevice, NetworkLink, NetworkAnnotation, DeviceWindow, PhysicalContainer, PhysicalContainerKind, PhysicalWorkspaceState, NetworkCluster } from '@/types/network'
 import { PHYSICAL_CONTAINER_KINDS } from '@/types/network'
 import { allowedChildKinds, canHoldDevices } from './physical'
-import { isInSameSubnet, isValidIpv4 } from './protocols/ip'
+import { ipToNumber, isInSameSubnet, isValidIpv4 } from './protocols/ip'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from './tftp'
 import { isValidSnmpCommunity } from './snmp'
 import { TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, validateTrafficGeneratorSettings, type TrafficGeneratorApplication, type TrafficGeneratorSettings } from './trafficGenerator'
@@ -27,6 +27,60 @@ function validateEmailMessage(value: unknown) {
   if (!message.id || String(message.id).length > 128 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(message.from)) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(message.to))) throw new Error('Invalid email message address or ID.')
   if (!String(message.subject).trim() || String(message.subject).length > 255 || new TextEncoder().encode(String(message.body)).byteLength > 65_536) throw new Error('Email message exceeds its subject or body limit.')
   if (!Number.isSafeInteger(message.sentAtTick) || Number(message.sentAtTick) < 0) throw new Error('Invalid email message timestamp.')
+}
+
+function validateCyberObserver(value: unknown) {
+  const state = object(value)
+  const accounts = state.accounts === undefined ? [] : array(state.accounts, 8).map(object)
+  const usernames = new Set<string>()
+  for (const account of accounts) {
+    textFields(account, ['username', 'passwordHash', 'role'])
+    const username = String(account.username).trim()
+    if (!username || username.length > 64 || usernames.has(username.toLowerCase()) || account.role !== 'admin' || !/^[0-9a-f]{8}$/i.test(String(account.passwordHash))) {
+      throw new Error('Invalid Cyber Observer account.')
+    }
+    usernames.add(username.toLowerCase())
+  }
+  const discoveries = state.discoveries === undefined ? [] : array(state.discoveries, 20).map(object)
+  const discoveryIds = new Set<string>()
+  for (const discovery of discoveries) {
+    textFields(discovery, ['id', 'name', 'mode', 'status'])
+    if (!String(discovery.id) || String(discovery.id).length > 128 || discoveryIds.has(String(discovery.id)) || !String(discovery.name).trim() || String(discovery.name).length > 80) {
+      throw new Error('Invalid Cyber Observer discovery identity.')
+    }
+    discoveryIds.add(String(discovery.id))
+    oneOf(discovery.mode, ['connected', 'range'])
+    oneOf(discovery.status, ['complete', 'failed'])
+    if (discovery.status === 'failed') {
+      if (discovery.reason === undefined) throw new Error('Invalid Cyber Observer discovery status.')
+      oneOf(discovery.reason, ['power-off', 'no-ip', 'no-active-link', 'invalid-range'])
+    } else if (discovery.reason !== undefined) {
+      throw new Error('Invalid Cyber Observer discovery status.')
+    }
+    if (!Number.isSafeInteger(discovery.createdAtMs) || Number(discovery.createdAtMs) < 0) throw new Error('Invalid Cyber Observer discovery time.')
+    const deviceIds = array(discovery.deviceIds, 2000)
+    if (deviceIds.some(id => typeof id !== 'string' || !id || id.length > 128) || new Set(deviceIds).size !== deviceIds.length) {
+      throw new Error('Invalid Cyber Observer discovery devices.')
+    }
+    for (const field of ['rangeStart', 'rangeEnd']) {
+      if (discovery[field] !== undefined && (typeof discovery[field] !== 'string' || String(discovery[field]).length > 64)) {
+        throw new Error('Invalid Cyber Observer discovery range.')
+      }
+    }
+    // A failed range attempt preserves whatever the user typed, including a
+    // blank or reversed range. Only completed snapshots must carry a usable
+    // range that the inventory can be reproduced from.
+    if (discovery.mode === 'range' && discovery.status === 'complete') {
+      if (!isValidIpv4(String(discovery.rangeStart ?? '')) || !isValidIpv4(String(discovery.rangeEnd ?? '')) || ipToNumber(String(discovery.rangeStart)) > ipToNumber(String(discovery.rangeEnd))) {
+        throw new Error('Invalid Cyber Observer discovery range.')
+      }
+    }
+  }
+  if (state.lastDiscoveryId !== undefined) {
+    if (typeof state.lastDiscoveryId !== 'string' || state.lastDiscoveryId.length > 128 || !discoveryIds.has(state.lastDiscoveryId)) {
+      throw new Error('Invalid Cyber Observer last discovery.')
+    }
+  }
 }
 
 export interface SerializedTrafficGeneratorRun {
@@ -90,6 +144,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     if (config.udpEchoServiceEnabled !== undefined && typeof config.udpEchoServiceEnabled !== 'boolean') throw new Error('Invalid UDP Echo service setting.')
     if (config.snifferServiceEnabled !== undefined && typeof config.snifferServiceEnabled !== 'boolean') throw new Error('Invalid Sniffer service setting.')
     if (config.snifferBufferSize !== undefined && (!Number.isInteger(config.snifferBufferSize) || Number(config.snifferBufferSize) < 1 || Number(config.snifferBufferSize) > 500)) throw new Error('Invalid Sniffer buffer size.')
+    if (config.cyberObserver !== undefined) validateCyberObserver(config.cyberObserver)
     if (config.snifferPorts !== undefined) {
       const ports = object(config.snifferPorts)
       if (Object.keys(ports).length > 64 || Object.values(ports).some(value => typeof value !== 'boolean')) throw new Error('Invalid Sniffer port setting.')

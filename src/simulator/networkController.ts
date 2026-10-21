@@ -4,9 +4,15 @@ import type {
   NetworkControllerState,
   NetworkDevice,
   NetworkLink,
-  NetworkPort,
 } from '@/types/network'
 import { ipToNumber, isValidIpv4 } from './protocols/ip'
+import {
+  defaultManagementRange,
+  deviceManagementAddresses,
+  primaryManagementAddress,
+  type ManagementAddress,
+} from './managementAddresses'
+import { activeTopologyLinks, reachableDeviceIds } from './topologyReachability'
 
 export const NETWORK_CONTROLLER_MODEL = 'NetworkController'
 export const NETWORK_CONTROLLER_DISCOVERY_LIMIT = 20
@@ -30,19 +36,6 @@ export function isNetworkController(device: Pick<NetworkDevice, 'type' | 'model'
   return device?.type === 'pc' && device.model === NETWORK_CONTROLLER_MODEL
 }
 
-export function isHttpServerDevice(device: Pick<NetworkDevice, 'type' | 'model'>): boolean {
-  return device.type === 'server' || isNetworkController(device)
-}
-
-export function isHttpServiceEnabled(device: Pick<NetworkDevice, 'type' | 'model' | 'config'>): boolean {
-  return isNetworkController(device) || device.config.httpServiceEnabled === true
-}
-
-export function httpResponseBody(device: NetworkDevice): string {
-  if (isNetworkController(device)) return NETWORK_CONTROLLER_HTTP_PAGE
-  return device.config.htmlContent || '<h1>wireX Web Server</h1><p>HTTP service operational.</p>'
-}
-
 export function networkControllerState(device: Pick<NetworkDevice, 'config'>): NetworkControllerState {
   return device.config.networkController ?? {}
 }
@@ -60,68 +53,11 @@ export function hashNetworkControllerPassword(password: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-export interface NetworkControllerAddress {
-  portId: string
-  portName: string
-  ip: string
-  mask: string
-  gateway?: string
-}
+export type NetworkControllerAddress = ManagementAddress
 
-export function networkControllerAddresses(device: NetworkDevice): NetworkControllerAddress[] {
-  return device.ports
-    .map((port, order) => ({ port, order }))
-    .filter(({ port }) =>
-      port.adminStatus === 'up' &&
-      !port.parentPortId &&
-      !port.name.includes('.') &&
-      isValidIpv4(port.ipAddress ?? '') &&
-      isValidIpv4(port.subnetMask ?? '')
-    )
-    // A Layer-3 switch's management address is its VLAN interface, not an
-    // access port that happens to carry an address.
-    .sort((a, b) => {
-      const rank = (port: NetworkPort) => device.type === 'switch' && port.virtualVlan !== undefined ? 0 : 1
-      return rank(a.port) - rank(b.port) || a.order - b.order
-    })
-    .map(({ port }) => ({
-      portId: port.id,
-      portName: port.name,
-      ip: (port.ipAddress ?? '').trim(),
-      mask: (port.subnetMask ?? '').trim(),
-      gateway: device.config.defaultGateway,
-    }))
-}
-
-export function primaryNetworkControllerAddress(device: NetworkDevice): NetworkControllerAddress | undefined {
-  return networkControllerAddresses(device)[0]
-}
-
-export function defaultNetworkControllerRange(ip: string | undefined): { start: string; end: string } {
-  if (!ip || !isValidIpv4(ip)) return { start: '192.168.1.1', end: '192.168.1.254' }
-  const prefix = ip.split('.').slice(0, 3).join('.')
-  return { start: `${prefix}.1`, end: `${prefix}.254` }
-}
-
-function activeLinks(devices: NetworkDevice[], links: NetworkLink[]): NetworkLink[] {
-  const byId = new Map(devices.map(device => [device.id, device]))
-  return links.filter(link => {
-    if (link.status !== 'up') return false
-    const from = byId.get(link.fromDeviceId)
-    const to = byId.get(link.toDeviceId)
-    if (!from?.power || !to?.power) return false
-    const fromPort = from.ports.find(port => port.id === link.fromPortId)
-    const toPort = to.ports.find(port => port.id === link.toPortId)
-    return Boolean(
-      fromPort &&
-      toPort &&
-      fromPort.adminStatus === 'up' &&
-      toPort.adminStatus === 'up' &&
-      fromPort.status !== 'down' &&
-      toPort.status !== 'down'
-    )
-  })
-}
+export const networkControllerAddresses = deviceManagementAddresses
+export const primaryNetworkControllerAddress = primaryManagementAddress
+export const defaultNetworkControllerRange = defaultManagementRange
 
 /** Active-link adjacency from the controller, seeded at its current device position. */
 export function reachableNetworkControllerDeviceIds(
@@ -129,24 +65,7 @@ export function reachableNetworkControllerDeviceIds(
   devices: NetworkDevice[],
   links: NetworkLink[]
 ): Set<string> {
-  const reachable = new Set<string>()
-  if (!controller.power) return reachable
-  const adjacency = new Map<string, string[]>()
-  for (const link of activeLinks(devices, links)) {
-    adjacency.set(link.fromDeviceId, [...(adjacency.get(link.fromDeviceId) ?? []), link.toDeviceId])
-    adjacency.set(link.toDeviceId, [...(adjacency.get(link.toDeviceId) ?? []), link.fromDeviceId])
-  }
-  const queue = [controller.id]
-  reachable.add(controller.id)
-  while (queue.length) {
-    const current = queue.shift()!
-    for (const peer of adjacency.get(current) ?? []) {
-      if (reachable.has(peer)) continue
-      reachable.add(peer)
-      queue.push(peer)
-    }
-  }
-  return reachable
+  return reachableDeviceIds(controller, devices, links)
 }
 
 export interface NetworkControllerDiscoveryInput {
@@ -187,7 +106,7 @@ export function discoverNetworkController(
 
   if (!controller.power) return fail('power-off')
   if (!primaryNetworkControllerAddress(controller)) return fail('no-ip')
-  if (activeLinks(devices, links).every(link => link.fromDeviceId !== controller.id && link.toDeviceId !== controller.id)) {
+  if (activeTopologyLinks(devices, links).every(link => link.fromDeviceId !== controller.id && link.toDeviceId !== controller.id)) {
     return fail('no-active-link')
   }
 

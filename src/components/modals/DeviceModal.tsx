@@ -16,6 +16,7 @@ import { isGenericEndDevice } from '@/simulator/endDevice'
 import { isSniffer } from '@/simulator/sniffer'
 import { isIsa3000 } from '@/simulator/isa'
 import { isNetworkController, networkControllerState, primaryNetworkControllerAddress } from '@/simulator/networkController'
+import { cyberObserverState, isCyberObserver, primaryCyberObserverAddress } from '@/simulator/cyberObserver'
 const NetworkControllerApp = dynamic(
   () => import('./NetworkControllerApp').then(module => module.NetworkControllerApp),
   {
@@ -23,6 +24,17 @@ const NetworkControllerApp = dynamic(
     loading: () => (
       <div className="flex h-full items-center justify-center" aria-busy="true">
         <span className="h-6 w-6 animate-spin rounded-full border-2 border-teal-700 border-t-transparent" />
+      </div>
+    ),
+  }
+)
+const CyberObserverApp = dynamic(
+  () => import('./CyberObserverApp').then(module => module.CyberObserverApp),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center" aria-busy="true">
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
       </div>
     ),
   }
@@ -65,6 +77,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
     if(initial && isSniffer(initial) && state.activeTab==='gui')return 'gui'
     if(initial && isGenericEndDevice(initial) && (state.activeTab==='gui'||state.activeTab==='html'))return state.activeTab
     if(initial && isNetworkController(initial) && (state.activeTab==='desktop'||state.activeTab==='gui'||state.activeTab==='cli'))return 'config'
+    if(initial && isCyberObserver(initial) && (state.activeTab==='desktop'||state.activeTab==='gui'||state.activeTab==='cli'||state.activeTab==='asdm'))return 'config'
     if(initial && usesDesktop(initial) && (state.activeTab==='cli'||state.activeTab==='gui'))return 'desktop'
     if(initial && !usesCli(initial.type) && state.activeTab==='cli')return 'config'
     if(initial?.type==='wlc'&&(state.activeTab==='cli'||state.activeTab==='gui'))return 'config'
@@ -82,10 +95,10 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   if (isSniffer(device)) tabs.push({ id: 'gui', label: t('GUI') })
   else if (isGenericEndDevice(device)) tabs.push({ id: 'gui', label: t('GUI') }, { id: 'html', label: t('HTML') })
   else if (usesDesktop(device)) tabs.push({ id: 'desktop', label: t('Desktop') })
-  else if (usesCli(device.type)) tabs.push({ id: 'cli', label: t('CLI') })
+  else if (usesCli(device.type) && !isCyberObserver(device)) tabs.push({ id: 'cli', label: t('CLI') })
   if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
   if (device.type === 'iot') tabs.push({ id: 'iot', label: t('IoT') })
-  if (device.type === 'security' && !isIsa3000(device)) tabs.push({ id: 'asdm', label: t('ASDM') })
+  if (device.type === 'security' && !isIsa3000(device) && !isCyberObserver(device)) tabs.push({ id: 'asdm', label: t('ASDM') })
   if (isIsa3000(device)) tabs.push({ id: 'isa', label: t('Firewall') })
   if (device.type === 'wlc') tabs.push({ id: 'webadmin', label: t('GUI') })
   tabs.push({ id: 'attributes', label: t('Attributes') })
@@ -832,7 +845,7 @@ function ConfigSession({ device }: { device: NetworkDevice }) {
   const page = pages.find((candidate) => candidate.id === requestedPageId) ?? pages[0] ?? { id: 'settings', name: 'Settings', group: 'GLOBAL' as const }
   const pageId = page.id
   const commands = useMemo(() => equivalentIosCommands(device, pageId), [device, pageId])
-  const hasIosCommands = device.type === 'router' || device.type === 'switch' || device.type === 'security'
+  const hasIosCommands = (device.type === 'router' || device.type === 'switch' || device.type === 'security') && !isCyberObserver(device)
 
   return (
     <div className="@container flex h-full min-h-0 flex-1 overflow-hidden">
@@ -950,7 +963,7 @@ function ConfigSettingsPage({ device, t, updateDeviceConfig, renameDevice, execu
   const month = now.toLocaleDateString('en-US', { month: 'short' })
   const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} ${weekday} ${month} ${now.getDate()} ${now.getFullYear()} UTC`
   const host = device.config.hostname || device.name
-  const isIosDevice = device.type === 'router' || device.type === 'switch' || device.type === 'security'
+  const isIosDevice = (device.type === 'router' || device.type === 'switch' || device.type === 'security') && !isCyberObserver(device)
   const showsGateway = device.type === 'pc' || device.type === 'laptop' || device.type === 'server' ||
     device.type === 'tablet' || device.type === 'smartphone' || device.type === 'printer'
   const dhcpEnabled = device.config.dhcpEnabled === true
@@ -1180,6 +1193,23 @@ function ConfigSettingsPage({ device, t, updateDeviceConfig, renameDevice, execu
               <span className="text-[11px]">{(networkControllerState(device).accounts?.length ?? 0) > 0 ? t('Configured') : t('Not configured')}</span>
             </SettingsRow>
             <p className="max-w-[520px] text-[11px] text-[#555]">{t('Manage this controller from a PC Web Browser on the same network.')}</p>
+          </>
+        )}
+        {isCyberObserver(device) && (
+          <>
+            <div className="pt-2 text-[11px] font-bold text-[#222]">{t('Web management')}</div>
+            <SettingsRow label={t('Management URL')}>
+              {(() => {
+                const address = primaryCyberObserverAddress(device)
+                return address
+                  ? <span dir="ltr" className="font-mono text-[11px] text-[#1e3a5f]">http://{address.ip}</span>
+                  : <span className="text-[11px] text-[#777]">{t('No management IP')}</span>
+              })()}
+            </SettingsRow>
+            <SettingsRow label={t('Administrator account')}>
+              <span className="text-[11px]">{(cyberObserverState(device).accounts?.length ?? 0) > 0 ? t('Configured') : t('Not configured')}</span>
+            </SettingsRow>
+            <p className="max-w-[520px] text-[11px] text-[#555]">{t('Open this appliance from a PC Web Browser on the same network.')}</p>
           </>
         )}
       </div>
@@ -3181,6 +3211,9 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
     const controllerDestination = transaction?.status === 'successful' && transaction.destinationDeviceId
       ? devices.find(item => item.id === transaction.destinationDeviceId && isNetworkController(item))
       : undefined
+    const cyberObserverDestination = transaction?.status === 'successful' && transaction.destinationDeviceId
+      ? devices.find(item => item.id === transaction.destinationDeviceId && isCyberObserver(item))
+      : undefined
     const dnsFailureDocument = dnsTransaction?.status === 'failed'
       ? (() => {
           const reason = (dnsTransaction.reason || 'The DNS query did not receive a valid answer.').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
@@ -3275,9 +3308,11 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
             Go
           </button>
         </div>
-        <div className={`flex-1 bg-white overflow-y-auto ${controllerDestination ? 'p-0' : 'p-6'}`}>
+        <div className={`flex-1 bg-white overflow-y-auto ${controllerDestination || cyberObserverDestination ? 'p-0' : 'p-6'}`}>
           {controllerDestination ? (
-            <NetworkControllerApp deviceId={controllerDestination.id} />
+            <NetworkControllerApp key={controllerDestination.id} deviceId={controllerDestination.id} />
+          ) : cyberObserverDestination ? (
+            <CyberObserverApp key={cyberObserverDestination.id} deviceId={cyberObserverDestination.id} />
           ) : transactionDocument || browserRender ? (
             <iframe title="Simulated server page" sandbox="" referrerPolicy="no-referrer" srcDoc={transactionDocument || browserRender || ''} style={{width:'100%',height:'100%',minHeight:240,border:0,background:'#fff'}} />
           ) : (
