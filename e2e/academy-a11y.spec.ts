@@ -62,9 +62,14 @@ test('academy accessibility audit light', async ({ page }) => {
   await assertA11y(page, 'reader-light')
 
   await page.getByTestId('academy-view-practice').click()
+  await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+  await page.waitForTimeout(300)
+  await assertA11y(page, 'exam-light')
+
+  await page.getByTestId('academy-practice-tab-theory').click()
   await expect(page.getByTestId('academy-practice-question')).toBeVisible()
   await page.waitForTimeout(300)
-  await assertA11y(page, 'practice-light')
+  await assertA11y(page, 'theory-light')
 
   await page.getByTestId('academy-view-rescue').click()
   await expect(page.getByTestId('academy-rescue')).toBeVisible()

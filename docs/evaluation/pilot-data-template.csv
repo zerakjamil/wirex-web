@@ -1,2 +1,2 @@
-participant_id,cohort,prior_networking_weeks,prior_vlan_config,pre_score_12,post_score_12,gain,transfer_rater_a_20,transfer_rater_b_20,transfer_consensus_20,transfer_critical_error,delayed_mcq_8,config_recall_5,survey_mean_5,completed_session,completed_delayed,protocol_deviations,notes
-P-XXXX,,0,no,,,,,,,,,,,yes,no,,
+participant_id,cohort,prior_networking_weeks,prior_vlan_config,setup_minutes,pre_score_12,post_score_12,gain,transfer_rater_a_20,transfer_rater_b_20,transfer_consensus_20,transfer_critical_error,delayed_mcq_8,config_recall_5,survey_mean_5,survey_find_5,completed_session,completed_delayed,protocol_deviations,notes
+P-XXXX,,0,no,,,,,,,,,,,,,,,,

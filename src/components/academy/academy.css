@@ -244,16 +244,18 @@ html[data-theme="dark"] .ccna-academy {
 .ccna-markdown code { padding: 1px 4px; border: 1px solid var(--ac-line); border-radius: 4px; background: var(--ac-code-inline); color: var(--ac-ink); font-family: var(--ac-mono); font-size: 11.5px; line-height: 1.5; unicode-bidi: isolate; }
 .ccna-markdown a { color: var(--ac-teal-strong); text-decoration: underline; text-underline-offset: 2px; }
 .ccna-markdown hr { margin: 24px 0; border: 0; border-top: 1px solid var(--ac-line); }
-.ccna-table-wrap { margin: 15px 0; overflow-x: auto; border: 1px solid var(--ac-line); border-radius: 9px; }
-.ccna-table-wrap table { width: 100%; border-collapse: collapse; font-size: 11.5px; line-height: 1.5; }
-.ccna-table-wrap th { padding: 8px 10px; border-bottom: 1px solid var(--ac-line); background: var(--ac-surface-2); color: var(--ac-ink); font-weight: 700; text-align: left; white-space: nowrap; }
-.ccna-table-wrap td { padding: 8px 10px; border-bottom: 1px solid var(--ac-line-soft); vertical-align: top; }
+.ccna-table-wrap { margin: 16px 0; overflow-x: auto; border: 1px solid var(--ac-line); border-radius: 9px; }
+.ccna-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.6; }
+.ccna-table-wrap th { padding: 10px 12px; border-bottom: 1px solid var(--ac-line); background: var(--ac-surface-2); color: var(--ac-ink); font-weight: 700; text-align: left; white-space: normal; }
+.ccna-table-wrap td { padding: 10px 12px; border-bottom: 1px solid var(--ac-line-soft); vertical-align: top; }
+.ccna-table-wrap tbody tr:nth-child(even) td { background: var(--ac-surface-2); }
+.ccna-table-wrap tbody tr:hover td { background: var(--ac-teal-soft); }
 .ccna-table-wrap tr:last-child td { border-bottom: 0; }
 .ccna-code { margin: 15px 0; border: 1px solid #1d3339; border-radius: 9px; overflow: hidden; background: #0c1a1e; }
 .ccna-code-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; background: #12252a; color: #8fb0ab; font-size: 8.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
 .ccna-code-head button { border: 0; border-radius: 4px; background: transparent; color: #b8d6d1; padding: 2px 5px; font-size: 9px; font-weight: 600; }
 .ccna-code-head button:hover { background: rgba(255, 255, 255, .08); color: #fff; }
-.ccna-code pre { margin: 0; padding: 12px 14px; overflow-x: auto; color: #dbe9e6; font-family: var(--ac-mono); font-size: 11.5px; line-height: 1.55; tab-size: 2; }
+.ccna-code pre { margin: 0; padding: 13px 15px; overflow-x: auto; color: #dbe9e6; font-family: var(--ac-mono); font-size: 12.5px; line-height: 1.6; tab-size: 2; }
 .ccna-quote { margin: 15px 0; padding: 11px 14px; border-inline-start: 3px solid var(--ac-line-strong); border-radius: 0 8px 8px 0; background: var(--ac-surface-2); }
 .ccna-quote p { margin: 5px 0; }
 .ccna-checks { display: grid; gap: 13px; margin-top: 28px; }
@@ -338,7 +340,7 @@ html[data-theme="dark"] .ccna-academy {
 .ccna-question-feedback p { margin: 0 0 11px; color: var(--ac-ink-2); font-size: 11.5px; line-height: 1.55; }
 .ccna-question-submit { margin-top: 13px; }
 .ccna-result-card { max-width: 740px; margin: 10px auto 0; padding: 34px; border: 1px solid var(--ac-line); border-radius: 18px; background: var(--ac-surface); text-align: center; box-shadow: 0 22px 56px -40px rgba(7, 25, 28, .6); }
-.ccna-score-wrap { position: relative; display: grid; place-items: center; width: 116px; height: 116px; margin: 18px auto 14px; }
+.ccna-score-wrap { position: relative; display: grid; place-items: center; width: 116px; height: 116px; margin: 18px auto 14px; direction: ltr; }
 .ccna-score-wrap > svg { position: absolute; inset: 0; }
 .ccna-score-wrap strong { color: var(--ac-ink); font-family: var(--ac-serif); font-size: 26px; font-weight: 600; letter-spacing: -.03em; }
 .ccna-result-card h1 { font-size: 30px; }
@@ -351,6 +353,47 @@ html[data-theme="dark"] .ccna-academy {
 .ccna-weak-row > span:first-child { flex: 1; min-width: 0; }
 .ccna-weak-row > span:nth-child(2) { display: grid; place-items: center; min-width: 20px; height: 20px; border-radius: 999px; background: var(--ac-bad-soft); color: var(--ac-bad); font-size: 9px; font-weight: 800; }
 .ccna-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 20px; }
+
+/* Practical exam */
+.ccna-practice-tabs { display: inline-flex; gap: 4px; margin: 0 0 22px; padding: 3px; border: 1px solid var(--ac-line); border-radius: 999px; background: var(--ac-surface-2); }
+.ccna-practice-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ac-muted); font-size: 10.5px; font-weight: 700; cursor: pointer; transition: background .12s ease, color .12s ease; }
+.ccna-practice-tabs button:hover { color: var(--ac-ink); }
+.ccna-practice-tabs button[aria-selected="true"] { background: var(--ac-surface); color: var(--ac-ink); box-shadow: 0 2px 8px -5px rgba(7, 25, 28, .5); }
+.ccna-practice-tabs button:focus-visible { outline: 2px solid var(--ac-teal); outline-offset: 2px; }
+.ccna-practice-tab-count { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--ac-teal-soft); color: var(--ac-teal-strong); font-size: 8px; font-weight: 800; }
+.ccna-exam-scorebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 20px 0 16px; border: 1px solid var(--ac-line); border-radius: 12px; background: var(--ac-line); overflow: hidden; }
+.ccna-exam-scorebar > div { padding: 13px 16px; background: var(--ac-surface); }
+.ccna-exam-scorebar span { display: block; color: var(--ac-muted); font-size: 8px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.ccna-exam-scorebar strong { display: block; margin-top: 4px; color: var(--ac-ink); font-family: var(--ac-serif); font-size: 24px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+.ccna-exam-scorebar small { color: var(--ac-muted); font-family: var(--ac-sans); font-size: 10px; font-weight: 600; letter-spacing: 0; }
+.ccna-exam-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 14px; }
+.ccna-exam-brief, .ccna-exam-tasks { padding: 20px; border: 1px solid var(--ac-line); border-radius: 14px; background: var(--ac-surface); }
+.ccna-exam-brief { display: flex; flex-direction: column; gap: 9px; }
+.ccna-exam-brief h2, .ccna-exam-tasks h2 { margin: 0; color: var(--ac-ink); font-family: var(--ac-serif); font-size: 23px; font-weight: 600; letter-spacing: -.025em; line-height: 1.15; }
+.ccna-exam-brief > p { margin: 0; color: var(--ac-ink-2); font-size: 11.5px; line-height: 1.55; }
+.ccna-exam-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+.ccna-exam-chips span { padding: 4px 7px; border: 1px solid var(--ac-line); border-radius: 999px; background: var(--ac-surface-2); color: var(--ac-ink-2); font-size: 8.5px; font-weight: 700; }
+.ccna-exam-steps { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--ac-line-soft); }
+.ccna-exam-steps ol { display: grid; gap: 5px; margin: 7px 0 0; padding: 0; list-style: none; }
+.ccna-exam-steps li { display: flex; align-items: center; gap: 7px; color: var(--ac-ink-2); font-size: 10.5px; line-height: 1.4; }
+.ccna-exam-steps li > span { display: inline-grid; place-items: center; flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ac-teal-soft); color: var(--ac-teal-strong); font-family: var(--ac-mono); font-size: 8.5px; font-weight: 700; }
+.ccna-exam-rules { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--ac-line-soft); }
+.ccna-exam-rules ul { display: grid; gap: 5px; margin: 7px 0 0; padding: 0; list-style: none; }
+.ccna-exam-rules li { display: flex; align-items: flex-start; gap: 6px; color: var(--ac-ink-2); font-size: 10px; line-height: 1.45; }
+.ccna-exam-rules svg { flex-shrink: 0; margin-top: 1px; color: var(--ac-teal-strong); }
+.ccna-exam-note { display: flex; align-items: flex-start; gap: 6px; margin-top: 4px !important; padding-top: 10px; border-top: 1px solid var(--ac-line-soft); color: var(--ac-muted) !important; font-size: 9.5px !important; line-height: 1.5 !important; }
+.ccna-exam-note svg { flex-shrink: 0; margin-top: 1px; }
+.ccna-exam-tasks-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ccna-exam-tasks-head > span:last-child { color: var(--ac-muted); font-family: var(--ac-mono); font-size: 9px; }
+.ccna-exam-tasks h2 { margin-top: 3px; }
+.ccna-exam-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; margin-top: 13px; }
+.ccna-exam-group h3 { margin: 0 0 5px; color: var(--ac-teal-strong); font-size: 8.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.ccna-exam-group ol { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ccna-exam-group li { display: flex; align-items: flex-start; gap: 6px; color: var(--ac-ink-2); font-size: 11px; line-height: 1.4; }
+.ccna-exam-group li > span { display: inline-grid; place-items: center; flex-shrink: 0; width: 17px; height: 17px; margin-top: 1px; border-radius: 50%; background: var(--ac-surface-2); color: var(--ac-muted); font-family: var(--ac-mono); font-size: 8px; }
+.ccna-exam-cta { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 15px 17px; border: 1px solid var(--ac-teal-border); border-radius: 12px; background: var(--ac-teal-soft); }
+.ccna-exam-cta .ccna-button { flex-shrink: 0; }
+.ccna-exam-cta > p { margin: 0; color: var(--ac-ink-2); font-size: 10px; line-height: 1.5; }
 
 /* Rescue */
 .ccna-rescue-head { margin-bottom: 18px; }
@@ -396,6 +439,8 @@ html[data-theme="dark"] .ccna-academy {
 
 @media (max-width: 860px) {
   .ccna-academy { width: 100vw; height: 100dvh; max-width: 100vw; max-height: 100dvh; border: 0; border-radius: 0; }
+  .ccna-exam-layout { grid-template-columns: 1fr; }
+  .ccna-exam-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ccna-shell { grid-template-rows: 54px minmax(0, 1fr); }
   .ccna-topbar { gap: 6px; padding: 0 10px; }
   .ccna-brand { min-width: 0; gap: 7px; }
@@ -439,6 +484,12 @@ html[data-theme="dark"] .ccna-academy {
 }
 
 @media (max-width: 520px) {
+  .ccna-practice-tabs { width: 100%; }
+  .ccna-practice-tabs button { flex: 1; justify-content: center; }
+  .ccna-exam-scorebar { grid-template-columns: 1fr; }
+  .ccna-exam-groups { grid-template-columns: 1fr; }
+  .ccna-exam-cta { align-items: stretch; flex-direction: column; }
+  .ccna-exam-cta .ccna-button { justify-content: center; }
   .ccna-brand-mark { display: none; }
   .ccna-mobile-course span { display: none; }
   .ccna-mobile-course { width: 30px; padding: 0; justify-content: center; }

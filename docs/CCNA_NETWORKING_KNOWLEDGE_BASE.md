@@ -94,21 +94,15 @@ An enterprise network provides connectivity for diverse internal endpoints and i
 ## 1.3 TCP/IP Architecture: Original vs. Updated Models
 The TCP/IP model exists in two iterations:
 
-```
-+---------------------------------------+---------------------------------------+
-| Original TCP/IP Model (RFC 1122 - 4L) | Updated TCP/IP Model (5-Layer Model)  |
-+---------------------------------------+---------------------------------------+
-| Layer 4: Application                  | Layer 5: Application                  |
-+---------------------------------------+---------------------------------------+
-| Layer 3: Transport                    | Layer 4: Transport                    |
-+---------------------------------------+---------------------------------------+
-| Layer 2: Internet                     | Layer 3: Network (Internet)           |
-+---------------------------------------+---------------------------------------+
-| Layer 1: Link (Network Access)        | Layer 2: Data Link                    |
-|                                       +---------------------------------------+
-|                                       | Layer 1: Physical                     |
-+---------------------------------------+---------------------------------------+
-```
+| Original TCP/IP Model (RFC 1122, 4 layers) | Updated TCP/IP Model (5 layers) |
+| --- | --- |
+| Layer 4: Application | Layer 5: Application |
+| Layer 3: Transport | Layer 4: Transport |
+| Layer 2: Internet | Layer 3: Network (Internet) |
+| Layer 1: Link (Network Access) | Layer 2: Data Link |
+| — | Layer 1: Physical |
+
+The original link layer maps to the updated data-link and physical layers.
 
 ### Protocol Examples per Layer
 - **Application**: HTTP, HTTPS, POP3, SMTP, IMAP, DNS, DHCP, FTP, Telnet, SSH, SNMP.
@@ -122,24 +116,17 @@ The TCP/IP model exists in two iterations:
 ## 1.4 OSI 7-Layer Reference Model vs. TCP/IP Models
 The Open Systems Interconnection (OSI) reference model was developed by the International Organization for Standardization (ISO). While TCP/IP is the implemented protocol stack, OSI remains the standard descriptive model for networking concepts.
 
-```
-OSI 7-Layer Model            Original TCP/IP (4L)        Updated TCP/IP (5L)
-+---+--------------+        +---+-------------+         +---+-------------+
-| 7 | Application  |---+    | 4 | Application |         | 5 | Application |
-+---+--------------+   |    |   |             |         |   |             |
-| 6 | Presentation |---+----+   |             |         |   |             |
-+---+--------------+   |    |   |             |         |   |             |
-| 5 | Session      |---+    +---+-------------+         +---+-------------+
-+---+--------------+        | 3 | Transport   |         | 4 | Transport   |
-| 4 | Transport    |------->+---+-------------+-------->+---+-------------+
-+---+--------------+        | 2 | Internet    |         | 3 | Network     |
-| 3 | Network      |------->+---+-------------+-------->+---+-------------+
-+---+--------------+        | 1 | Link        |         | 2 | Data Link   |
-| 2 | Data Link    |---+    |   |             |-------->+---+-------------+
-+---+--------------+   +--->|   |             |         | 1 | Physical    |
-| 1 | Physical     |---+    +---+-------------+         +---+-------------+
-+---+--------------+
-```
+| OSI layer (7–1) | Original TCP/IP (4 layers) | Updated TCP/IP (5 layers) |
+| --- | --- | --- |
+| 7 — Application | Application | Application |
+| 6 — Presentation | Application | Application |
+| 5 — Session | Application | Application |
+| 4 — Transport | Transport | Transport |
+| 3 — Network | Internet | Network |
+| 2 — Data Link | Link | Data Link |
+| 1 — Physical | Link | Physical |
+
+The original link layer covers both OSI layers 1 and 2; the updated model splits them into data link and physical.
 
 *Mnemonic for OSI Layers (7 down to 1)*: **A**ll **P**eople **S**eem **T**o **N**eed **D**ata **P**rocessing.
 
@@ -517,13 +504,7 @@ Optical fiber links operate in full duplex using two paired physical strands:
 
 ## 2.9 IEEE 802.3 Ethernet Frame Format
 
-```
-+----------+-----+-------------+------------+------+--------------+-----+
-| Preamble | SFD | Destination | Source MAC | Type | Data and Pad | FCS |
-| (7 B)    | (1) | MAC (6 B)   | (6 B)      | (2)  | (46-1500 B)  | (4) |
-+----------+-----+-------------+------------+------+--------------+-----+
-<------------------------- Header -------------------------> <Payload>  <Trailer>
-```
+Ethernet fields appear on the wire in the order shown below.
 
 | Field Name | Length in Bytes | Functional Purpose |
 |---|---|---|
@@ -669,18 +650,12 @@ Switch(config-line)# end
 ## 3.4 Centralized AAA Server Authentication (RADIUS / TACACS+)
 In enterprise deployments, maintaining local user databases across thousands of switches is impractical. Switches forward authentication requests to external Authentication, Authorization, and Accounting (AAA) servers:
 
-```
-+------------+       1. Telnet / SSH        +------------+   2. Access-Request   +------------+
-| Workstation| ---------------------------> | Switch SW1 | --------------------> | AAA Server |
-|   Client   | <--------------------------- |            | <-------------------- | (RADIUS /  |
-+------------+     4. CLI Prompt Granted    +------------+   3. Access-Accept    |  TACACS+)  |
-                                                                                 +------------+
-```
-
-1. User attempts login on Switch `SW1`.
-2. `SW1` encapsulates credentials in a RADIUS or TACACS+ packet and queries central AAA Server `S1`.
-3. AAA server evaluates central directory (e.g., Active Directory / LDAP) and returns `Approved`.
-4. Switch opens CLI prompt for user.
+| Step | Path | What happens |
+| --- | --- | --- |
+| 1 | User → SW1 | The user attempts a Telnet or SSH login. |
+| 2 | SW1 → AAA server | SW1 encapsulates the credentials in a RADIUS or TACACS+ Access-Request. |
+| 3 | AAA server → SW1 | The server evaluates its central directory (for example Active Directory or LDAP) and returns Access-Accept or Access-Reject. |
+| 4 | SW1 → user | On approval, SW1 opens the CLI prompt. |
 
 ---
 
@@ -895,36 +870,37 @@ Trunking Mechanism across Two Switches:
 ## 4.3 IEEE 802.1Q Frame Tagging Architecture
 IEEE 802.1Q is the industry-standard trunking protocol. It inserts a **4-byte (32-bit)** header directly between the Source MAC address and the EtherType field:
 
-```
-Standard Ethernet Frame:
-+---------------+------------------+--------------+------------------+---------+
-| Dest MAC (6B) | Source MAC (6B)  | Type (2B)    | Data (46-1500 B) | FCS (4B)|
-+---------------+------------------+--------------+------------------+---------+
+**Standard Ethernet frame**
 
-802.1Q Tagged Frame:
-+---------------+------------------+--------------+-----------+------------------+---------+
-| Dest MAC (6B) | Source MAC (6B)  | 802.1Q (4B)  | Type (2B) | Data (46-1500 B) | FCS (4B)|
-+---------------+------------------+--------------+-----------+------------------+---------+
-                                    /            \
-        +--------------------------+              +--------------------------+
-       /                                                                      \
-      +----------------------------+-----------+------+------------------------+
-      | Tag Protocol ID (TPID)     | Priority  | Flag | VLAN Identifier (VID)  |
-      | 16 bits (0x8100)           | 3 bits    | 1 bit| 12 bits                |
-      +----------------------------+-----------+------+------------------------+
-```
+| Field | Size | Notes |
+| --- | --- | --- |
+| Destination MAC | 6 B | Recipient's MAC address |
+| Source MAC | 6 B | Sender's MAC address |
+| Type | 2 B | EtherType; identifies the payload protocol |
+| Data and pad | 46–1500 B | Layer 3 PDU, padded to the minimum frame size |
+| FCS | 4 B | CRC used for error detection |
 
-### 802.1Q Tag Field Breakdown
-1. **Tag Protocol Identifier (TPID)**: 16 bits (2 bytes). Set to `0x8100` to indicate an 802.1Q tagged frame.
-2. **Priority Code Point (PCP)**: 3 bits. Defines Class of Service (CoS) for Layer 2 Quality of Service (QoS) prioritization (values 0–7).
-3. **Drop Eligible Indicator (DEI) / CFI**: 1 bit. Indicates frames eligible to be dropped in the presence of congestion.
-4. **VLAN Identifier (VID)**: 12 bits. Identifies the VLAN to which the frame belongs:
-   - $2^{12} = 4096$ possible values (VLANs 0 to 4095).
-   - Reserved values: `0` (priority tag only) and `4095` (reserved).
-   - Normal range: `1 - 1005`.
-   - Extended range: `1006 - 4094`.
+**802.1Q tagged frame**
 
-*(Note: Adding the 4-byte tag modifies the frame contents, requiring the sending switch to recalculate the 4-byte FCS trailer).*
+| Field | Size | Notes |
+| --- | --- | --- |
+| Destination MAC | 6 B | Unchanged by tagging |
+| Source MAC | 6 B | Unchanged by tagging |
+| 802.1Q tag | 4 B | Inserted between the source MAC and Type |
+| Type | 2 B | EtherType of the payload |
+| Data and pad | 46–1500 B | Payload |
+| FCS | 4 B | Recalculated after tagging |
+
+**802.1Q tag fields**
+
+| Field | Size | Purpose |
+| --- | --- | --- |
+| Tag Protocol Identifier (TPID) | 16 bits | `0x8100` marks the frame as 802.1Q tagged |
+| Priority Code Point (PCP) | 3 bits | Class of Service (CoS) value 0–7 |
+| Drop Eligible Indicator (DEI) | 1 bit | Marks the frame as eligible for dropping under congestion |
+| VLAN Identifier (VID) | 12 bits | VLAN number; 0 and 4095 are reserved |
+
+The 12-bit VID space provides 4096 values. VID `0` is used for priority tagging only and VID `4095` is reserved; the normal VLAN range is `1–1005` and the extended range is `1006–4094`. Because tagging changes the frame, the sending switch recalculates the 4-byte FCS.
 
 ---
 

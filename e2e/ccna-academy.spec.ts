@@ -82,6 +82,24 @@ test('opens from the title bar, searches the course, and launches a guided lab',
   await expect(training).toContainText(/TCP\/IP|Encapsulation/)
 })
 
+test('starts the 14-task practical exam from the Academy', async ({ page }) => {
+  await startNewWorkspace(page)
+  await page.getByTestId('academy-open').click()
+  await page.getByTestId('academy-view-practice').click()
+  await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+  await expect(page.getByTestId('academy-practical-start')).toBeVisible()
+
+  await page.getByTestId('academy-practical-start').click()
+  await expect(page.getByTestId('ccna-academy')).toBeHidden()
+  await expect(page.getByTestId('training-practical-score')).toBeVisible()
+  await expect(page.locator('.pt-training-panel .pt-task-list li')).toHaveCount(14)
+  await expect(page.getByTestId('training-practical-score')).toContainText('0 / 14')
+
+  await page.getByTestId('training-exam-return').click()
+  await expect(page.getByTestId('ccna-academy')).toBeVisible()
+  await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+})
+
 test('opens the matching concept from the training catalog', async ({ page }) => {
   await startNewWorkspace(page)
   await page.getByRole('button', { name: 'Training', exact: true }).click()
@@ -98,6 +116,8 @@ test('completes a practice round and enters a rescue path', async ({ page }) => 
   await startNewWorkspace(page)
   await page.getByTestId('academy-open').click()
   await page.getByTestId('academy-view-practice').click()
+  await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+  await page.getByTestId('academy-practice-tab-theory').click()
   await expect(page.getByTestId('academy-practice-question')).toBeVisible()
 
   for (let index = 0; index < 10; index += 1) {

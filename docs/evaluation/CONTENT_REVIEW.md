@@ -67,7 +67,19 @@ For each section:
 
 Record findings by section ID. A finding should include the quoted sentence, why it is wrong or misleading, and a proposed correction.
 
-### 4.3 Simulator alignment
+### 4.3 Practical exam (all 14 tasks)
+
+Open **Academy → Exam → Practical** and inspect the briefing against the live topology. For every `task.exam-*` row in `academy-ui-strings.csv`, confirm that:
+
+- the task is achievable with documented IOS commands on the presented models and ports;
+- the wording names the required outcome without demanding one arbitrary implementation;
+- the grader would accept any valid configuration that achieves the stated outcome (for example, any valid STP priority that makes SW1 root, or either active/passive LACP);
+- the 14 tasks plus the cross-VLAN ping can all be completed within a reasonable exam session;
+- the displayed point split (10 theory + 14 practical) matches the actual score.
+
+Do not accept a task merely because the reference solution passes. Check that an alternative correct solution is not failed by an over-specific assertion.
+
+### 4.4 Simulator alignment
 
 For sections that link to a guided lab, confirm that:
 
@@ -95,6 +107,7 @@ The content gate passes only when:
 - there are **zero unresolved P0 findings**;
 - every P1 finding is either fixed and re-reviewed, or explicitly accepted with a written rationale and a visible learner-facing caveat where appropriate;
 - answer/explanation inconsistencies are zero for the checks that are rated correct;
+- all 14 practical-exam tasks pass this review, or every exception is fixed and re-reviewed;
 - the reviewers confirm that the sections they reviewed do not contain verbatim Cisco copyrighted text or Cisco branding.
 
 If the 90% threshold fails, do not average across reviewers. List the failing items and fix them, then run a second review on the changed items and a random sample of unchanged items.

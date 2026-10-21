@@ -4,10 +4,10 @@ Status: implemented 2026-10-21. Free, account-free learning layer inside the
 wireX Packet Tracer-compatible workspace.
 
 The Academy is not a second simulator and not a learning-management system. It
-is a guided reading, retrieval, and rescue layer over the simulator that already
-exists. It adds no devices, protocols, services, or grading backend. Students
-read a short concept, answer a check, then open a real guided lab and configure
-the same topology the simulator evaluates.
+is a guided reading, retrieval, and live practical-exam layer over the simulator
+that already exists. It adds no devices, protocols, services, or grading backend.
+Students read a short concept, answer a check, then configure a real topology the
+simulator grades from its own state.
 
 ## Audience and promise
 
@@ -17,8 +17,10 @@ is short on time before lab or exam day. The promise is deliberately narrow:
 > Read it. Wire it. Prove it.
 
 Every core section ends with a check and, where one exists, a link into an
-existing guided lab. The learning loop is concept → retrieval → real simulator
-state, not video watching or quiz farming.
+existing guided lab. The exam is weighted toward doing: 14 of its 24 points come
+from hands-on checkpoints, and only 10 from multiple-choice theory. The learning
+loop is concept → retrieval → real simulator state, not video watching or quiz
+farming.
 
 ## What is in the layer
 
@@ -27,14 +29,17 @@ state, not video watching or quiz farming.
 | Sections | 46 | 43 core sections plus 3 appendix command-reference sections |
 | Chapters | 5 | TCP/IP, Ethernet LANs, basic switch management, VLANs/trunking, and the command appendix |
 | Checks | 33 | One or more per core section; immediate explanation and retry |
-| Practice round | 10 questions | Random selection from all checks; score, weak-chapter review, and rescue entry |
+| Skills exam | 24 points | 10 theory questions + 14 live practical checkpoints; most points come from the simulator |
+| Theory round | 10 questions | Random selection from all checks; score, weak-chapter review, and rescue entry |
+| Practical exam | 14 tasks | One two-switch, one-router campus: VLANs, access ports, LACP, trunks, router-on-a-stick, STP, and ping |
 | Rescue paths | 3 | 45-minute VLANs, 30-minute switch management, 120-minute exam sprint |
 | Guided-lab links | 4 lessons | `tcpip` → 1.8, `ethernet` → 2.9, `vlans` → 4.5, `campus` → 3.6 |
 
 Progress is stored locally under `wirex-academy-v1`: read sections, correct
-checks, last section, active rescue path, and best practice score. Reset progress
-is available on the Academy home screen and asks for confirmation. There is no
-account, server sync, certificate, or instructor gradebook.
+checks, last section, active rescue path, and best theory score. Practical scores
+persist with the existing training progress and are read back into the exam view.
+Reset progress is available on the Academy home screen and asks for confirmation.
+There is no account, server sync, certificate, or instructor gradebook.
 
 ## Learning design
 
@@ -56,9 +61,15 @@ order:
 - **Worked examples with fading.** The reader shows the concept and command
   pattern, the check removes the pattern, and the lab asks the student to
   produce and verify it in the simulator.
-- **Spacing and mastery.** Practice draws from the whole course, not the current
-  section. Rescue paths are short, ordered reread-and-prove plans for the night
-  before a lab.
+- **Spacing and mastery.** The practical exam draws from the whole switching
+  sequence, not the current section. Rescue paths are short, ordered
+  reread-and-prove plans for the night before a lab.
+- **Performance-first assessment.** The exam table shows the point split before
+  the student starts: 10 theory, 14 practical. The practical briefing lists all
+  14 checkpoints and opens the real simulator. The grader reads VLAN IDs and
+  names, access mode, LACP state, trunk membership, dot1Q subinterfaces, STP
+  priority, and a successful cross-VLAN ping; it does not trust free-text
+  answers.
 - **Accessibility and RTL.** The layer uses a native modal dialog, semantic
   headings, keyboard-operable controls, visible focus, reduced-motion support,
   responsive layouts, and logical CSS properties. Course content stays English
@@ -104,8 +115,8 @@ Academy does not reproduce them:
 
 ## Where students find it
 
-The Academy is one overlay with four views: Learn, Practice, Rescue, and the
-reader. It can be opened from:
+The Academy is one overlay with four views: Learn, Exam, Rescue, and the reader.
+It can be opened from:
 
 - the first-visit welcome chooser;
 - the `Academy` button in the title bar;
@@ -114,8 +125,9 @@ reader. It can be opened from:
 
 Opening a section from a training lesson preserves the student's workspace. The
 lab action closes the Academy first and then starts the existing guided lesson
-through `useTrainingStore.start(lesson, 'guided')`, so the normal workspace
-backup and restore rules still apply.
+through `useTrainingStore.start(lesson, 'guided')`. The practical exam uses
+`start('exam', 'exam')`; it backs up the current workspace, loads the exam
+topology, and restores the workspace when the student exits.
 
 ## Using it
 
@@ -124,8 +136,8 @@ backup and restore rules still apply.
    commands.
 3. Answer the check. Read the explanation even when correct.
 4. Mark the section read. The progress ring and chapter counts update.
-5. Open the matching lab when one is offered, or use **Practice** for a
-   10-question mixed round.
+5. Open the matching lab when one is offered. Use **Exam → Practical** for the
+   14-task live exam, or **Exam → Theory** for a 10-question round.
 6. If time is short, choose a **Rescue** path. Each path lists the minimum
    sections in order, tracks completion, and links to a guided lab.
 
@@ -145,11 +157,13 @@ phones the rail becomes a drawer and closes after a section is selected.
 | `src/components/academy/CcnaAcademy.tsx` | Native dialog shell, tabs, course rail, search, mobile drawer |
 | `src/components/academy/AcademyHome.tsx` | Home dashboard, hero, chapter grid, reset |
 | `src/components/academy/AcademyReader.tsx` | Reader, checks, lab launch, quick hits, progress |
-| `src/components/academy/AcademyPractice.tsx` | Random practice round and weak-chapter review |
+| `src/components/academy/AcademyPractice.tsx` | Practical exam briefing/results, 10-question theory round, weak-chapter review |
 | `src/components/academy/AcademyRescue.tsx` | Rescue chooser and active checklist |
 | `src/components/academy/academy.css` | Scoped light/dark/RTL/responsive design system |
 | `src/store/academyStore.ts` | Progress state, validation, persistence, reset |
-| `src/components/academy/actions.ts` | Academy-to-training handoff |
+| `src/components/academy/actions.ts` | Academy-to-training handoff, including the practical exam |
+| `src/simulator/trainingLabs.ts` | Guided labs plus the 14-check practical exam topology |
+| `src/store/trainingStore.ts` | Live lab grading, exam score persistence, workspace backup |
 | `src/i18n/messages.ts` | English, Arabic, and Central Kurdish Academy UI strings |
 
 ## Regenerating and extending the course
@@ -176,39 +190,45 @@ cannot ship silently.
 
 At the 2026-10-21 checkpoint:
 
-- `npm run check` passes **702/702 unit tests**, including 25 new Academy tests:
-  8 course-content tests, 8 markdown tests, and 9 store/persistence tests.
+- `npm run check` passes **722/722 unit tests**, including 25 Academy core tests
+  (8 course-content, 8 markdown, 9 store/persistence), 5 table-regression tests,
+  1 practical-exam integration test, 2 review-packet tests, and 12 pilot-analysis tests.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production/TypeScript build passes, the production dependency
   audit reports **0 vulnerabilities**, and `electron:prep` succeeds.
 - The targeted production-browser suite `e2e/ccna-academy.spec.ts` passes
-  **6/6**:
+  **7/7**:
   1. read a concept, answer a check, mark it read, persist across reload, and
      reset progress;
   2. open from the title bar, search the course, and launch a guided lab;
-  3. open the matching concept from the training catalog;
-  4. complete a 10-question practice round and enter a rescue path;
-  5. Arabic chrome with English course content still LTR;
-  6. mobile course drawer closes after section selection.
+  3. start the 14-task practical exam, see 14 live tasks in the simulator, and
+     return to the exam briefing;
+  4. open the matching concept from the training catalog;
+  5. complete a 10-question theory round and enter a rescue path;
+  6. Arabic chrome with English course content still LTR;
+  7. mobile course drawer closes after section selection.
 - The axe accessibility audit `e2e/academy-a11y.spec.ts` passes **2/2** across
-  light-theme home, reader, practice, and rescue plus dark-theme home and
-  reader at WCAG 2.1 A/AA, with no serious or critical violations. The view
+  light-theme home, reader, practical exam, theory round, and rescue plus
+  dark-theme home and reader at WCAG 2.1 A/AA, with no serious or critical
+  violations. The view
   switcher uses a labelled tabpanel, `aria-controls`, a roving tab stop, and
   direction-aware Left/Right/Home/End keys. Closing the dialog returns focus to
   its opener; selecting a section moves focus to the reader title; and the
   practice result heading receives focus. The light muted text token was
   darkened from `#64767c` to `#5b6d73` to reach AA on the rail.
-- Light, dark, RTL, reader, practice, rescue, and mobile layouts were reviewed
-  in a real Chromium production build.
+- Light, dark, RTL, reader, practical exam, theory round, rescue, and mobile
+  layouts were reviewed in a real Chromium production build. Converted content
+  tables were checked as real Markdown tables in both themes; only topology and
+  flow diagrams remain monospace.
 
-The full production-browser suite now passes **84/84**, including these six
-Academy scenarios and the two axe audits. The formerly host-load-sensitive `simulation-scale`
-`longestTaskMs < 500` bound passes at **416 ms** (8/8 pings, p95 tick 81.4 ms,
-engine p95 8.6 ms, queue peak 2,132). Earlier runs measured 916 ms, with a
-same-host A/B against `80bfc03` at 692 ms under heavy host load; those were
-environment artifacts, and the bound was never weakened. The targeted Academy
-spec was also run separately against the production server at
-`127.0.0.1:3005`.
+The full production-browser suite now passes **85/85**, including these seven
+Academy scenarios and the two axe audits. The host-load-sensitive
+`simulation-scale` bound `longestTaskMs < 500` passes at **425 ms** (8/8 pings,
+p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132) at host load ~5.0/8.
+Earlier runs measured 916 ms, with a same-host A/B at 692 ms under heavy host
+load; those were environment artifacts, and the bound was never weakened. The
+targeted Academy and axe specs were also run separately against the production
+server at `127.0.0.1:3005`.
 
 ## Limits and open evidence
 

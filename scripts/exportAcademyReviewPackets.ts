@@ -126,6 +126,31 @@ writeCsv('academy-sections.csv', [
 ])
 
 const messagesByKey = messages as Record<string, readonly [string, string, string]>
+
+// The training panel and the practical exam render keys through template
+// literals (`task.${id}`, `lesson.${id}`, `diag.${code}`), which a static
+// `t('...')` scan cannot see. Include the whole dynamic families so the native
+// review packet cannot silently omit a task, lesson, or diagnostic string.
+const dynamicSources: readonly [string, string][] = [
+  ['task.', 'src/components/cisco/CampusTraining.tsx'],
+  ['lesson.', 'src/components/cisco/CampusTraining.tsx'],
+  ['diag.', 'src/components/cisco/CampusTraining.tsx'],
+]
+for (const key of Object.keys(messagesByKey)) {
+  const source = dynamicSources.find(([prefix]) => key.startsWith(prefix))?.[1]
+  if (!source) continue
+  const locations = keyLocations.get(key) ?? new Set<string>()
+  locations.add(source)
+  if (key.startsWith('task.exam-')) locations.add('src/components/academy/AcademyPractice.tsx')
+  keyLocations.set(key, locations)
+}
+for (const key of ['Guided', 'Recall', 'Troubleshoot', 'Free practice', 'Exam']) {
+  if (!messagesByKey[key]) continue
+  const locations = keyLocations.get(key) ?? new Set<string>()
+  locations.add('src/components/cisco/CampusTraining.tsx')
+  keyLocations.set(key, locations)
+}
+
 const missingKeys = [...keyLocations.keys()].filter(key => !messagesByKey[key])
 if (missingKeys.length > 0) {
   throw new Error(`Academy keys missing from messages.ts: ${missingKeys.join(', ')}`)

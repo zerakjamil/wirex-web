@@ -63,3 +63,4 @@ tools/packet-tracer/agent-harness/.pytest_cache/
 tools/packet-tracer/agent-harness/cli_anything/packet_tracer/utils/ptax
 **/__pycache__/
 *.egg-info/
+docs/evaluation/private/

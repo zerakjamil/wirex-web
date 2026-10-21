@@ -29,7 +29,7 @@ function CourseRail({ onNavigate, open }: { onNavigate: () => void; open: boolea
 
   return <aside className={`ccna-rail${open ? ' is-open' : ''}`} aria-label={t('Course navigation')}>
     <div className="ccna-rail-head">
-      <div className="ccna-rail-title-row"><span>{t('Course')}</span><span>{completedSections.length} / {ccnaSections.length}</span></div>
+      <div className="ccna-rail-title-row"><span>{t('Course')}</span><span dir="ltr">{completedSections.length} / {ccnaSections.length}</span></div>
       <div className="ccna-rail-progress" aria-hidden="true"><span style={{ width: `${percent}%` }} /></div>
       <label className="ccna-search">
         <AcademyIcon name="search" size={14} />
@@ -153,7 +153,7 @@ export function CcnaAcademy() {
         <button type="button" className="ccna-mobile-course" onClick={toggleRail} aria-label={t('Open course navigation')} aria-expanded={railOpen} data-testid="academy-course-toggle"><AcademyIcon name="menu" size={16} /><span>{t('Course')}</span></button>
         <nav className="ccna-view-tabs" role="tablist" aria-label={t('Academy views')} onKeyDown={handleTabKeyDown}>
           <button type="button" role="tab" id="academy-tab-home" aria-controls="academy-panel" aria-selected={learnSelected} tabIndex={learnSelected ? 0 : -1} onClick={() => setView('home')} data-testid="academy-view-learn"><AcademyIcon name="book" size={13} />{t('Learn')}</button>
-          <button type="button" role="tab" id="academy-tab-practice" aria-controls="academy-panel" aria-selected={view === 'practice'} tabIndex={view === 'practice' ? 0 : -1} onClick={() => setView('practice')} data-testid="academy-view-practice"><AcademyIcon name="target" size={13} />{t('Practice')}</button>
+          <button type="button" role="tab" id="academy-tab-practice" aria-controls="academy-panel" aria-selected={view === 'practice'} tabIndex={view === 'practice' ? 0 : -1} onClick={() => setView('practice')} data-testid="academy-view-practice"><AcademyIcon name="target" size={13} />{t('Exam')}</button>
           <button type="button" role="tab" id="academy-tab-rescue" aria-controls="academy-panel" aria-selected={view === 'rescue'} tabIndex={view === 'rescue' ? 0 : -1} onClick={() => setView('rescue')} data-testid="academy-view-rescue"><AcademyIcon name="flame" size={13} />{t('Rescue')}</button>
         </nav>
         <div className="ccna-top-actions">

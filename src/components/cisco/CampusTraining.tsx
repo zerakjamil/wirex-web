@@ -13,7 +13,7 @@ import {ccnaLessonSection} from '@/content/ccnaCourse'
 import {useAcademyStore} from '@/store/academyStore'
 import {AcademyIcon} from '@/components/academy/AcademyIcons'
 
-const modes:Record<LearningMode,string>={guided:'Guided',recall:'Recall',troubleshoot:'Troubleshoot',free:'Free practice'}
+const modes:Record<LearningMode,string>={guided:'Guided',recall:'Recall',troubleshoot:'Troubleshoot',free:'Free practice',exam:'Exam'}
 
 export function TrainingCatalog(){
  const open=useTrainingStore(s=>s.catalogOpen),progress=useTrainingStore(s=>s.progress),dialog=useRef<HTMLDialogElement>(null),[mode,setMode]=useState<LearningMode>('guided'),{t,dir}=useI18n()
@@ -50,8 +50,8 @@ export function TrainingPanel(){
  const training=useTrainingStore(),devices=useNetworkStore(s=>s.devices),links=useNetworkStore(s=>s.links),results=useNetworkStore(s=>s.pingResults),{t,dir}=useI18n()
  const resetDialog=useRef<HTMLDialogElement>(null),test=results.find(r=>r.id===training.testId)
  const [tab,setTab]=useState<'lesson'|'devices'>('lesson')
- const tasks=evaluateLesson(training.lesson,devices,links).map(c=>c.id==='traffic'?{...c,complete:hasValidTrainingReply()}:c)
- const hint=training.lesson==='vlans'||training.lesson==='campus'?'hint.vlan':training.lesson==='stp'?'hint.stp':training.lesson==='channel'?'hint.channel':'hint.packet'
+ const tasks=evaluateLesson(training.lesson,devices,links).map(c=>(c.id==='traffic'||c.id==='exam-traffic')?{...c,complete:hasValidTrainingReply()}:c)
+ const hint=training.lesson==='exam'?'hint.exam':training.lesson==='vlans'||training.lesson==='campus'?'hint.vlan':training.lesson==='stp'?'hint.stp':training.lesson==='channel'?'hint.channel':'hint.packet'
  return <aside className="pt-training-panel" dir={dir} aria-label={t('Training')}>
   <header><strong>{t('Training')}</strong><button onClick={training.openCatalog}>{t('Lesson')}</button></header>
   <div className="pt-training-tabs" role="tablist"><button role="tab" aria-selected={tab==='lesson'} onClick={()=>setTab('lesson')}>{t('Lesson tab')}</button><button role="tab" aria-selected={tab==='devices'} onClick={()=>setTab('devices')}>{t('Devices tab')}</button></div>
@@ -59,14 +59,16 @@ export function TrainingPanel(){
   {ccnaLessonSection[training.lesson]&&<button className="pt-training-concept-link" title={t('Open the matching Academy section')} onClick={()=>useAcademyStore.getState().openSection(ccnaLessonSection[training.lesson]!)}><AcademyIcon name="book" size={12}/>{t('Read concept')}</button>}
   {training.lesson==='campus'&&<p>{t('Switch management does not enable inter-VLAN routing.')}</p>}
   <ol className="pt-task-list">{tasks.map(task=><li key={task.id}><span aria-label={t(task.complete?'Completed':'Not yet complete')}>{task.complete?'✓':'○'}</span>{t(`task.${task.id}`)}</li>)}</ol>
+  {training.lesson==='exam'&&<div className="pt-exam-score" role="status" data-testid="training-practical-score"><strong>{t('Practical score')}: {tasks.filter(task=>task.complete).length} / {tasks.length}</strong><small>{t('Theory is scored in the Academy.')}</small></div>}
   <div className="pt-training-actions"><button onClick={training.testTraffic} disabled={test?.status==='pending'}>{t('Test traffic')}</button><button onClick={training.check}>{t('Check my work')}</button></div>
   <p role="status">{t('Last test')}: {t(test?.status==='successful'?'Successful':test?.status==='pending'?'Pending':test?.status==='failed'?'Failed':'Not tested')}</p>
   {test?.status==='successful'&&!hasValidTrainingReply()&&<p role="status">{t('Configuration changed. Run another traffic test.')}</p>}
   {training.checked&&<p className={tasks.every(c=>c.complete)?'pt-audit-clear':'pt-fault-count'} role="status">{t(tasks.every(c=>c.complete)?'Completed':'Not yet complete')}</p>}
-  {training.mode!=='free'&&<><button onClick={training.revealHint} disabled={training.hintLevel>=3}>{t(training.hintLevel>=2?'Reveal command':'Hint')}</button>{(training.mode==='guided'||training.hintLevel>=1)&&<p>{t(hint)}</p>}{training.hintLevel>=2&&<p>{t('hint.context')}</p>}{training.hintLevel>=3&&<pre dir="ltr">{lessonCommands[training.lesson]}</pre>}</>}
+  {training.mode!=='free'&&training.mode!=='exam'&&<><button onClick={training.revealHint} disabled={training.hintLevel>=3}>{t(training.hintLevel>=2?'Reveal command':'Hint')}</button>{(training.mode==='guided'||training.hintLevel>=1)&&<p>{t(hint)}</p>}{training.hintLevel>=2&&<p>{t('hint.context')}</p>}{training.hintLevel>=3&&<pre dir="ltr">{lessonCommands[training.lesson]}</pre>}</>}
   <ConnectionDiagnostics/>
   <p><small>{t('Course reference')}: <bdi>{lessonReferences[training.lesson]}</bdi></small></p>
   <button onClick={()=>resetDialog.current?.showModal()}>{t('Reset exercise')}</button><button onClick={training.exit}>{t('Return to my network')}</button>
+  {training.lesson==='exam'&&<button onClick={()=>{training.exit();useAcademyStore.getState().openAcademy();useAcademyStore.getState().setView('practice')}} data-testid="training-exam-return">{t('Return to exam briefing')}</button>}
   <p><small>{t('Saved in this browser')}</small></p></div>}
   <dialog ref={resetDialog} className="pt-training-confirm"><h3>{t('Reset this exercise?')}</h3><p>{t('Only this training exercise will be reset.')}</p><button onClick={()=>resetDialog.current?.close()}>{t('Cancel')}</button><button onClick={()=>{training.reset();resetDialog.current?.close()}}>{t('Reset exercise')}</button></dialog>
  </aside>

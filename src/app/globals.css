@@ -169,6 +169,9 @@ html, body {
 .pt-task-list {list-style:none;margin-block:12px}
 .pt-task-list li {display:flex;gap:7px;padding-block:5px;border-bottom:1px solid #d3dadd}
 .pt-task-list span {color:#006477;font-weight:bold;flex:0 0 14px}
+.pt-exam-score {margin-block:12px;padding:10px;border:1px solid #b7c6cc;border-radius:6px;background:#e7f2f4}
+.pt-exam-score strong {display:block;font-size:13px}
+.pt-exam-score small {display:block;margin-top:2px;color:#465a61;font-size:11px;line-height:1.4}
 .pt-training-terminal {height:280px;min-height:180px;flex:1 0 220px;display:flex;overflow:hidden;text-align:left}
 .pt-training-terminal>div {width:100%;min-width:0}
 .pt-command-feedback {border-top:1px solid #acb4b8;padding-top:8px;max-height:220px;overflow:auto;flex-shrink:0}
@@ -490,6 +493,8 @@ html[data-theme="dark"] :is(.pt-device-description,.pt-scenario-controls,.pt-pdu
 html[data-theme="dark"] :is(.pt-pdu-tabs>button[aria-pressed="true"],.pt-event-controls>button[aria-pressed="true"]) {background:var(--pt-selected);color:var(--cisco-text-main);border-color:#63a8be}
 html[data-theme="dark"] .pt-event-count {color:var(--cisco-text-muted)}
 html[data-theme="dark"] :is(.pt-command-feedback code,.pt-task-list span) {color:var(--pt-accent-text)}
+html[data-theme="dark"] .pt-exam-score {border-color:var(--pt-border);background:#12313a}
+html[data-theme="dark"] .pt-exam-score small {color:var(--cisco-text-muted)}
 html[data-theme="dark"] .pt-fault-list>li {background:#3a2728;border-block-color:#865451;border-inline-start-color:#f28c80}
 html[data-theme="dark"] .pt-fault-count {color:#ffb5ab}
 html[data-theme="dark"] .pt-audit-clear {color:#8fe0b5}

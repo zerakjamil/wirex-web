@@ -18,7 +18,8 @@
     "electron:verify": "node scripts/verifyMacApp.mjs",
     "electron:icon": "node scripts/buildAppIcon.mjs",
     "content:ccna": "node scripts/buildCcnaCourse.mjs",
-    "review:export": "tsx scripts/exportAcademyReviewPackets.ts"
+    "review:export": "tsx scripts/exportAcademyReviewPackets.ts",
+    "pilot:analyze": "tsx scripts/analyzeAcademyPilot.ts"
   },
   "build": {
     "appId": "com.wireforge.simulator",

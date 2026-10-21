@@ -59,7 +59,7 @@ Five to eight participants cannot support precise population estimates. Report e
 | 0–10 | Welcome, consent, anonymous ID | Collect consent separately; do not put names in the data file. |
 | 10–25 | Pre-test (12 items) | Closed book, no Academy. Shuffle item order per participant if practical. |
 | 25–30 | Orientation | Show how to open the Academy and the lab workspace. Do not teach the content. |
-| 30–70 | Academy study | Participant chooses sections; observer records blockers and time without prompting. |
+| 30–70 | Academy study | Participant chooses sections; the optional 14-task practical exam is available, but not required. Observer records blockers and time without prompting. |
 | 70–75 | Break | |
 | 75–110 | Transfer task | 35 minutes. Follow the task in `INSTRUMENTS.md`. Inject the fault at the specified point. |
 | 110–120 | Survey and short interview | Survey first; then 5-minute open-ended questions. |
@@ -95,7 +95,8 @@ Independent review of the 33 checks and a sample of sections, using [`CONTENT_RE
 ### Usability and process measures
 
 - 6-item post-session survey (1–5) plus open-ended questions.
-- Observer notes: time to first meaningful action, blockers, questions asked, whether the participant found the course rail, search, practice, rescue, and lab launch.
+- Observer notes: time to first meaningful action, blockers, questions asked, whether the participant found the course rail, search, theory round, practical exam, rescue, and lab launch.
+- Optional practical-exam result: score (0–14), time, and which checkpoints were still failing. Report descriptively; it is part of the intervention, so it is not the primary transfer endpoint.
 - Optional think-aloud for 2–3 participants, with separate consent for audio/screen recording.
 - Optional Academy progress export: ask the participant to open the browser console and copy `localStorage.getItem('wirex-academy-v1')` only if they consent. The record contains section/check IDs, not names. If this is awkward, rely on observation instead.
 

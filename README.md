@@ -4,8 +4,8 @@ wireX is a free, browser-based network simulation and CCNA learning workspace.
 It targets the Cisco Packet Tracer 9.0.1 student workflow — place devices, cable
 them, configure IOS-style CLIs, run packets, inspect PDUs, and save or reopen a
 workspace — and wraps the simulator in the **CCNA Academy**, a guided reading,
-retrieval, and rescue layer for first-time students and last-minute CCNA2 exam
-candidates.
+retrieval, and live practical-exam layer for first-time students and last-minute
+CCNA2 exam candidates.
 
 wireX is an independent project. It is not affiliated with, endorsed by, or
 sponsored by Cisco Systems, Inc. Cisco, Packet Tracer, and CCNA are trademarks of
@@ -16,13 +16,15 @@ Cisco Systems, Inc.
 - **Free and account-free.** No license server, login, cohort, or installation
   is required to start a lab in the browser.
 - **A real learning loop, not a quiz widget.** The Academy's 46 sections connect
-  concepts to 33 checks and then to existing guided simulator labs. A correct
-  answer is never a substitute for a working topology.
+  concepts to 33 checks, a 10-point theory round, and a 14-point practical exam
+  that runs on a live two-switch campus. A correct answer is never a substitute
+  for a working topology.
 - **Built for the night before lab.** Three rescue paths give a 45-, 30-, or
   120-minute route through the highest-yield sections, with progress and a lab
   handoff.
-- **Practice that spans the course.** A 10-question randomized round records a
-  best score and names the chapters to revisit.
+- **Most of the exam is hands-on.** The practical exam is 14 of 24 points. The
+  grader reads VLANs, access ports, LACP, trunks, router subinterfaces, STP
+  priority, and a real cross-VLAN ping from simulator state.
 - **Accessible by default.** Light and dark themes, English/Arabic/Central
   Kurdish UI, RTL layouts, keyboard-operable controls, reduced-motion support,
   and a phone-friendly course drawer.
@@ -58,13 +60,24 @@ The Academy contains:
 - 46 sections across five chapters: TCP/IP, Ethernet LANs, basic switch
   management, VLANs/trunking, and an IOS command appendix.
 - 33 checks with immediate explanations and retry.
-- Three time-boxed rescue paths and a 10-question mixed practice round.
+- A 24-point skills exam: 10 theory questions plus 14 hands-on checkpoints on a
+  two-switch, one-router campus.
+- Three time-boxed rescue paths.
 - Search across titles, chapters, and body text.
 - Links into the existing `tcpip`, `ethernet`, `vlans`, and `campus` guided
   lessons.
 
+The **Exam** view opens on the practical briefing. The 14 checked tasks cover
+VLAN creation and names, access ports, an LACP bundle, 802.1Q trunks,
+router-on-a-stick subinterfaces, STP root priority, and a cross-VLAN ping. The
+simulator opens with the current workspace backed up; **Check my work** grades
+the live topology, and **Return to exam briefing** brings the score back into the
+Academy. The theory tab is 10 randomized questions. The two scores combine out
+of 24.
+
 Course prose is English and explicitly LTR; the surrounding UI follows the app
-locale. Progress is stored under `wirex-academy-v1`.
+locale. Progress is stored under `wirex-academy-v1`; practical scores persist with
+the existing training progress.
 
 Read the full design, source attribution, file map, and open efficacy evidence in
 [`docs/CCNA_ACADEMY.md`](docs/CCNA_ACADEMY.md).
@@ -120,19 +133,19 @@ Targeted Academy browser flow against a production server:
 npm run electron:prep
 PORT=3005 npm start &
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3005 \
-  npx playwright test e2e/ccna-academy.spec.ts
+  npx playwright test e2e/ccna-academy.spec.ts e2e/academy-a11y.spec.ts
 ```
 
 At the 2026-10-21 checkpoint:
 
-- `npm run check` passes **702/702 unit tests**.
+- `npm run check` passes **722/722 unit tests**.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
-- The full production-browser suite passes **84/84**, including the targeted
-  CCNA Academy scenarios **6/6** and the axe accessibility audit **2/2**.
+- The full production-browser suite passes **85/85**, including the targeted
+  CCNA Academy scenarios **7/7** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound passes at
-  **416 ms** (8/8 pings, p95 tick 81.4 ms, engine p95 8.6 ms, queue peak 2,132).
+  **425 ms** (8/8 pings, p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132).
 
 Instructor/educational acceptance, native AR/CKB proofreading, and external
 Packet Tracer interoperability remain open. Current evidence and caveats are

@@ -27,7 +27,7 @@ Regenerate the three CSV packets after any content or UI-string change:
 npm run review:export
 ```
 
-Do not hand-edit the generated CSV files. The UI packet currently contains **174 unique keys**: the 117 keys added specifically for the Academy plus shared chrome keys used by the Academy entry points. Review the whole packet; a shared key can still be wrong in context.
+Do not hand-edit the generated CSV files. The UI packet currently contains **272 unique keys**, including the Academy course/exam strings, all 27 training-task labels, 14 lesson/goal pairs, 22 diagnostics, learning-mode labels, and shared chrome keys used by the Academy entry points. Review the whole packet; a shared key can still be wrong in context.
 
 ## Minimum credible evidence
 

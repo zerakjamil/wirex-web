@@ -3,6 +3,7 @@
 import React, { useId, useState } from 'react'
 import { ccnaChapters, ccnaSections, ccnaStats, getAdjacentSections, getRescuePath, getSection } from '@/content/ccnaCourse'
 import { useAcademyStore } from '@/store/academyStore'
+import { useTrainingStore } from '@/store/trainingStore'
 import { useI18n } from '@/i18n/useI18n'
 import { AcademyIcon } from './AcademyIcons'
 
@@ -50,6 +51,10 @@ export function AcademyHome() {
   const completedSections = useAcademyStore(state => state.completedSections)
   const lastSectionId = useAcademyStore(state => state.lastSectionId)
   const practiceBest = useAcademyStore(state => state.practiceBest)
+  const examProgress = useTrainingStore(state => state.progress.exam)
+  const theoryBest = Math.max(0, Math.min(10, Math.round(practiceBest / 10)))
+  const practicalMax = Math.max(1, examProgress?.maxScore ?? 14)
+  const practicalScore = Math.max(0, Math.min(practicalMax, examProgress?.score ?? 0))
   const activeRescueId = useAcademyStore(state => state.activeRescueId)
   const openSection = useAcademyStore(state => state.openSection)
   const setView = useAcademyStore(state => state.setView)
@@ -105,10 +110,10 @@ export function AcademyHome() {
       </button>
       <button type="button" className="ccna-action" onClick={() => setView('practice')} data-testid="academy-home-practice">
         <span className="ccna-action-icon"><AcademyIcon name="target" size={18} /></span>
-        <span className="ccna-action-eyebrow">{t('Practice')}</span>
-        <strong>{t('10-question check')}</strong>
-        <span className="ccna-action-desc">{practiceBest > 0 ? `${t('Best score')}: ${practiceBest}%` : t('Every answer links back to the section.')}</span>
-        <span className="ccna-action-more">{t('Start practice')}<AcademyIcon name={dir === 'rtl' ? 'arrow-left' : 'arrow-right'} size={13} /></span>
+        <span className="ccna-action-eyebrow">{t('Skills exam')}</span>
+        <strong>{t('10 theory + 14 practical')}</strong>
+        <span className="ccna-action-desc">{theoryBest > 0 || practicalScore > 0 ? `${t('Theory')} ${theoryBest}/10 · ${t('Practical')} ${practicalScore}/${practicalMax}` : t('Most of the score is hands-on.')}</span>
+        <span className="ccna-action-more">{t('Open exam')}<AcademyIcon name={dir === 'rtl' ? 'arrow-left' : 'arrow-right'} size={13} /></span>
       </button>
       <button type="button" className="ccna-action" onClick={() => setView('rescue')} data-testid="academy-home-rescue">
         <span className="ccna-action-icon"><AcademyIcon name="flame" size={18} /></span>

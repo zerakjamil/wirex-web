@@ -6,3 +6,8 @@ export function startGuidedLab(lesson: LessonId) {
   useAcademyStore.getState().closeAcademy()
   useTrainingStore.getState().start(lesson, 'guided')
 }
+
+export function startPracticalExam(restart = false) {
+  useAcademyStore.getState().closeAcademy()
+  useTrainingStore.getState().start('exam', 'exam', restart)
+}

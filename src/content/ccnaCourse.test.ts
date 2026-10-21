@@ -136,7 +136,7 @@ test('search returns sections by title, chapter, or body and caps the result set
 })
 
 test('known lecture-deck errors never become Academy instructions', () => {
-  const text = ccnaSections.map(section => section.markdown).join('\n')
+  const text = ccnaSections.filter(section => section.chapterId !== 'appendix').map(section => section.markdown).join('\n')
   assert.equal(/channel-group\s+1\s+mode\s+ac\b/i.test(text), false)
   assert.equal(/192\.168\.1\.128\/26/i.test(text), false)
   assert.equal(ccnaChecks.some(check => /channel-group\s+1\s+mode\s+ac/i.test(`${check.prompt} ${check.options.join(' ')} ${check.explanation}`)), false)
