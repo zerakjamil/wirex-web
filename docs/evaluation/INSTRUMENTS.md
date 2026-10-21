@@ -220,7 +220,7 @@ PC2 ── Fa0/2 ┤ SW1 ── Fa0/23 ────── Fa0/24 ── SW2 ─�
 - SW1 `Fa0/23` connects to SW2 `Fa0/24`.
 - PC1 and PC2 connect to SW1 `Fa0/1` and `Fa0/2`.
 - PC3 and PC4 connect to SW2 `Fa0/1` and `Fa0/2`.
-- Use the cable type the course recommends for each link.
+- Use straight-through cable for PC-to-switch and router-to-switch links, and crossover cable for the switch-to-switch link, as the course recommends.
 
 ### Addressing plan
 
@@ -276,7 +276,7 @@ switchport trunk allowed vlan remove 20
 end
 ```
 
-This leaves the trunk up but removes VLAN 20 from it. PC3 and PC4 lose inter-VLAN and cross-switch connectivity. The expected fix is:
+This leaves the trunk up but removes VLAN 20 from it. PC3 and PC4 lose inter-VLAN connectivity and connectivity to VLAN 10 across the trunk; PC3-to-PC4 traffic on SW2 remains reachable. The expected fix is:
 
 ```cisco
 configure terminal
