@@ -90,8 +90,8 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       },
     ],
     verify: [
-      'show vlan brief shows VLAN 10 named Sales and Fa0/1 assigned to it.',
-      'show interfaces trunk shows Gi0/1 trunking and VLAN 10 allowed.',
+      'In show vlan brief, VLAN 10 is active and Fa0/1 appears underneath it.',
+      'In show interfaces trunk, Gi0/1 is trunking and VLAN 10 is allowed.',
       'Test traffic from Sales-A to Sales-B succeeds, then Check my work.',
     ],
     mistakes: [
@@ -130,6 +130,7 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
     verify: [
       'show mac address-table lists the PC MAC on the expected access port.',
       'show arp shows the peer IP resolved to a MAC address.',
+      'In show interfaces status, connected means the link is up; the Vlan column shows the access VLAN or trunk.',
       'Test traffic succeeds and the Ethernet task is marked complete.',
     ],
     mistakes: [
@@ -172,7 +173,7 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
     ],
     verify: [
       'show ip interface brief shows both router interfaces up/up with the expected addresses.',
-      'show ip route lists both connected subnets.',
+      'show ip route lists both connected subnets; C marks a connected route and L marks the local interface address.',
       'Test traffic succeeds and the TCP/IP task is marked complete.',
     ],
     mistakes: [
@@ -194,12 +195,13 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       'All three switches start at the default priority 32768.',
       'Distribution-A and Distribution-B also have Sales PCs on Fa0/1.',
       'Only configure root primary on the switch you want to win.',
+      'After applying the root commands, let the simulation run for a few seconds so BPDUs converge before reading show spanning-tree.',
     ],
     steps: [
       {
         deviceId: 'campus-sw-a',
         title: 'Make Distribution-A the primary root for VLAN 10',
-        body: 'Root primary sets priority 24576 in this simulator, low enough to beat the default 32768. PortFast is safe on the PC-facing Fa0/1 port, not on an uplink.',
+        body: 'Root primary sets the base priority to 24576 (displayed as 24586 with the VLAN 10 system-ID extension), low enough to beat the default 32768. PortFast is safe on the PC-facing Fa0/1 port, not on an uplink.',
         commands: [
           enable,
           configure,
@@ -214,7 +216,7 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       {
         deviceId: 'campus-sw-b',
         title: 'Make Distribution-B the secondary root',
-        body: 'Root secondary sets priority 28672. It keeps B ready to take over without competing with A while A is healthy.',
+        body: 'Root secondary sets the base priority to 28672 (displayed as 28682 for VLAN 10). It keeps B ready to take over without competing with A while A is healthy.',
         commands: [
           enable,
           configure,
@@ -229,7 +231,7 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       {
         deviceId: 'campus-sw-c',
         title: 'Verify the election from Access-C',
-        body: 'Access-C should not be root. Look for its root port toward A and an alternate path toward B; the alternate path is the one STP is holding in reserve.',
+        body: 'Give BPDUs a few seconds to converge, then read Access-C. It should not be root: its root port points toward A and its alternate path toward B is the link STP is holding in reserve.',
         commands: [enable, 'show spanning-tree vlan 10'],
       },
     ],
@@ -307,14 +309,14 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       {
         deviceId: 'campus-sw-a',
         title: 'Prove the bundle is operational',
-        body: 'Port-channel 1 should be in use, and both Gigabit members should be bundled rather than independent. STP should now treat the pair as one logical link.',
+        body: 'Port-channel 1 should be in use, and both Gigabit members should be bundled rather than independent. STP now treats the pair as one logical link.',
         commands: [enable, 'show etherchannel summary', 'show interfaces trunk', 'show spanning-tree vlan 10'],
       },
     ],
     verify: [
-      'show etherchannel summary shows Po1 in use with Gi0/1 and Gi0/2 bundled.',
-      'The protocol is LACP and both members show the bundled flag.',
-      'show interfaces trunk shows the Port-channel carrying VLAN 10.',
+      'show etherchannel summary shows Po1(SU) with Gi0/1(P) and Gi0/2(P): the logical bundle is in use and both members are bundled.',
+      'The protocol column reads LACP, and neither member appears with a down or standalone flag.',
+      'show interfaces trunk confirms 802.1Q trunking on the bundle links, and the summary proves both members belong to Po1.',
       'Test traffic succeeds and both EtherChannel tasks are marked complete.',
     ],
     mistakes: [
@@ -418,7 +420,7 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
     verify: [
       'Both switches show VLANs 10, 20, and 30 with the expected names.',
       'Fa0/1-2 are Sales, Fa0/3 is Management, and Fa0/4 is Admin on both switches.',
-      'The Gi0/1 trunk carries all three VLANs.',
+      'The Gi0/1 trunk carries all three VLANs; show ip interface brief should show Vlan10 up/up with .2 on A and .3 on B.',
       'The management SVIs are up with .2 and .3.',
       'Test traffic succeeds and every campus task is complete.',
     ],
@@ -546,8 +548,8 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
     verify: [
       'All three VLANs exist with the expected names on both switches.',
       'The access ports match the PC groups, and Fa0/24 is a trunk.',
-      'show etherchannel summary shows one operational two-member bundle.',
-      'Each router subinterface is up with the correct gateway address.',
+      'show etherchannel summary shows one operational two-member bundle, Po1(SU) with Gi0/1(P) and Gi0/2(P).',
+      'Each router subinterface is up with the correct gateway address; show ip route lists a C route for each VLAN subnet.',
       'Core-SW1 is root for VLANs 10, 20, and 30.',
       'Cross-VLAN Test traffic succeeds and the practical score reaches 14 / 14.',
     ],

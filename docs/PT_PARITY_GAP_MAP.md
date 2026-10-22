@@ -33,15 +33,15 @@ Classification legend:
 | Network Controller | Two-NIC controller with web setup/login, discovery, inventory and topology | The controller is a real `pc`-class end device with two fixed copper gigabit interfaces and no modules. Management opens from another PC's **Desktop → Web Browser**. The console stores a classroom admin digest, runs connected-topology or IP-range discovery, persists up to 20 snapshots, and renders inventory plus a topology map from real active links. Connected discovery walks active-link adjacency, traverses unaddressed intermediate switches, and prefers a Layer-3 switch VLAN interface. It explicitly does not emit CDP frames. PT-only REST/API, path trace, credential management and live interoperation are not exposed | `networkController.ts`, `NetworkControllerApp.tsx`, `DeviceModal.tsx`, `engine.ts`, `deviceFactory.ts`, `deviceCatalog.ts`, `physicalHardware.ts`, `HardwareChassis.tsx`, `physical.css`, `Cisco3DIcons.tsx`; `networkController.test.ts` (10), `http.test.ts`; `e2e/network-controller.spec.ts`; `docs/NETWORK_CONTROLLER_IMPLEMENTATION.md` |
 | Cyber Observer | Two-NIC monitoring appliance with browser setup/login, discovery, inventory, findings and Assurance topology | The appliance is a real `security`-class device with two fixed copper gigabit interfaces and no modules, ASA defaults or native Desktop/CLI/ASDM. Management opens from another PC's **Desktop → Web Browser**. It stores a classroom account digest, runs connected-topology or IPv4-range discovery over active links, persists up to 20 snapshots, and shows inventory, severity-ranked configuration findings and a topology coloured by worst finding. It includes itself in the snapshot and explicitly reports no external CVE or firmware matching | `cyberObserver.ts`, `CyberObserverApp.tsx`, `DeviceModal.tsx`, `httpService.ts`, `managementAddresses.ts`, `topologyReachability.ts`, `deviceFactory.ts`, `deviceCatalog.ts`, `physicalHardware.ts`, `HardwareChassis.tsx`, `physical.css`, `Cisco3DIcons.tsx`, `workspaceSchema.ts`; `cyberObserver.test.ts` (14), `workspaceSchema.test.ts`; `e2e/cyber-observer.spec.ts`; `docs/CYBER_OBSERVER_IMPLEMENTATION.md` |
 
-Every item above is exercised by the automated suites: unit 724/724, Playwright
+Every item above is exercised by the automated suites: unit 725/725, Playwright
 E2E **87/87** flows against the production build on the 2026-10-22 rerun. Every
 functional flow passes, including Cyber Observer, the palette Wireless PC,
 generic end-device, Sniffer, ISA-3000, Network Controller, the practical exam, and Academy accessibility specs, the Activity
 Wizard routing-option and wireless-item unit coverage, the Traffic Generator raw-injector and
 run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
 the four physical specs. The realtime scale case now passes its unchanged
-`<500 ms` pacing bound at **149 ms** in the full 87-test run (8/8 pings, p95 tick
-102.3 ms, engine p95 12.4 ms, queue peak 2,132, drained clean, no warnings)
+`<500 ms` pacing bound at **137 ms** in the full 87-test run (8/8 pings, p95 tick
+93.7 ms, engine p95 12.7 ms, queue peak 2,132, drained clean, no warnings)
 after the setup render was excluded from the realtime window. Earlier host-load runs
 measured 916 ms, with a same-host A/B against `80bfc03` at 692 ms; those were
 environment artifacts, and the bound was not weakened. The PT parity gate stays

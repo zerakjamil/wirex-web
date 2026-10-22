@@ -146,7 +146,7 @@ corresponding state:
 
 ## Verification
 
-- `npm test` 702/702 at the Cyber Observer checkpoint; 724/724 at the 2026-10-22 Academy checkpoint (14 Cyber Observer unit tests plus the workspace-schema round-trip and targeted browser flow)
+- `npm test` 702/702 at the Cyber Observer checkpoint; 725/725 at the 2026-10-22 Academy checkpoint (14 Cyber Observer unit tests plus the workspace-schema round-trip and targeted browser flow)
 - `tsc --noEmit` clean
 - ESLint 0 errors / 28 existing warnings
 - `npm run electron:prep` green

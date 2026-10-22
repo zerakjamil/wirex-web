@@ -142,16 +142,16 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3005 \
 
 At the 2026-10-22 checkpoint:
 
-- `npm run check` passes **724/724 unit tests**.
+- `npm run check` passes **725/725 unit tests**.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
 - The full production-browser suite passes **87/87**, including the targeted
   CCNA Academy scenarios **9/9** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound measured
-  **149 ms** in the full 87-test run (and **129 ms** in the latest targeted run)
+  **137 ms** in the full 87-test run (and **145 ms** in the latest targeted run)
   after setup rendering was excluded from the realtime window (8/8 pings, queue
-  peak 2,132; full run p95 tick 102.3 ms, engine p95 12.4 ms).
+  peak 2,132; full run p95 tick 93.7 ms, engine p95 12.7 ms).
 
 Instructor/educational acceptance, native AR/CKB proofreading, and external
 Packet Tracer interoperability remain open. Current evidence and caveats are
