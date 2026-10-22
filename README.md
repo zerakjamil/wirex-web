@@ -142,8 +142,8 @@ At the 2026-10-21 checkpoint:
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
-- The full production-browser suite passes **85/85**, including the targeted
-  CCNA Academy scenarios **7/7** and the axe accessibility audit **2/2**.
+- The full production-browser suite passes **86/86**, including the targeted
+  CCNA Academy scenarios **8/8** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound passes at
   **425 ms** (8/8 pings, p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132).
 

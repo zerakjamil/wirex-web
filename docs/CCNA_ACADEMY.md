@@ -197,7 +197,7 @@ At the 2026-10-21 checkpoint:
 - The optimized production/TypeScript build passes, the production dependency
   audit reports **0 vulnerabilities**, and `electron:prep` succeeds.
 - The targeted production-browser suite `e2e/ccna-academy.spec.ts` passes
-  **7/7**:
+  **8/8**:
   1. read a concept, answer a check, mark it read, persist across reload, and
      reset progress;
   2. open from the title bar, search the course, and launch a guided lab;
@@ -206,7 +206,9 @@ At the 2026-10-21 checkpoint:
   4. open the matching concept from the training catalog;
   5. complete a 10-question theory round and enter a rescue path;
   6. Arabic chrome with English course content still LTR;
-  7. mobile course drawer closes after section selection.
+  7. mobile course drawer closes after section selection;
+  8. configure the exam through the real CLI and move from 13/14 to 14/14
+     with a cross-VLAN ping.
 - The axe accessibility audit `e2e/academy-a11y.spec.ts` passes **2/2** across
   light-theme home, reader, practical exam, theory round, and rescue plus
   dark-theme home and reader at WCAG 2.1 A/AA, with no serious or critical
@@ -221,7 +223,7 @@ At the 2026-10-21 checkpoint:
   tables were checked as real Markdown tables in both themes; only topology and
   flow diagrams remain monospace.
 
-The full production-browser suite now passes **85/85**, including these seven
+The full production-browser suite now passes **86/86**, including these eight
 Academy scenarios and the two axe audits. The host-load-sensitive
 `simulation-scale` bound `longestTaskMs < 500` passes at **425 ms** (8/8 pings,
 p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132) at host load ~5.0/8.

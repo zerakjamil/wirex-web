@@ -3,6 +3,18 @@ import { startNewWorkspace } from './start'
 
 const academy = (page: import('@playwright/test').Page) => page.getByTestId('ccna-academy')
 
+async function runTrainingCommands(page: import('@playwright/test').Page, deviceId: string, commands: readonly string[]) {
+  const dock = page.locator('.pt-training-dock')
+  await dock.locator('select').selectOption(deviceId)
+  const input = dock.getByLabel('Cisco Terminal Command Input')
+  await expect(input).toBeVisible()
+  for (const command of commands) {
+    await input.fill(command)
+    await input.press('Enter')
+    await expect(input).toHaveValue('')
+  }
+}
+
 async function openFromWelcome(page: import('@playwright/test').Page) {
   await page.goto('/')
   await expect(page.getByTestId('welcome-dialog')).toBeVisible({ timeout: 10_000 })
@@ -98,6 +110,48 @@ test('starts the 14-task practical exam from the Academy', async ({ page }) => {
   await page.getByTestId('training-exam-return').click()
   await expect(page.getByTestId('ccna-academy')).toBeVisible()
   await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+})
+
+test('configures the practical exam through the real CLI and returns 14/14', async ({ page }) => {
+  test.setTimeout(120_000)
+  await startNewWorkspace(page)
+  await page.getByTestId('academy-open').click()
+  await page.getByTestId('academy-view-practice').click()
+  await page.getByTestId('academy-practical-start').click()
+
+  const dock = page.locator('.pt-training-dock')
+  await expect(dock).toBeVisible()
+  const common = ['enable', 'configure terminal', 'vlan 10', 'name Sales', 'exit', 'vlan 20', 'name Management', 'exit', 'vlan 30', 'name Admin', 'exit']
+  await runTrainingCommands(page, 'exam-sw-a', [...common,
+    'interface range fa0/1-2', 'switchport mode access', 'switchport access vlan 10', 'exit',
+    'interface fa0/3', 'switchport mode access', 'switchport access vlan 20', 'exit',
+    'interface fa0/4', 'switchport mode access', 'switchport access vlan 30', 'exit',
+    'interface range gi0/1-2', 'switchport mode trunk', 'channel-group 1 mode active', 'exit',
+    'interface fa0/24', 'switchport mode trunk', 'exit',
+  ])
+  await runTrainingCommands(page, 'exam-sw-b', [...common,
+    'interface fa0/1', 'switchport mode access', 'switchport access vlan 10', 'exit',
+    'interface fa0/3', 'switchport mode access', 'switchport access vlan 20', 'exit',
+    'interface range gi0/1-2', 'switchport mode trunk', 'channel-group 1 mode active', 'exit',
+  ])
+  await runTrainingCommands(page, 'exam-router', [
+    'enable', 'configure terminal', 'interface gi0/0', 'no shutdown', 'exit',
+    'interface gi0/0.10', 'encapsulation dot1q 10', 'ip address 192.168.10.1 255.255.255.0', 'exit',
+    'interface gi0/0.20', 'encapsulation dot1q 20', 'ip address 192.168.20.1 255.255.255.0', 'exit',
+    'interface gi0/0.30', 'encapsulation dot1q 30', 'ip address 192.168.30.1 255.255.255.0', 'exit',
+  ])
+  await runTrainingCommands(page, 'exam-sw-a', ['spanning-tree vlan 10 root primary', 'spanning-tree vlan 20 root primary', 'spanning-tree vlan 30 root primary'])
+
+  await page.getByRole('button', { name: 'Check my work', exact: true }).click()
+  await expect(page.getByTestId('training-practical-score')).toContainText('13 / 14')
+  await page.getByRole('button', { name: 'Test traffic', exact: true }).click()
+  await expect(page.getByText(/Last test: Successful/)).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Check my work', exact: true }).click()
+  await expect(page.getByTestId('training-practical-score')).toContainText('14 / 14')
+
+  await page.getByTestId('training-exam-return').click()
+  await expect(page.getByTestId('academy-practice-practical')).toBeVisible()
+  await expect(page.locator('.ccna-exam-scorebar')).toContainText('14 / 14')
 })
 
 test('opens the matching concept from the training catalog', async ({ page }) => {
