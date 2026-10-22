@@ -182,6 +182,7 @@ test('shows the full LACP walkthrough and configures both switch ends', async ({
   await panel.getByText('Full configuration walkthrough').click()
   await expect(panel.locator('.pt-lesson-guide')).toContainText('Distribution-A Gi0/1')
   await expect(panel.locator('.pt-lesson-guide pre').first()).toContainText('channel-group 1 mode active')
+  await expect(panel.locator('.pt-guide-expected pre')).toContainText('Po1(SU)')
   await panel.getByRole('button', { name: 'Hint', exact: true }).click()
   await panel.getByRole('button', { name: 'Hint', exact: true }).click()
   await panel.getByRole('button', { name: 'Reveal command', exact: true }).click()

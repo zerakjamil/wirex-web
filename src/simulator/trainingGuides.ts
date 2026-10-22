@@ -8,12 +8,18 @@ export interface TrainingGuideStep {
   verify?: string[]
 }
 
+export interface TrainingGuideExpected {
+  title: string
+  output: string[]
+}
+
 export interface TrainingGuide {
   summary: string
   topology: string[]
   before: string[]
   steps: TrainingGuideStep[]
   verify: string[]
+  expected?: TrainingGuideExpected[]
   mistakes: string[]
 }
 
@@ -241,6 +247,15 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       'At least one path is alternate/discarding, proving the loop is broken.',
       'Test traffic still succeeds and the STP tasks are marked complete.',
     ],
+    expected: [{
+      title: 'show spanning-tree vlan 10 on Access-C after BPDUs converge (excerpt)',
+      output: [
+        'Root ID Priority 24586',
+        'Root path cost 4',
+        'Gi0/1            Root FWD  4',
+        'Gi0/2            Altn BLK  4',
+      ],
+    }],
     mistakes: [
       'Configuring root primary on both Distribution switches.',
       'Changing the bridge priority without checking which switch currently wins.',
@@ -319,6 +334,14 @@ export const trainingGuides: Record<LessonId, TrainingGuide> = {
       'show interfaces trunk confirms 802.1Q trunking on the bundle links, and the summary proves both members belong to Po1.',
       'Test traffic succeeds and both EtherChannel tasks are marked complete.',
     ],
+    expected: [{
+      title: 'show etherchannel summary on Distribution-A',
+      output: [
+        'Number of channel-groups in use: 1',
+        'Group  Port-channel  Protocol  Ports',
+        '1      Po1(SU)       LACP      Gi0/1(P) Gi0/2(P)',
+      ],
+    }],
     mistakes: [
       'Configuring only Distribution-A and expecting the other side to join.',
       'Using passive on both switches, so neither side initiates.',

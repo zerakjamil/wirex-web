@@ -33,6 +33,13 @@ export function TrainingGuide({ lesson, mode }: { lesson: LessonId; mode: Learni
           </li>)}</ol>
           <h4>{t('Verify')}</h4>
           <ul>{guide.verify.map(line => <li key={line}>{line}</li>)}</ul>
+          {guide.expected && guide.expected.length > 0 && <>
+            <h4>{t('Expected')}</h4>
+            {guide.expected.map(item => <div className="pt-guide-expected" key={item.title}>
+              <p><code dir="ltr">{item.title}</code></p>
+              <pre dir="ltr">{item.output.join('\n')}</pre>
+            </div>)}
+          </>}
           <h4>{t('Common mistakes')}</h4>
           <ul>{guide.mistakes.map(line => <li key={line}>{line}</li>)}</ul>
         </div>

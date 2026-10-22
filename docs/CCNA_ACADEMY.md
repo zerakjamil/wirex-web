@@ -34,7 +34,7 @@ farming.
 | Practical exam | 14 tasks | One two-switch, one-router campus: VLANs, access ports, LACP, trunks, router-on-a-stick, STP, and ping |
 | Rescue paths | 3 | 45-minute VLANs, 30-minute switch management, 120-minute exam sprint |
 | Guided-lab links | 6 lessons | `tcpip` → 1.8, `ethernet` → 2.9, `vlans` → 4.5, `campus` → 3.6, `stp` → 9.3, `channel` → 9.5 |
-| Lesson walkthroughs | 7 | Per-device topology, prerequisites, commands, verification, and common mistakes; exam walkthrough stays hidden in exam mode |
+| Lesson walkthroughs | 7 | Per-device topology, prerequisites, commands, verification, expected output, and common mistakes; exam walkthrough stays hidden in exam mode |
 
 Progress is stored locally under `wirex-academy-v1`: read sections, correct
 checks, last section, active rescue path, and best theory score. Practical scores
@@ -231,7 +231,7 @@ At the 2026-10-22 checkpoint:
 The full production-browser suite now passes **87/87**, including these nine
 Academy scenarios and the two axe audits. The host-load-sensitive
 `simulation-scale` bound `longestTaskMs < 500` passes: the full 87-test run
-measured **137 ms**, and the latest targeted run measured **145 ms** (8/8 pings,
+measured **137 ms**, and the latest targeted run measured **85 ms** (8/8 pings,
 queue peak 2,132; full run p95 tick 93.7 ms, engine p95 12.7 ms). The measurement
 now waits for the 300-node topology to commit and paint before the realtime
 window opens, so the setup render cannot be mistaken for simulation cost. The bound itself is unchanged. The

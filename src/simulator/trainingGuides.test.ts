@@ -15,6 +15,11 @@ test('every training lesson has a complete, device-accurate guide', () => {
     assert.ok(guide.mistakes.length > 0, lesson)
     const lab = createTrainingLab(lesson, 'guided')
     const devices = new Set(lab.devices.map(device => device.id))
+    for (const item of guide.expected ?? []) {
+      assert.ok(item.title.trim(), lesson)
+      assert.ok(item.output.length > 0, lesson)
+      for (const line of item.output) assert.ok(line.trim(), lesson)
+    }
     for (const step of guide.steps) {
       assert.ok(step.title.trim(), lesson)
       assert.ok(step.body.trim(), lesson)
@@ -61,6 +66,9 @@ test('every training lesson has a complete, device-accurate guide', () => {
       const access = useNetworkStore.getState().executeIosCommand('campus-sw-c', 'show spanning-tree vlan 10')
       assert.match(access, /Root ID Priority 24586/)
       assert.match(access, /Altn\s+BLK/)
+      const expected = trainingGuides.stp.expected?.[0]
+      assert.ok(expected)
+      for (const line of expected.output) assert.ok(access.includes(line), line)
     }
   }
 })
@@ -105,4 +113,7 @@ test('the LACP walkthrough produces one operational bundled port-channel', () =>
   assert.match(summary, /Po1\(SU\)/)
   assert.match(summary, /Gi0\/1\(P\)/)
   assert.match(summary, /Gi0\/2\(P\)/)
+  const expected = trainingGuides.channel.expected?.[0]
+  assert.ok(expected)
+  for (const line of expected.output) assert.ok(summary.includes(line), line)
 })

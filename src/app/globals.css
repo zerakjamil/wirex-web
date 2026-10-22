@@ -603,6 +603,10 @@ html[data-theme="dark"] .pt-app :focus-visible {outline-color:#89d8ed}
 .pt-guide-hidden {color:#6a5d37;font-style:italic}
 .pt-guide-verify {color:#315b4b}
 .pt-guide-verify code {font-size:10px;overflow-wrap:anywhere}
+.pt-guide-expected {margin-block:6px}
+.pt-guide-expected p {margin-block:2px}
+.pt-guide-expected code {font-size:10px;overflow-wrap:anywhere}
+.pt-guide-expected pre {max-height:130px}
 .pt-catalog-guide {margin-block:6px}
 .pt-catalog-guide p {margin:6px 8px 2px;font-size:11px;line-height:1.5}
 .pt-catalog-guide ul {margin:2px 8px 7px;padding-inline-start:17px;font-size:11px;line-height:1.5}
