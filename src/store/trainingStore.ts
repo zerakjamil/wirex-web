@@ -91,7 +91,7 @@ export const useTrainingStore=create<TrainingStore>((set,get)=>({
     useNetworkStore.setState({deviceWindows:backup.deviceWindows,commandEvents:[]})
     useWorkspaceStore.setState({fileName:backup.fileName,past:[],future:[]});useWorkspaceStore.getState().setTool('select');useWorkspaceStore.getState().command('fit-topology')
   },
-  reset:()=>get().start(get().lesson,get().mode),
+  reset:()=>{const {lesson,mode}=get();get().start(lesson,mode,lesson==='exam')},
   revealHint:()=>{const {lesson,progress,hintLevel}=get();const p=progress[lesson] || {hintsUsed:0,completed:false,attempts:1};if(hintLevel<3)set({hintLevel:hintLevel+1,progress:{...progress,[lesson]:{...p,hintsUsed:p.hintsUsed+1}}})},
   check:()=>{
     const net=useNetworkStore.getState(),state=get(),checks=evaluateLesson(state.lesson,net.devices,net.links)

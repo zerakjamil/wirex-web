@@ -55,6 +55,11 @@ test('practical exam grades 14 live checkpoints and a cross-VLAN ping', () => {
   assert.equal(useTrainingStore.getState().progress.exam?.maxScore, examTaskIds.length)
   assert.equal(useTrainingStore.getState().progress.exam?.completed, true)
 
+  useTrainingStore.getState().reset()
+  assert.equal(useTrainingStore.getState().progress.exam?.score, undefined)
+  assert.equal(useTrainingStore.getState().progress.exam?.completed, false)
+  assert.equal(useTrainingStore.getState().checked, false)
+
   useTrainingStore.getState().start('exam', 'exam', true)
   assert.equal(useTrainingStore.getState().progress.exam?.score, undefined)
   assert.equal(useTrainingStore.getState().progress.exam?.completed, false)
