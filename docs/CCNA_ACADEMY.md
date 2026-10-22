@@ -193,7 +193,8 @@ At the 2026-10-22 checkpoint:
 
 - `npm run check` passes **724/724 unit tests**, including 27 Academy and
   training-guide core tests (8 course-content, 8 markdown, 9 store/persistence,
-  2 training-guide), 5 table-regression tests, 1 practical-exam integration test,
+  2 training-guide; the guide test executes every command block against the CLI
+  engine), 5 table-regression tests, 1 practical-exam integration test,
   2 review-packet tests, and 12 pilot-analysis tests.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production/TypeScript build passes, the production dependency
@@ -230,8 +231,8 @@ At the 2026-10-22 checkpoint:
 The full production-browser suite now passes **87/87**, including these nine
 Academy scenarios and the two axe audits. The host-load-sensitive
 `simulation-scale` bound `longestTaskMs < 500` passes: the full 87-test run
-measured **134 ms**, and the latest targeted run measured **142 ms** (8/8 pings,
-queue peak 2,132; full run p95 tick 100.2 ms, engine p95 11.3 ms). The measurement
+measured **149 ms**, and the latest targeted run measured **129 ms** (8/8 pings,
+queue peak 2,132; full run p95 tick 102.3 ms, engine p95 12.4 ms). The measurement
 now waits for the 300-node topology to commit and paint before the realtime
 window opens, so the setup render cannot be mistaken for simulation cost. The bound itself is unchanged. The
 targeted Academy and axe specs were also run separately against the production

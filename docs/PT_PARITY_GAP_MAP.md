@@ -40,8 +40,8 @@ generic end-device, Sniffer, ISA-3000, Network Controller, the practical exam, a
 Wizard routing-option and wireless-item unit coverage, the Traffic Generator raw-injector and
 run-persistence spec, BGP flow F13 (eBGP and iBGP neighbors from the CLI) and
 the four physical specs. The realtime scale case now passes its unchanged
-`<500 ms` pacing bound at **134 ms** in the full 87-test run (8/8 pings, p95 tick
-100.2 ms, engine p95 11.3 ms, queue peak 2,132, drained clean, no warnings)
+`<500 ms` pacing bound at **149 ms** in the full 87-test run (8/8 pings, p95 tick
+102.3 ms, engine p95 12.4 ms, queue peak 2,132, drained clean, no warnings)
 after the setup render was excluded from the realtime window. Earlier host-load runs
 measured 916 ms, with a same-host A/B against `80bfc03` at 692 ms; those were
 environment artifacts, and the bound was not weakened. The PT parity gate stays

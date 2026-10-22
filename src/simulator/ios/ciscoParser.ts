@@ -400,6 +400,11 @@ export function parseIosCommand(device: NetworkDevice, rawLine: string): IosExec
 
   // 2. Privileged EXEC mode
   if (device.currentCliMode === 'priv') {
+    if (cmd === 'enable' || cmd === 'en') {
+      // Already in privileged EXEC; keeping this idempotent lets a guide's
+      // verification block follow a configuration block without an error.
+      return { output: '' }
+    }
     if (cmd === 'disable') {
       return { output: '', newMode: 'user' }
     }
@@ -2316,6 +2321,16 @@ function handleShowCommands(device: NetworkDevice, parts: string[]): IosExecutio
 
   // show interfaces switchport / trunk
   if (sub1 === 'int' || sub1 === 'interfaces') {
+    if (sub2 === 'status' || sub3 === 'status') {
+      let out = 'Port      Name               Status       Vlan       Duplex  Speed Type\n'
+      for (const p of device.ports) {
+        const status = p.adminStatus === 'down' ? 'disabled' : p.status === 'up' ? 'connected' : 'notconnect'
+        const vlan = p.portMode === 'trunk' ? 'trunk' : String(p.vlan ?? 1)
+        const type = p.media === 'fiber' ? '1000BaseSX' : '10/100BaseTX'
+        out += `${p.shortName.padEnd(10)}${(p.description ?? '').slice(0, 18).padEnd(19)}${status.padEnd(13)}${vlan.padEnd(11)}auto    auto  ${type}\n`
+      }
+      return { output: out.trimEnd() }
+    }
     if (sub2 === 'switchport' || sub3 === 'switchport' || sub2 === 'sw') {
       let out = ''
       for (const p of device.ports) {

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createTrainingLab, lessonCommands, lessonIds } from './trainingLabs'
 import { guideCommandsForDevice, trainingGuides } from './trainingGuides'
+import { useNetworkStore } from '../store/networkStore'
 
 test('every training lesson has a complete, device-accurate guide', () => {
   for (const lesson of lessonIds) {
@@ -12,12 +13,26 @@ test('every training lesson has a complete, device-accurate guide', () => {
     assert.ok(guide.steps.length > 0, lesson)
     assert.ok(guide.verify.length > 0, lesson)
     assert.ok(guide.mistakes.length > 0, lesson)
-    const devices = new Set(createTrainingLab(lesson, 'guided').devices.map(device => device.id))
+    const lab = createTrainingLab(lesson, 'guided')
+    const devices = new Set(lab.devices.map(device => device.id))
     for (const step of guide.steps) {
       assert.ok(step.title.trim(), lesson)
       assert.ok(step.body.trim(), lesson)
       assert.ok(step.commands.length > 0, `${lesson}: ${step.title}`)
       assert.ok(devices.has(step.deviceId), `${lesson}: ${step.deviceId}`)
+    }
+    useNetworkStore.setState({ devices: structuredClone(lab.devices), links: structuredClone(lab.links) })
+    for (const step of guide.steps) {
+      for (const command of step.commands) {
+        const output = useNetworkStore.getState().executeIosCommand(step.deviceId, command)
+        assert.ok(
+          !/% (?:Unrecognized|Invalid|Incomplete|Ambiguous|Specify|Unknown|Not enough)/i.test(output),
+          `${lesson}/${step.deviceId}: ${command} -> ${output}`,
+        )
+        if (command === 'show interfaces status') {
+          assert.match(output, /Port\s+Name\s+Status/, `${lesson}/${step.deviceId}: ${output}`)
+        }
+      }
     }
     assert.ok(lessonCommands[lesson].trim(), lesson)
   }

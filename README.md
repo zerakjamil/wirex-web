@@ -149,9 +149,9 @@ At the 2026-10-22 checkpoint:
 - The full production-browser suite passes **87/87**, including the targeted
   CCNA Academy scenarios **9/9** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound measured
-  **134 ms** in the full 87-test run (and **142 ms** in the latest targeted run)
+  **149 ms** in the full 87-test run (and **129 ms** in the latest targeted run)
   after setup rendering was excluded from the realtime window (8/8 pings, queue
-  peak 2,132; full run p95 tick 100.2 ms, engine p95 11.3 ms).
+  peak 2,132; full run p95 tick 102.3 ms, engine p95 12.4 ms).
 
 Instructor/educational acceptance, native AR/CKB proofreading, and external
 Packet Tracer interoperability remain open. Current evidence and caveats are
