@@ -176,3 +176,11 @@ Official Cert Guide, Volume 1, the CCNA2 Labs 1–6 decks, and supplied chapter
 PDFs. No Cisco logos, artwork, screenshots, or slide text are reproduced. See
 [`docs/CCNA_ACADEMY.md`](docs/CCNA_ACADEMY.md) for the clean-room position and
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for dependency notices.
+
+## License
+
+The wireX source code and original course material are released under the
+[MIT License](LICENSE). Third-party components remain under their respective
+licenses; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Cisco, Packet
+Tracer, and CCNA are trademarks of Cisco Systems, Inc.; wireX is independent
+and is not affiliated with or endorsed by Cisco.

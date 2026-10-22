@@ -1,6 +1,7 @@
 {
   "name": "wirex-web",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "wireX network simulation and classroom practice workspace",
   "main": "electron/main.js",
   "scripts": {

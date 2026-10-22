@@ -1,4 +1,9 @@
-# PKT import
+# Third-party notices
+
+wireX is released under the MIT License (see [`LICENSE`](LICENSE)). The
+components below retain their own licenses and attribution requirements.
+
+## PKT import
 
 The PKT format and EAX pipeline were implemented using the MIT-licensed reference
 [jeamxn/cisco-pka-to-xml](https://github.com/jeamxn/cisco-pka-to-xml).
