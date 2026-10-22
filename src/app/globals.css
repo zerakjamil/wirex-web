@@ -600,6 +600,9 @@ html[data-theme="dark"] .pt-app :focus-visible {outline-color:#89d8ed}
 .pt-guide-step-head small {flex:0 0 auto;color:#5d6f78;font-size:10px}
 .pt-guide-step p {margin-block:3px}
 .pt-guide-step button {margin-block:3px 5px}
+.pt-guide-step-actions {display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-block:3px 5px}
+.pt-guide-step-actions button {margin:0}
+.pt-sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .pt-guide-hidden {color:#6a5d37;font-style:italic}
 .pt-guide-verify {color:#315b4b}
 .pt-guide-verify code {font-size:10px;overflow-wrap:anywhere}

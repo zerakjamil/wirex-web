@@ -168,6 +168,7 @@ test('opens the matching concept from the training catalog', async ({ page }) =>
 
 test('shows the full LACP walkthrough and configures both switch ends', async ({ page }) => {
   test.setTimeout(120_000)
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await startNewWorkspace(page)
   await page.getByRole('button', { name: 'Training', exact: true }).click()
   const catalog = page.locator('dialog.pt-training-catalog[open]')
@@ -183,6 +184,12 @@ test('shows the full LACP walkthrough and configures both switch ends', async ({
   await expect(panel.locator('.pt-lesson-guide')).toContainText('Distribution-A Gi0/1')
   await expect(panel.locator('.pt-lesson-guide pre').first()).toContainText('channel-group 1 mode active')
   await expect(panel.locator('.pt-guide-expected pre')).toContainText('Po1(SU)')
+  const copy = panel.getByTestId('guide-copy-0')
+  await copy.click()
+  await expect(copy).toHaveText('Copied')
+  const copiedCommands = await page.evaluate(() => navigator.clipboard.readText())
+  expect(copiedCommands).toContain('channel-group 1 mode active')
+  expect(copiedCommands).not.toContain('! Distribution-B')
   await panel.getByRole('button', { name: 'Hint', exact: true }).click()
   await panel.getByRole('button', { name: 'Hint', exact: true }).click()
   await panel.getByRole('button', { name: 'Reveal command', exact: true }).click()

@@ -67,8 +67,8 @@ The Academy contains:
 - Search across titles, chapters, and body text.
 - Links into the existing `tcpip`, `ethernet`, `vlans`, `campus`, `stp`, and
   `channel` guided lessons.
-- A per-device walkthrough for every practice lesson: topology, prerequisites, complete
-  switch-by-switch commands, verification, expected-output excerpts, and common mistakes. Commands fade
+- A per-device walkthrough for every practice lesson: topology, prerequisites, complete,
+  copyable switch-by-switch commands, verification, expected-output excerpts, and common mistakes. Commands fade
   out of Recall, Troubleshoot, and Exam mode.
 
 The **Exam** view opens on the practical briefing. The 14 checked tasks cover
@@ -149,7 +149,7 @@ At the 2026-10-22 checkpoint:
 - The full production-browser suite passes **87/87**, including the targeted
   CCNA Academy scenarios **9/9** and the axe accessibility audit **2/2**.
 - The unchanged `simulation-scale` `longestTaskMs < 500` bound measured
-  **137 ms** in the full 87-test run (and **85 ms** in the latest targeted run)
+  **137 ms** in the full 87-test run (and **89 ms** in the latest targeted run)
   after setup rendering was excluded from the realtime window (8/8 pings, queue
   peak 2,132; full run p95 tick 93.7 ms, engine p95 12.7 ms).
 
