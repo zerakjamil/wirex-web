@@ -166,6 +166,41 @@ test('opens the matching concept from the training catalog', async ({ page }) =>
   await expect(page.getByTestId('academy-open-lab')).toBeVisible()
 })
 
+test('shows the full LACP walkthrough and configures both switch ends', async ({ page }) => {
+  test.setTimeout(120_000)
+  await startNewWorkspace(page)
+  await page.getByRole('button', { name: 'Training', exact: true }).click()
+  const catalog = page.locator('dialog.pt-training-catalog[open]')
+  await expect(catalog).toBeVisible()
+  const card = catalog.locator('li').filter({ has: page.getByRole('heading', { name: 'EtherChannel: bundle the uplinks' }) })
+  await card.getByText('Lesson context').click()
+  await expect(card).toContainText('EtherChannel bundles parallel switch links')
+  await card.getByRole('button', { name: 'Start lesson' }).click()
+
+  const panel = page.getByRole('complementary', { name: 'Training' })
+  await expect(panel).toContainText('EtherChannel bundles parallel switch links')
+  await panel.getByText('Full configuration walkthrough').click()
+  await expect(panel.locator('.pt-lesson-guide')).toContainText('Distribution-A Gi0/1')
+  await expect(panel.locator('.pt-lesson-guide pre').first()).toContainText('channel-group 1 mode active')
+  await panel.getByRole('button', { name: 'Hint', exact: true }).click()
+  await panel.getByRole('button', { name: 'Hint', exact: true }).click()
+  await panel.getByRole('button', { name: 'Reveal command', exact: true }).click()
+  const hintCommands = panel.getByTestId('training-hint-commands')
+  await expect(hintCommands).toContainText('channel-group 1 mode active')
+  await expect(hintCommands).not.toContainText('! Distribution-B')
+  await panel.getByRole('button', { name: /Use this device: Distribution-A/ }).first().click()
+
+  const common = ['enable', 'configure terminal', 'vlan 10', 'name Sales', 'exit',
+    'interface fa0/1', 'switchport mode access', 'switchport access vlan 10', 'exit',
+    'interface range gi0/1-2', 'switchport mode trunk', 'channel-group 1 mode active', 'exit']
+  await runTrainingCommands(page, 'campus-sw-a', common)
+  await runTrainingCommands(page, 'campus-sw-b', common)
+  await panel.getByRole('button', { name: 'Test traffic', exact: true }).click()
+  await expect(panel.getByText(/Last test: Successful/)).toBeVisible({ timeout: 30_000 })
+  await panel.getByRole('button', { name: 'Check my work', exact: true }).click()
+  await expect(panel.getByText('Completed', { exact: true })).toBeVisible()
+})
+
 test('completes a practice round and enters a rescue path', async ({ page }) => {
   await startNewWorkspace(page)
   await page.getByTestId('academy-open').click()

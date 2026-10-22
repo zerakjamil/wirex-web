@@ -97,6 +97,8 @@ test('eight cold-cache campus pings complete through realtime browser simulation
     const ids = hosts.slice(0, 8).map(host => store.getState().sendPing(host.id, targetIp))
     if (ids.some(id => !id)) throw new Error(`Could not start all eight campus pings: ${store.getState().simulationWarning ?? 'unknown reason'}`)
     const pingIds = ids as string[]
+    // Let the 300-node topology commit and paint before measuring the realtime run.
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
     const metrics = {
       startedAt: performance.now(),
       peakQueue: store.getState().inFlightPackets.length,

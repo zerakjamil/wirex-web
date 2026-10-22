@@ -583,3 +583,37 @@ html[data-theme="dark"] .pt-app :focus-visible {outline-color:#89d8ed}
 /* CCNA Academy links inside the existing training flow */
 .pt-training-catalog li>.pt-training-concept-link,.pt-training-panel .pt-training-concept-link{display:inline-flex;align-items:center;gap:4px;width:auto;margin:4px 0 6px;padding:2px 0;border:0;background:transparent;color:#0b6f66;font:700 11px/1.4 Arial,Tahoma,sans-serif;text-decoration:underline;text-underline-offset:2px}
 .pt-training-catalog li>.pt-training-concept-link:hover,.pt-training-panel .pt-training-concept-link:hover{background:transparent;color:#0a4f4a}
+
+.pt-guide-summary {margin-block:8px;padding:7px 8px;border-inline-start:3px solid #0f766e;background:#eaf3f4;color:#243b45;font-size:11px;line-height:1.5;text-align:left}
+.pt-lesson-guide,.pt-catalog-guide {margin-block:8px;border:1px solid #c3cdd1;background:#fbfcfc;text-align:start}
+.pt-lesson-guide>summary,.pt-catalog-guide>summary {padding:6px 8px;color:#0b4f5c;font:700 11px/1.45 Arial,Tahoma,sans-serif;cursor:pointer;list-style-position:inside}
+.pt-lesson-guide>summary:hover,.pt-catalog-guide>summary:hover {background:#e6f0f3}
+.pt-lesson-guide>summary:focus-visible,.pt-catalog-guide>summary:focus-visible {outline:2px solid #00829d;outline-offset:2px}
+.pt-lesson-guide-body {padding:0 8px 8px;font-size:11px;line-height:1.5}
+.pt-lesson-guide-body h4 {margin-block:9px 3px;color:#4b5e68;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+.pt-lesson-guide-body ul,.pt-lesson-guide-body ol,.pt-catalog-guide ul {margin:0;padding-inline-start:17px}
+.pt-lesson-guide-body li,.pt-catalog-guide li {margin-block:3px}
+.pt-lesson-guide-body pre {max-height:190px}
+.pt-guide-step {margin-block:7px;padding-block-start:6px;border-top:1px solid #dce4e7}
+.pt-guide-step-head {display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.pt-guide-step-head strong {font-size:11px;line-height:1.4}
+.pt-guide-step-head small {flex:0 0 auto;color:#5d6f78;font-size:10px}
+.pt-guide-step p {margin-block:3px}
+.pt-guide-step button {margin-block:3px 5px}
+.pt-guide-hidden {color:#6a5d37;font-style:italic}
+.pt-guide-verify {color:#315b4b}
+.pt-guide-verify code {font-size:10px;overflow-wrap:anywhere}
+.pt-catalog-guide {margin-block:6px}
+.pt-catalog-guide p {margin:6px 8px 2px;font-size:11px;line-height:1.5}
+.pt-catalog-guide ul {margin:2px 8px 7px;padding-inline-start:17px;font-size:11px;line-height:1.5}
+html[data-theme="dark"] .pt-guide-summary {border-inline-start-color:#4fd1c5;background:#1e2b33;color:#dbe7eb}
+html[data-theme="dark"] .pt-lesson-guide,html[data-theme="dark"] .pt-catalog-guide {border-color:#3f535e;background:#1a252b}
+html[data-theme="dark"] .pt-lesson-guide>summary,html[data-theme="dark"] .pt-catalog-guide>summary {color:#a9e3ea}
+html[data-theme="dark"] .pt-lesson-guide>summary:hover,html[data-theme="dark"] .pt-catalog-guide>summary:hover {background:#24343d}
+html[data-theme="dark"] .pt-lesson-guide-body h4 {color:#9fb6bf}
+html[data-theme="dark"] .pt-guide-step {border-color:#34464f}
+html[data-theme="dark"] .pt-guide-step-head small {color:#9fb6bf}
+html[data-theme="dark"] .pt-guide-hidden {color:#d6c58f}
+html[data-theme="dark"] .pt-guide-verify {color:#9fd9c0}
+.pt-training-catalog .pt-catalog-guide li {margin-block:3px;padding:0;border:0}
+.pt-training-catalog li>.pt-training-concept-link {margin-inline-start:6px}

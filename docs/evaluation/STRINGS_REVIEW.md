@@ -21,7 +21,7 @@ Reviewers work independently. Do not let one language's reviewer rewrite the oth
 
 ## 3. Materials
 
-- [`generated/academy-ui-strings.csv`](./generated/academy-ui-strings.csv): key, English source, Arabic, Central Kurdish, and the source files where the key is used. The packet has 272 unique keys, including the Academy course/exam strings, all 27 training-task labels, 14 lesson/goal pairs, 22 diagnostics, learning-mode labels, and shared chrome keys used by its entry points.
+- [`generated/academy-ui-strings.csv`](./generated/academy-ui-strings.csv): key, English source, Arabic, Central Kurdish, and the source files where the key is used. The packet has 281 unique keys, including the Academy course/exam strings, all 27 training-task labels, 14 lesson/goal pairs, 22 diagnostics, learning-mode labels, and shared chrome keys used by its entry points.
 - The running Academy in Arabic and Kurdish, light and dark, desktop and mobile widths.
 - This protocol and the glossary section below.
 

@@ -15,8 +15,8 @@ Cisco Systems, Inc.
 
 - **Free and account-free.** No license server, login, cohort, or installation
   is required to start a lab in the browser.
-- **A real learning loop, not a quiz widget.** The Academy's 46 sections connect
-  concepts to 33 checks, a 10-point theory round, and a 14-point practical exam
+- **A real learning loop, not a quiz widget.** The Academy's 52 sections connect
+  concepts to 39 checks, a 10-point theory round, and a 14-point practical exam
   that runs on a live two-switch campus. A correct answer is never a substitute
   for a working topology.
 - **Built for the night before lab.** Three rescue paths give a 45-, 30-, or
@@ -57,15 +57,19 @@ welcome chooser, or click **Read concept** beside a training lesson.
 
 The Academy contains:
 
-- 46 sections across five chapters: TCP/IP, Ethernet LANs, basic switch
-  management, VLANs/trunking, and an IOS command appendix.
-- 33 checks with immediate explanations and retry.
+- 52 sections across six chapters: TCP/IP, Ethernet LANs, basic switch
+  management, VLANs/trunking, redundant LAN design (STP and EtherChannel), and an
+  IOS command appendix.
+- 39 checks with immediate explanations and retry.
 - A 24-point skills exam: 10 theory questions plus 14 hands-on checkpoints on a
   two-switch, one-router campus.
 - Three time-boxed rescue paths.
 - Search across titles, chapters, and body text.
-- Links into the existing `tcpip`, `ethernet`, `vlans`, and `campus` guided
-  lessons.
+- Links into the existing `tcpip`, `ethernet`, `vlans`, `campus`, `stp`, and
+  `channel` guided lessons.
+- A per-device walkthrough for every practice lesson: topology, prerequisites, complete
+  switch-by-switch commands, verification, and common mistakes. Commands fade
+  out of Recall, Troubleshoot, and Exam mode.
 
 The **Exam** view opens on the practical briefing. The 14 checked tasks cover
 VLAN creation and names, access ports, an LACP bundle, 802.1Q trunks,
@@ -136,16 +140,18 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3005 \
   npx playwright test e2e/ccna-academy.spec.ts e2e/academy-a11y.spec.ts
 ```
 
-At the 2026-10-21 checkpoint:
+At the 2026-10-22 checkpoint:
 
-- `npm run check` passes **722/722 unit tests**.
+- `npm run check` passes **724/724 unit tests**.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production build, TypeScript check, and production dependency
   audit pass with **0 vulnerabilities**.
-- The full production-browser suite passes **86/86**, including the targeted
-  CCNA Academy scenarios **8/8** and the axe accessibility audit **2/2**.
-- The unchanged `simulation-scale` `longestTaskMs < 500` bound passes at
-  **425 ms** (8/8 pings, p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132).
+- The full production-browser suite passes **87/87**, including the targeted
+  CCNA Academy scenarios **9/9** and the axe accessibility audit **2/2**.
+- The unchanged `simulation-scale` `longestTaskMs < 500` bound measured
+  **134 ms** in the full 87-test run (and **142 ms** in the latest targeted run)
+  after setup rendering was excluded from the realtime window (8/8 pings, queue
+  peak 2,132; full run p95 tick 100.2 ms, engine p95 11.3 ms).
 
 Instructor/educational acceptance, native AR/CKB proofreading, and external
 Packet Tracer interoperability remain open. Current evidence and caveats are

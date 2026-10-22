@@ -42,6 +42,12 @@
 4.8,4.8,IP Telephony & Voice VLAN Integration,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),312,ch8-voice,vlans
 4.9,4.9,Administrative & Operational VLAN States (Active vs. Shutdown),ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),100,ch8-lshut,
 4.10,4.10,Trunking Verification & Operational Mismatch Troubleshooting,ch8,Chapter 8,Implementing Ethernet Virtual LANs (VLANs & Trunking),278,ch8-nonegotiate,vlans
-5.1,5.1,"System, Security, and Management Setup",appendix,Appendix,Cisco IOS Command Quick Reference,85,,
-5.2,5.2,VLAN & Trunking Setup,appendix,Appendix,Cisco IOS Command Quick Reference,94,,
-5.3,5.3,Verification & Inspection,appendix,Appendix,Cisco IOS Command Quick Reference,209,,
+9.1,9.1,Why Redundant Links Need Spanning Tree,ch9,Chapter 9,Redundant LAN Design,316,ch9-loop,
+9.2,9.2,"STP Election: Bridge ID, Cost, Roles, and States",ch9,Chapter 9,Redundant LAN Design,282,ch9-root,stp
+9.3,9.3,Configuring and Verifying PVST+,ch9,Chapter 9,Redundant LAN Design,283,ch9-primary,stp
+9.4,9.4,EtherChannel: One Logical Link From Many,ch9,Chapter 9,Redundant LAN Design,386,ch9-lacp,
+9.5,9.5,Configuring and Verifying LACP,ch9,Chapter 9,Redundant LAN Design,284,ch9-members,channel
+9.6,9.6,Integrated Redundancy Lab,ch9,Chapter 9,Redundant LAN Design,245,ch9-summary,channel
+6.1,6.1,"System, Security, and Management Setup",appendix,Appendix,Cisco IOS Command Quick Reference,85,,
+6.2,6.2,VLAN & Trunking Setup,appendix,Appendix,Cisco IOS Command Quick Reference,94,,
+6.3,6.3,Verification & Inspection,appendix,Appendix,Cisco IOS Command Quick Reference,228,,

@@ -26,14 +26,15 @@ farming.
 
 | Item | Count | Notes |
 | --- | ---: | --- |
-| Sections | 46 | 43 core sections plus 3 appendix command-reference sections |
-| Chapters | 5 | TCP/IP, Ethernet LANs, basic switch management, VLANs/trunking, and the command appendix |
-| Checks | 33 | One or more per core section; immediate explanation and retry |
+| Sections | 52 | 49 core sections plus 3 appendix command-reference sections |
+| Chapters | 6 | TCP/IP, Ethernet LANs, basic switch management, VLANs/trunking, redundant LAN design (STP/EtherChannel), and the command appendix |
+| Checks | 39 | One or more per core section; immediate explanation and retry |
 | Skills exam | 24 points | 10 theory questions + 14 live practical checkpoints; most points come from the simulator |
 | Theory round | 10 questions | Random selection from all checks; score, weak-chapter review, and rescue entry |
 | Practical exam | 14 tasks | One two-switch, one-router campus: VLANs, access ports, LACP, trunks, router-on-a-stick, STP, and ping |
 | Rescue paths | 3 | 45-minute VLANs, 30-minute switch management, 120-minute exam sprint |
-| Guided-lab links | 4 lessons | `tcpip` → 1.8, `ethernet` → 2.9, `vlans` → 4.5, `campus` → 3.6 |
+| Guided-lab links | 6 lessons | `tcpip` → 1.8, `ethernet` → 2.9, `vlans` → 4.5, `campus` → 3.6, `stp` → 9.3, `channel` → 9.5 |
+| Lesson walkthroughs | 7 | Per-device topology, prerequisites, commands, verification, and common mistakes; exam walkthrough stays hidden in exam mode |
 
 Progress is stored locally under `wirex-academy-v1`: read sections, correct
 checks, last section, active rescue path, and best theory score. Practical scores
@@ -182,22 +183,23 @@ The generated file is not the place to make edits.
 6. Mark every English course-content element `dir="ltr"` inside RTL chrome.
 7. Run `npm test`, `npm run lint`, and the targeted Academy E2E suite.
 
-The content builder fails if the source collapses to fewer than 40 sections,
+The content builder fails if the source collapses to fewer than 50 sections,
 and the course test asserts unique section IDs, so a broken heading structure
 cannot ship silently.
 
 ## Verification
 
-At the 2026-10-21 checkpoint:
+At the 2026-10-22 checkpoint:
 
-- `npm run check` passes **722/722 unit tests**, including 25 Academy core tests
-  (8 course-content, 8 markdown, 9 store/persistence), 5 table-regression tests,
-  1 practical-exam integration test, 2 review-packet tests, and 12 pilot-analysis tests.
+- `npm run check` passes **724/724 unit tests**, including 27 Academy and
+  training-guide core tests (8 course-content, 8 markdown, 9 store/persistence,
+  2 training-guide), 5 table-regression tests, 1 practical-exam integration test,
+  2 review-packet tests, and 12 pilot-analysis tests.
 - ESLint reports **0 errors / 28 existing warnings**.
 - The optimized production/TypeScript build passes, the production dependency
   audit reports **0 vulnerabilities**, and `electron:prep` succeeds.
 - The targeted production-browser suite `e2e/ccna-academy.spec.ts` passes
-  **8/8**:
+  **9/9**:
   1. read a concept, answer a check, mark it read, persist across reload, and
      reset progress;
   2. open from the title bar, search the course, and launch a guided lab;
@@ -207,7 +209,9 @@ At the 2026-10-21 checkpoint:
   5. complete a 10-question theory round and enter a rescue path;
   6. Arabic chrome with English course content still LTR;
   7. mobile course drawer closes after section selection;
-  8. configure the exam through the real CLI and move from 13/14 to 14/14
+  8. open the full LACP walkthrough, configure both switches through the real
+     CLI, and complete the EtherChannel lesson;
+  9. configure the exam through the real CLI and move from 13/14 to 14/14
      with a cross-VLAN ping.
 - The axe accessibility audit `e2e/academy-a11y.spec.ts` passes **2/2** across
   light-theme home, reader, practical exam, theory round, and rescue plus
@@ -223,12 +227,13 @@ At the 2026-10-21 checkpoint:
   tables were checked as real Markdown tables in both themes; only topology and
   flow diagrams remain monospace.
 
-The full production-browser suite now passes **86/86**, including these eight
+The full production-browser suite now passes **87/87**, including these nine
 Academy scenarios and the two axe audits. The host-load-sensitive
-`simulation-scale` bound `longestTaskMs < 500` passes at **425 ms** (8/8 pings,
-p95 tick 84.2 ms, engine p95 8.8 ms, queue peak 2,132) at host load ~5.0/8.
-Earlier runs measured 916 ms, with a same-host A/B at 692 ms under heavy host
-load; those were environment artifacts, and the bound was never weakened. The
+`simulation-scale` bound `longestTaskMs < 500` passes: the full 87-test run
+measured **134 ms**, and the latest targeted run measured **142 ms** (8/8 pings,
+queue peak 2,132; full run p95 tick 100.2 ms, engine p95 11.3 ms). The measurement
+now waits for the 300-node topology to commit and paint before the realtime
+window opens, so the setup render cannot be mistaken for simulation cost. The bound itself is unchanged. The
 targeted Academy and axe specs were also run separately against the production
 server at `127.0.0.1:3005`.
 

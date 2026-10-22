@@ -12,6 +12,8 @@ import {DeviceNavigator} from './DeviceNavigator'
 import {ccnaLessonSection} from '@/content/ccnaCourse'
 import {useAcademyStore} from '@/store/academyStore'
 import {AcademyIcon} from '@/components/academy/AcademyIcons'
+import {TrainingGuide} from './TrainingGuide'
+import {guideCommandsForDevice,trainingGuides} from '@/simulator/trainingGuides'
 
 const modes:Record<LearningMode,string>={guided:'Guided',recall:'Recall',troubleshoot:'Troubleshoot',free:'Free practice',exam:'Exam'}
 
@@ -22,7 +24,7 @@ export function TrainingCatalog(){
   <header><h2>{t('Campus Training')}</h2><button aria-label={t('Close')} onClick={()=>useTrainingStore.setState({catalogOpen:false})}>×</button></header>
   <p>{t('Training does not replace your imported network.')}</p>
   <label>{t('Learning mode')}<select value={mode} onChange={e=>setMode(e.target.value as LearningMode)}>{Object.entries(modes).map(([id,key])=><option key={id} value={id}>{t(key)}</option>)}</select></label>
-  <ol>{lessonIds.map(id=><li key={id}><h3>{t(`lesson.${id}`)} {progress[id]?.completed?'✓':''}</h3><p>{t(`lesson.${id}.goal`)}</p><small dir="ltr">{lessonReferences[id]}</small>{ccnaLessonSection[id]&&<button className="pt-training-concept-link" title={t('Open the matching Academy section')} onClick={()=>{useTrainingStore.setState({catalogOpen:false});useAcademyStore.getState().openSection(ccnaLessonSection[id]!)}}><AcademyIcon name="book" size={12}/>{t('Read concept')}</button>}<button onClick={()=>useTrainingStore.getState().start(id,mode)}>{t('Start lesson')}</button></li>)}</ol>
+  <ol>{lessonIds.map(id=><li key={id}><h3>{t(`lesson.${id}`)} {progress[id]?.completed?'✓':''}</h3><p>{t(`lesson.${id}.goal`)}</p>{id!=='exam'&&<details className="pt-catalog-guide"><summary>{t('Lesson context')}</summary><p dir="ltr">{trainingGuides[id].summary}</p><ul dir="ltr">{trainingGuides[id].topology.map(line=><li key={line}>{line}</li>)}</ul></details>}<small dir="ltr">{lessonReferences[id]}</small>{ccnaLessonSection[id]&&<button className="pt-training-concept-link" title={t('Open the matching Academy section')} onClick={()=>{useTrainingStore.setState({catalogOpen:false});useAcademyStore.getState().openSection(ccnaLessonSection[id]!)}}><AcademyIcon name="book" size={12}/>{t('Read concept')}</button>}<button onClick={()=>useTrainingStore.getState().start(id,mode)}>{t('Start lesson')}</button></li>)}</ol>
   <small>{t('Saved in this browser')}</small>
  </dialog>
 }
@@ -52,11 +54,13 @@ export function TrainingPanel(){
  const [tab,setTab]=useState<'lesson'|'devices'>('lesson')
  const tasks=evaluateLesson(training.lesson,devices,links).map(c=>(c.id==='traffic'||c.id==='exam-traffic')?{...c,complete:hasValidTrainingReply()}:c)
  const hint=training.lesson==='exam'?'hint.exam':training.lesson==='vlans'||training.lesson==='campus'?'hint.vlan':training.lesson==='stp'?'hint.stp':training.lesson==='channel'?'hint.channel':'hint.packet'
+ const hintCommands=guideCommandsForDevice(training.lesson,training.deviceId)||lessonCommands[training.lesson]
  return <aside className="pt-training-panel" dir={dir} aria-label={t('Training')}>
   <header><strong>{t('Training')}</strong><button onClick={training.openCatalog}>{t('Lesson')}</button></header>
   <div className="pt-training-tabs" role="tablist"><button role="tab" aria-selected={tab==='lesson'} onClick={()=>setTab('lesson')}>{t('Lesson tab')}</button><button role="tab" aria-selected={tab==='devices'} onClick={()=>setTab('devices')}>{t('Devices tab')}</button></div>
   {tab==='devices'?<DeviceNavigator/>:<div className="pt-training-scroll"><h2>{t(`lesson.${training.lesson}`)}</h2><small>{t(modes[training.mode])}</small><p>{t(`lesson.${training.lesson}.goal`)}</p>
   {ccnaLessonSection[training.lesson]&&<button className="pt-training-concept-link" title={t('Open the matching Academy section')} onClick={()=>useAcademyStore.getState().openSection(ccnaLessonSection[training.lesson]!)}><AcademyIcon name="book" size={12}/>{t('Read concept')}</button>}
+  <TrainingGuide lesson={training.lesson} mode={training.mode}/>
   {training.lesson==='campus'&&<p>{t('Switch management does not enable inter-VLAN routing.')}</p>}
   <ol className="pt-task-list">{tasks.map(task=><li key={task.id}><span aria-label={t(task.complete?'Completed':'Not yet complete')}>{task.complete?'✓':'○'}</span>{t(`task.${task.id}`)}</li>)}</ol>
   {training.lesson==='exam'&&<div className="pt-exam-score" role="status" data-testid="training-practical-score"><strong>{t('Practical score')}: {tasks.filter(task=>task.complete).length} / {tasks.length}</strong><small>{t('Theory is scored in the Academy.')}</small></div>}
@@ -64,7 +68,7 @@ export function TrainingPanel(){
   <p role="status">{t('Last test')}: {t(test?.status==='successful'?'Successful':test?.status==='pending'?'Pending':test?.status==='failed'?'Failed':'Not tested')}</p>
   {test?.status==='successful'&&!hasValidTrainingReply()&&<p role="status">{t('Configuration changed. Run another traffic test.')}</p>}
   {training.checked&&<p className={tasks.every(c=>c.complete)?'pt-audit-clear':'pt-fault-count'} role="status">{t(tasks.every(c=>c.complete)?'Completed':'Not yet complete')}</p>}
-  {training.mode!=='free'&&training.mode!=='exam'&&<><button onClick={training.revealHint} disabled={training.hintLevel>=3}>{t(training.hintLevel>=2?'Reveal command':'Hint')}</button>{(training.mode==='guided'||training.hintLevel>=1)&&<p>{t(hint)}</p>}{training.hintLevel>=2&&<p>{t('hint.context')}</p>}{training.hintLevel>=3&&<pre dir="ltr">{lessonCommands[training.lesson]}</pre>}</>}
+  {training.mode!=='free'&&training.mode!=='exam'&&<><button onClick={training.revealHint} disabled={training.hintLevel>=3}>{t(training.hintLevel>=2?'Reveal command':'Hint')}</button>{(training.mode==='guided'||training.hintLevel>=1)&&<p>{t(hint)}</p>}{training.hintLevel>=2&&<p>{t('hint.context')}</p>}{training.hintLevel>=3&&<pre data-testid="training-hint-commands" dir="ltr">{hintCommands}</pre>}</>}
   <ConnectionDiagnostics/>
   <p><small>{t('Course reference')}: <bdi>{lessonReferences[training.lesson]}</bdi></small></p>
   <button onClick={()=>resetDialog.current?.showModal()}>{t('Reset exercise')}</button><button onClick={training.exit}>{t('Return to my network')}</button>

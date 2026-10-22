@@ -1164,7 +1164,364 @@ Operational Mode: TRUNK                                      Operational Mode: S
 
 ---
 
-# 5. Cisco IOS Command Quick Reference
+# 5. Chapter 9: Redundant LAN Design
+
+Redundant links make a LAN more available, but Layer 2 Ethernet has no TTL.
+A frame that loops between switches can circulate forever, multiply broadcasts,
+and destabilize the forwarding table. Spanning Tree Protocol (STP) and
+EtherChannel are the two tools that make redundant switch links safe: STP
+builds one loop-free logical tree, and EtherChannel turns parallel links into
+one logical link so STP does not have to block the extra capacity.
+
+This chapter is a lab-derived synthesis for the CCNA2 Lab 3 sequence. It is
+not a chapter of the Cisco CCNA Official Cert Guide; it exists so the
+spanning-tree and EtherChannel lessons have the same reading, configuration,
+and verification depth as the VLAN chapters.
+
+## 9.1 Why Redundant Links Need Spanning Tree
+
+A redundant topology has more than one path between two switches. That is
+good for availability: if one cable fails, another can carry traffic. It is
+bad for Ethernet if both paths are active at Layer 2, because the network has
+no mechanism equivalent to an IP TTL to stop a frame from going around a loop.
+
+### The loop problem
+
+Consider two switches joined by two links. A broadcast frame arrives on
+Switch-A. Switch-A floods it out every other port, including both links.
+Switch-B receives two copies, floods both back toward Switch-A, and the cycle
+continues. The same thing happens to unknown unicast and multicast frames.
+The result is a broadcast storm, duplicated frames, high CPU, and a MAC table
+that keeps moving the same source address between ports.
+
+| Symptom | What is happening |
+| --- | --- |
+| Broadcast storm | Broadcasts multiply around the loop instead of being delivered once |
+| MAC flapping | The same source MAC appears on different ports as copies arrive |
+| Duplicate unicast | A host receives the same frame more than once |
+| Link saturation | The loop consumes bandwidth even when no user is sending new data |
+
+### What STP does
+
+STP elects one root bridge, then chooses one active path to that root for each
+VLAN. Ports that would create a loop are placed in a non-forwarding state.
+They are not deleted: if the active path fails, STP can promote an alternate
+port and restore connectivity.
+
+STP is a control-plane protocol. It does not route between VLANs, and it does
+not create VLANs. It only decides which switch ports may forward frames.
+
+> A port can be in a blocking/discarding **state** while its role is alternate
+> or backup. "Blocked" is not a port role. Keep the role and state terms
+> separate when you read `show spanning-tree`.
+
+## 9.2 STP Election: Bridge ID, Cost, Roles, and States
+
+### Bridge ID and root election
+
+Every switch has a bridge ID made of two parts:
+
+1. A 2-byte bridge priority (the default is 32768).
+2. A 6-byte switch MAC address.
+
+The switch with the **lowest bridge ID** becomes the root bridge. Lower
+priority wins first; if priorities tie, the lower MAC address wins. That is
+why changing only the priority is enough to make a planned root win in a
+small lab, but the MAC address is still the tie-breaker when priorities match.
+
+The root bridge has all of its ports in the designated role. Every other
+switch must choose exactly one root port: the port with the lowest root path
+cost toward the root. If two paths have the same cost, the switch compares the
+neighbor bridge ID and then the neighbor port ID.
+
+### Port roles and states
+
+| Item | Meaning |
+| --- | --- |
+| Root port | The non-root switch's best path toward the root bridge |
+| Designated port | The forwarding port for a segment; one per segment |
+| Alternate port | A backup path that is not forwarding while the active path works |
+| Disabled | Administratively or physically unavailable |
+
+Classic 802.1D states are blocking, listening, learning, forwarding, and
+disabled. Listening and learning normally last 15 seconds each. PortFast lets
+an edge port skip those delays because no switch should be reached through a
+PC-facing port. Never enable PortFast on an inter-switch uplink.
+
+Per-VLAN STP (PVST+) runs a separate election for each VLAN. One switch can be
+root for VLAN 10 and a non-root for VLAN 20. That is the basis for per-VLAN
+root placement and load sharing.
+
+## 9.3 Configuring and Verifying PVST+
+
+In the STP lab, Distribution-A, Distribution-B, and Access-C form a triangle.
+All switch-to-switch links are trunks. The goal is to make Distribution-A the
+root for VLAN 10 and keep Distribution-B as the secondary root.
+
+### Distribution-A: primary root for VLAN 10
+
+```cisco
+enable
+configure terminal
+spanning-tree vlan 10 root primary
+interface fa0/1
+ spanning-tree portfast
+ exit
+end
+```
+
+`root primary` sets the VLAN 10 priority to 24576 in this simulator. Real IOS
+may choose a value below the current root, but the intent is the same: make
+this switch win the election for VLAN 10.
+
+### Distribution-B: secondary root for VLAN 10
+
+```cisco
+enable
+configure terminal
+spanning-tree vlan 10 root secondary
+interface fa0/1
+ spanning-tree portfast
+ exit
+end
+```
+
+`root secondary` sets priority 28672. It does not make B the root while A is
+healthy; it gives B the next-best priority if A disappears.
+
+### Verification
+
+```cisco
+show spanning-tree vlan 10
+show spanning-tree summary
+```
+
+Run the VLAN view on all three switches. On Distribution-A, look for the line
+that says this bridge is the root. On B and C, identify the root port and the
+alternate path. The exact port names depend on the topology and path costs,
+but the tree must have one root and no forwarding loop.
+
+### Common mistakes
+
+- Configuring `root primary` on both switches. Both get priority 24576 and the
+  MAC address decides the election; the switch you intended may lose.
+- Using `root primary` without checking the current root. An existing lower
+  priority still wins.
+- Enabling PortFast on a switch-to-switch link. It can create a transient loop
+  while the neighbor is still converging.
+- Treating an alternate port as a broken cable. It is the standby path.
+
+## 9.4 EtherChannel: One Logical Link From Many
+
+EtherChannel bundles up to eight compatible physical links into one logical
+Port-channel. The bundle provides more aggregate bandwidth and link redundancy,
+while STP treats it as a single link instead of blocking all but one member.
+
+### LACP and PAgP modes
+
+LACP is the IEEE 802.3ad standard. PAgP is a Cisco-proprietary negotiation
+protocol. The two do not negotiate with each other.
+
+| Local mode | Remote mode | Forms a bundle? |
+| --- | --- | --- |
+| active | active | Yes |
+| active | passive | Yes |
+| passive | passive | No |
+| desirable | desirable | Yes |
+| desirable | auto | Yes |
+| auto | auto | No |
+| on | on | Yes, without negotiation |
+| active or passive | desirable or auto | No, different protocols |
+
+At least one side must actively ask to form the bundle. That means at least one
+`active` side for LACP or one `desirable` side for PAgP. `passive` and `auto`
+wait for the other side.
+
+### Requirements
+
+All member links must agree on:
+
+- speed and duplex;
+- access or trunk mode;
+- access VLAN, native VLAN, and allowed VLAN list;
+- the set of physical links in the bundle;
+- a compatible negotiation mode.
+
+The local `channel-group` number identifies the bundle on that switch. The two
+switches do not have to use the same number, although matching numbers make the
+configuration easier to read. Do not mix LACP and PAgP on the same bundle.
+
+After the Port-channel exists, configure VLAN and trunk changes on the logical
+Port-channel interface in real IOS. If you change one physical member and not
+the others, the bundle can fail or the member can be suspended.
+
+### Reading the summary
+
+`show etherchannel summary` uses flags such as:
+
+| Flag | Meaning |
+| --- | --- |
+| SU | The Port-channel is in use |
+| P | The member is bundled in the Port-channel |
+| I | The member is independent, not bundled |
+| D | The member is down |
+| s | The member is suspended |
+
+The exact letters vary by platform, but the important check is that the
+Port-channel is in use and every intended member is bundled, not independent.
+
+## 9.5 Configuring and Verifying LACP
+
+The EtherChannel lab has two switches and two parallel Gigabit links:
+
+- Distribution-A Gi0/1 to Distribution-B Gi0/1
+- Distribution-A Gi0/2 to Distribution-B Gi0/2
+
+Both sides need the same VLAN and trunk settings. The example uses VLAN 10
+with Fa0/1 as the access port, and both Gigabit members as trunks.
+
+### Distribution-A
+
+```cisco
+enable
+configure terminal
+vlan 10
+ name Sales
+ exit
+interface fa0/1
+ switchport mode access
+ switchport access vlan 10
+ exit
+interface range gi0/1-2
+ switchport mode trunk
+ channel-group 1 mode active
+ exit
+end
+```
+
+### Distribution-B
+
+```cisco
+enable
+configure terminal
+vlan 10
+ name Sales
+ exit
+interface fa0/1
+ switchport mode access
+ switchport access vlan 10
+ exit
+interface range gi0/1-2
+ switchport mode trunk
+ channel-group 1 mode active
+ exit
+end
+```
+
+### Verification
+
+```cisco
+show etherchannel summary
+show interfaces trunk
+show spanning-tree vlan 10
+```
+
+The summary should show a Port-channel in use with both members bundled. The
+trunk view should show the logical bundle carrying VLAN 10. STP should see one
+logical link, not two separate parallel links. Test traffic from the Sales PC
+on one side to the Sales PC on the other side.
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+| --- | --- |
+| Only one switch has a channel | The other side was never configured |
+| Both sides passive | No side is actively negotiating |
+| Member stays independent | Trunk/access mode, VLAN, or allowed list differs |
+| One member is suspended | One physical link has different settings from its partner |
+| LACP and PAgP do not form | The two ends use different negotiation protocols |
+| Command rejected | The `ac` mode is not a valid LACP mode; use `active` or `passive` |
+
+## 9.6 Integrated Redundancy Lab
+
+This lab combines the two ideas. Two distribution switches carry VLAN 10 and
+VLAN 20 over a two-member LACP bundle. Distribution-A is the primary root for
+VLAN 10 and the secondary root for VLAN 20; Distribution-B is the opposite.
+The result is a resilient Layer 2 core with a planned root for each VLAN.
+
+### Distribution-A
+
+```cisco
+enable
+configure terminal
+vlan 10
+ name Sales
+ exit
+vlan 20
+ name Management
+ exit
+interface range fa0/1-2
+ switchport mode access
+ switchport access vlan 10
+ exit
+interface fa0/3
+ switchport mode access
+ switchport access vlan 20
+ exit
+interface range gi0/1-2
+ switchport mode trunk
+ channel-group 1 mode active
+ exit
+spanning-tree vlan 10 root primary
+spanning-tree vlan 20 root secondary
+end
+```
+
+### Distribution-B
+
+```cisco
+enable
+configure terminal
+vlan 10
+ name Sales
+ exit
+vlan 20
+ name Management
+ exit
+interface range fa0/1-2
+ switchport mode access
+ switchport access vlan 10
+ exit
+interface fa0/3
+ switchport mode access
+ switchport access vlan 20
+ exit
+interface range gi0/1-2
+ switchport mode trunk
+ channel-group 1 mode active
+ exit
+spanning-tree vlan 10 root secondary
+spanning-tree vlan 20 root primary
+end
+```
+
+### Verification
+
+```cisco
+show etherchannel summary
+show interfaces trunk
+show spanning-tree vlan 10
+show spanning-tree vlan 20
+```
+
+Confirm that both members are bundled, both VLANs are carried, and each VLAN
+has the intended root. This lab does not route between VLANs. If the PCs in
+VLAN 10 need to reach the PCs in VLAN 20, add a router-on-a-stick or a
+multilayer switch; a Layer 2 EtherChannel alone cannot do it.
+
+---
+
+# 6. Cisco IOS Command Quick Reference
 
 ### System, Security, and Management Setup
 ```cisco
@@ -1253,8 +1610,10 @@ show interfaces <int-id> trunk
 
 This knowledge base is a paraphrase and reorganization of the Cisco CCNA
 200-301 Official Cert Guide, Volume 1 (chapters 1, 2, 6, and 8), the CCNA2
-Labs 1–6 decks, and the supplied chapter PDFs. It is the source for the
-in-product CCNA Academy, not a reproduction of Cisco courseware.
+Labs 1–6 decks, and the supplied chapter PDFs. Chapter 9 is a lab-derived
+synthesis for STP and EtherChannel, not a chapter of the official guide. The
+knowledge base is the source for the in-product CCNA Academy, not a reproduction
+of Cisco courseware.
 
 Cisco, Packet Tracer, and CCNA are trademarks of Cisco Systems, Inc. wireX is
 not affiliated with, endorsed by, or sponsored by Cisco. No Cisco logos,

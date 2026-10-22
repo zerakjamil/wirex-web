@@ -4,15 +4,15 @@ Version 1.0 · 2026-10-21
 
 ## 1. Why this exists
 
-The Academy's 46 sections and 33 checks were built from an ingested CCNA knowledge base and then corrected for known deck artifacts. That is not the same as independent instructor validation. This review asks two qualified CCNA instructors to check the content for technical correctness, answer/explanation consistency, and misleading simplifications before the Academy makes any teaching claim.
+The Academy's 52 sections and 39 checks were built from an ingested CCNA knowledge base and then corrected for known deck artifacts. That is not the same as independent instructor validation. This review asks two qualified CCNA instructors to check the content for technical correctness, answer/explanation consistency, and misleading simplifications before the Academy makes any teaching claim.
 
 The reviewers are not asked to approve the product's design or the simulator. They are asked to find content errors.
 
 ## 2. Materials
 
 - The running Academy at `http://127.0.0.1:3005` (or the deployed URL), with light and dark themes available.
-- [`generated/academy-checks.csv`](./generated/academy-checks.csv): all 33 checks with options, answer, explanation, and section ID.
-- [`generated/academy-sections.csv`](./generated/academy-sections.csv): all 46 sections by chapter and number.
+- [`generated/academy-checks.csv`](./generated/academy-checks.csv): all 39 checks with options, answer, explanation, and section ID.
+- [`generated/academy-sections.csv`](./generated/academy-sections.csv): all 52 sections by chapter and number.
 - A copy of the CCNA 200-301 blueprint and, where needed, Cisco IOS command reference or IEEE 802.1Q documentation.
 - This protocol and a sign-off sheet.
 
@@ -37,7 +37,7 @@ If a reviewer is also a pilot instructor, they may do both roles, but the conten
 
 ## 4. Procedure
 
-### 4.1 Check review (all 33 checks)
+### 4.1 Check review (all 39 checks)
 
 For each row in `academy-checks.csv`:
 
@@ -103,7 +103,7 @@ When in doubt between P0 and P1, use P0. It is cheaper to re-review a correct it
 
 The content gate passes only when:
 
-- two instructors independently rate **at least 90% of the 33 checks** as technically correct;
+- two instructors independently rate **at least 90% of the 39 checks** as technically correct;
 - there are **zero unresolved P0 findings**;
 - every P1 finding is either fixed and re-reviewed, or explicitly accepted with a written rationale and a visible learner-facing caveat where appropriate;
 - answer/explanation inconsistencies are zero for the checks that are rated correct;
@@ -146,7 +146,7 @@ Attach the completed check sheet and section findings. Do not put reviewer perso
 - It does not prove that novices learn better; that is the pilot protocol.
 - It does not validate the simulator's fidelity against real hardware.
 - It does not replace native-language proofreading.
-- It does not validate every one of the 46 sections if the reviewer only samples 20. Record the coverage honestly.
+- It does not validate every one of the 52 sections if the reviewer only samples 20. Record the coverage honestly.
 - It does not make the content immune to error. It reduces the chance that a wrong check ships.
 
 ## 10. Data handling

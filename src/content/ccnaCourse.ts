@@ -81,6 +81,12 @@ const chapterPresentation: Record<string, Omit<CcnaChapter, 'id' | 'bookNumber' 
     description: 'Broadcast domains, trunks, 802.1Q, DTP, and voice.',
     accent: '#6d28d9',
   },
+  ch9: {
+    label: 'Chapter 9',
+    kicker: 'Redundancy',
+    description: 'STP and EtherChannel turn parallel links into a safe, resilient design.',
+    accent: '#0e7490',
+  },
   appendix: {
     label: 'Appendix',
     kicker: 'Reference',
@@ -280,6 +286,50 @@ export const ccnaSectionNotes: Record<string, CcnaSectionNote> = {
       lesson: 'vlans',
       label: 'Trunk verification lab',
       description: 'Break a trunk, inspect the mismatch, and repair it.',
+    },
+  },
+  '9.1': {
+    why: 'A redundant cable is only useful if the switch can prevent a Layer 2 loop. This is the reason STP exists.',
+    trap: 'A “blocked” port is in a blocking/discarding state; its role may be alternate or backup. Blocked is not a role.',
+  },
+  '9.2': {
+    why: 'Root election explains why one switch forwards and another stands by. You need the bridge ID and path-cost rules to predict the result.',
+    trap: 'Priority is compared before the MAC address. A lower priority wins even if the other switch has a lower MAC.',
+    lab: {
+      lesson: 'stp',
+      label: 'STP root election lab',
+      description: 'Make Distribution-A the VLAN 10 root and inspect the alternate path.',
+    },
+  },
+  '9.3': {
+    why: 'This is the exact configuration pattern used in the STP lab and the practical exam.',
+    trap: '`root primary` does not configure ports directly. It lowers the bridge priority for one VLAN so the election produces the root you want.',
+    lab: {
+      lesson: 'stp',
+      label: 'PVST+ root and verification lab',
+      description: 'Configure primary and secondary roots, then read the live tree.',
+    },
+  },
+  '9.4': {
+    why: 'EtherChannel is the difference between a blocked backup link and usable aggregate bandwidth.',
+    trap: '`passive` + `passive` never forms a bundle, and `channel-group 1 mode ac` is not a valid mode. Use `active` or `passive` for LACP.',
+  },
+  '9.5': {
+    why: 'This is the complete two-switch LACP configuration, including the underlay VLAN and trunk settings that must match.',
+    trap: 'Configuring only one switch is the most common failure. Both ends need compatible members before the bundle forms.',
+    lab: {
+      lesson: 'channel',
+      label: 'LACP bundle lab',
+      description: 'Configure both switches, verify the Port-channel, and test traffic.',
+    },
+  },
+  '9.6': {
+    why: 'This lab combines LACP, VLANs, trunks, and per-VLAN roots in one small design.',
+    trap: 'A Layer 2 EtherChannel does not route between VLANs. Add a Layer 3 device if the departments must communicate.',
+    lab: {
+      lesson: 'channel',
+      label: 'Integrated redundancy lab',
+      description: 'Build the LACP core and steer each VLAN to its intended root.',
     },
   },
 }
@@ -554,6 +604,54 @@ export const ccnaChecks: CcnaCheck[] = [
     answer: 1,
     explanation: '`act/lshut` means the VLAN exists but has been administratively shut down locally.',
   },
+  {
+    id: 'ch9-loop',
+    sectionId: '9.1',
+    prompt: 'Why does STP place a redundant port in a blocking/discarding state?',
+    options: ['Ethernet has no TTL, so an active loop would keep duplicating frames and broadcasts', 'The port is reserved for inter-VLAN routing', 'The port must stay down until a router is added', 'The port is administratively disabled'],
+    answer: 0,
+    explanation: 'A Layer 2 loop has no TTL to stop a frame. STP breaks the loop by keeping one path non-forwarding while retaining it as a standby.',
+  },
+  {
+    id: 'ch9-root',
+    sectionId: '9.2',
+    prompt: 'Two switches have the same bridge priority. Which value decides the root election?',
+    options: ['The lowest bridge MAC address', 'The highest port number', 'The highest management IP address', 'The shortest hostname'],
+    answer: 0,
+    explanation: 'The bridge ID is priority plus MAC. When priorities tie, the lower MAC address produces the lower bridge ID and wins the election.',
+  },
+  {
+    id: 'ch9-primary',
+    sectionId: '9.3',
+    prompt: 'What does `spanning-tree vlan 10 root primary` do on Distribution-A?',
+    options: ['Lowers A’s VLAN 10 bridge priority so A wins the root election', 'Makes every A port a root port', 'Blocks every redundant path on A', 'Creates VLAN 10 on A'],
+    answer: 0,
+    explanation: 'The command sets a low per-VLAN priority. STP then elects A as root if no other bridge has an even lower bridge ID. It does not assign port roles directly.',
+  },
+  {
+    id: 'ch9-lacp',
+    sectionId: '9.4',
+    prompt: 'Which LACP mode pairing can form an EtherChannel?',
+    options: ['active / active', 'passive / passive', 'active / on', 'auto / auto'],
+    answer: 0,
+    explanation: 'Active/active forms, and active/passive also forms. Passive/passive never initiates, active/on mixes LACP with static mode, and auto is PAgP.',
+  },
+  {
+    id: 'ch9-members',
+    sectionId: '9.5',
+    prompt: 'Which condition prevents two physical ports from joining the same LACP Port-channel?',
+    options: ['One member is an access port and the other is a trunk', 'The switches use different local channel-group numbers', 'The members connect two different switches', 'The bundle contains two physical links'],
+    answer: 0,
+    explanation: 'Member interfaces must agree on mode, VLAN, native VLAN, allowed list, and speed/duplex. Local channel-group numbers can differ between switches.',
+  },
+  {
+    id: 'ch9-summary',
+    sectionId: '9.6',
+    prompt: 'What does a successful `show etherchannel summary` prove?',
+    options: ['The members negotiated into one operational Port-channel treated as a single logical link', 'STP is disabled on both switches', 'Every VLAN is routed between the switches', 'The PC default gateways are correct'],
+    answer: 0,
+    explanation: 'The summary reports bundle state and member flags. It proves the Port-channel is operational; it does not prove routing or end-to-end host configuration.',
+  },
 ]
 
 export const ccnaRescuePaths: CcnaRescuePath[] = [
@@ -600,6 +698,8 @@ export const ccnaLessonSection: Partial<Record<LessonId, string>> = {
   ethernet: '2.9',
   vlans: '4.5',
   campus: '3.6',
+  stp: '9.3',
+  channel: '9.5',
 }
 
 export const ccnaStats = {

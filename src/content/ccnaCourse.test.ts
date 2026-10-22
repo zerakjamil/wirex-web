@@ -21,12 +21,12 @@ import {
   searchCcnaSections,
 } from './ccnaCourse'
 
-test('course has five chapters, forty-six sections, and unique identifiers', () => {
-  assert.equal(ccnaChapters.length, 5)
-  assert.equal(ccnaSections.length, 46)
+test('course has six chapters, fifty-two sections, and unique identifiers', () => {
+  assert.equal(ccnaChapters.length, 6)
+  assert.equal(ccnaSections.length, 52)
   assert.equal(new Set(ccnaSections.map(section => section.id)).size, ccnaSections.length)
   assert.equal(new Set(ccnaChapters.map(chapter => chapter.id)).size, ccnaChapters.length)
-  assert.deepEqual(ccnaChapters.map(chapter => chapter.order), [1, 2, 3, 4, 5])
+  assert.deepEqual(ccnaChapters.map(chapter => chapter.order), [1, 2, 3, 4, 5, 6])
   for (const chapter of ccnaChapters) {
     assert.ok(chapter.sections.length > 0, chapter.id)
     assert.ok(chapter.label.trim(), chapter.id)
@@ -44,11 +44,11 @@ test('course has five chapters, forty-six sections, and unique identifiers', () 
 })
 
 test('stats describe the core course, checks, and rescue paths', () => {
-  assert.equal(ccnaStats.chapters, 4)
-  assert.equal(ccnaStats.sections, 43)
+  assert.equal(ccnaStats.chapters, 5)
+  assert.equal(ccnaStats.sections, 49)
   assert.equal(ccnaStats.checks, ccnaChecks.length)
   assert.equal(ccnaStats.rescuePaths, 3)
-  assert.equal(ccnaChecks.length, 33)
+  assert.equal(ccnaChecks.length, 39)
 })
 
 test('every check is answerable, explained, and attached to a real section', () => {
@@ -87,6 +87,8 @@ test('rescue paths and labs only reference existing sections and training lesson
   assert.equal(ccnaLessonSection.ethernet, '2.9')
   assert.equal(ccnaLessonSection.vlans, '4.5')
   assert.equal(ccnaLessonSection.campus, '3.6')
+  assert.equal(ccnaLessonSection.stp, '9.3')
+  assert.equal(ccnaLessonSection.channel, '9.5')
 })
 
 test('section notes and helpers stay usable across the entire course', () => {
@@ -113,6 +115,8 @@ test('section notes and helpers stay usable across the entire course', () => {
   assert.equal(getSectionLab('2.9')?.lesson, 'ethernet')
   assert.equal(getSectionLab('3.6')?.lesson, 'campus')
   assert.equal(getSectionLab('4.5')?.lesson, 'vlans')
+  assert.equal(getSectionLab('9.3')?.lesson, 'stp')
+  assert.equal(getSectionLab('9.5')?.lesson, 'channel')
   assert.equal(getSectionLab('missing'), undefined)
 })
 

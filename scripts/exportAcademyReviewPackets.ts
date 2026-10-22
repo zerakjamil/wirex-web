@@ -37,6 +37,7 @@ const entrySources = [
   'src/components/cisco/CiscoTitleBar.tsx',
   'src/components/cisco/CiscoMenuBar.tsx',
   'src/components/cisco/CampusTraining.tsx',
+  'src/components/cisco/TrainingGuide.tsx',
   'src/components/modals/WelcomeModal.tsx',
 ].map(file => join(root, file))
 const allSources = [...academySources, ...entrySources].filter(file => /\.(tsx|ts)$/.test(file))
@@ -56,8 +57,8 @@ mkdirSync(outputDirectory, { recursive: true })
 const sectionOrder = new Map(ccnaSections.map((section, index) => [section.id, index]))
 const sectionById = new Map(ccnaSections.map(section => [section.id, section]))
 
-if (ccnaChecks.length !== 33) throw new Error(`Expected 33 checks, found ${ccnaChecks.length}`)
-if (ccnaSections.length !== 46) throw new Error(`Expected 46 sections, found ${ccnaSections.length}`)
+if (ccnaChecks.length !== 39) throw new Error(`Expected 39 checks, found ${ccnaChecks.length}`)
+if (ccnaSections.length !== 52) throw new Error(`Expected 52 sections, found ${ccnaSections.length}`)
 
 const sortedChecks = [...ccnaChecks].sort((a, b) =>
   (sectionOrder.get(a.sectionId) ?? 999) - (sectionOrder.get(b.sectionId) ?? 999)

@@ -14,11 +14,11 @@ The kit is deliberately separate from the product. It does not claim that the Ac
 | --- | --- |
 | [`PILOT_PROTOCOL.md`](./PILOT_PROTOCOL.md) | Participant criteria, session schedule, blinding, analysis, success criteria, ethics, and data handling. |
 | [`INSTRUMENTS.md`](./INSTRUMENTS.md) | Original 12-item pre/post test, 8-item delayed test, config-recall task, transfer task, rubric, and survey. |
-| [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md) | Two-instructor review protocol for the 46 sections and 33 checks, with severity and sign-off rules. |
+| [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md) | Two-instructor review protocol for the 52 sections and 39 checks, with severity and sign-off rules. |
 | [`STRINGS_REVIEW.md`](./STRINGS_REVIEW.md) | Native AR/CKB proofreading protocol for the Academy UI strings. |
 | [`pilot-data-template.csv`](./pilot-data-template.csv) | Empty scoring sheet with one row per anonymous participant. |
-| [`generated/academy-checks.csv`](./generated/academy-checks.csv) | All 33 checks with options, answers, explanations, and section IDs for instructor review. |
-| [`generated/academy-sections.csv`](./generated/academy-sections.csv) | All 46 sections by chapter for coverage review. |
+| [`generated/academy-checks.csv`](./generated/academy-checks.csv) | All 39 checks with options, answers, explanations, and section IDs for instructor review. |
+| [`generated/academy-sections.csv`](./generated/academy-sections.csv) | All 52 sections by chapter for coverage review. |
 | [`generated/academy-ui-strings.csv`](./generated/academy-ui-strings.csv) | Academy-related EN/AR/CKB UI strings with source locations for native review. |
 
 Regenerate the three CSV packets after any content or UI-string change:
@@ -27,7 +27,7 @@ Regenerate the three CSV packets after any content or UI-string change:
 npm run review:export
 ```
 
-Do not hand-edit the generated CSV files. The UI packet currently contains **272 unique keys**, including the Academy course/exam strings, all 27 training-task labels, 14 lesson/goal pairs, 22 diagnostics, learning-mode labels, and shared chrome keys used by the Academy entry points. Review the whole packet; a shared key can still be wrong in context.
+Do not hand-edit the generated CSV files. The UI packet currently contains **281 unique keys**, including the Academy course/exam strings, all 27 training-task labels, 14 lesson/goal pairs, 22 diagnostics, learning-mode labels, and shared chrome keys used by the Academy entry points. Review the whole packet; a shared key can still be wrong in context.
 
 ## Minimum credible evidence
 

@@ -11,7 +11,7 @@ This is a feasibility pilot, not a confirmatory trial. It answers four practical
 - **RQ3 — Retention:** do they still remember the core concepts 7–10 days later?
 - **RQ4 — Usability:** where do they get stuck, what misconceptions remain, and is the interface usable without a guide?
 
-A separate instructor review answers a fifth question: are the Academy's 46 sections and 33 checks technically correct and clear? See [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md).
+A separate instructor review answers a fifth question: are the Academy's 52 sections and 39 checks technically correct and clear? See [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md).
 
 ## 2. Design
 
@@ -76,7 +76,7 @@ If a participant finishes early, do not fill the time with hints. Record the tim
 
 ### Instructor review — 90 minutes per instructor
 
-Independent review of the 33 checks and a sample of sections, using [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md). Allow up to two hours if the reviewer reads every section.
+Independent review of the 39 checks and a sample of sections, using [`CONTENT_REVIEW.md`](./CONTENT_REVIEW.md). Allow up to two hours if the reviewer reads every section.
 
 ## 5. Measures
 
@@ -165,7 +165,7 @@ Treat these as go/no-go for a **pilot claim**, not for shipping the product. The
 | Learning | Mean pre/post gain ≥3.0 of 12; bootstrap 95% interval lower bound >0; ≥75% of participants gain ≥2 points. |
 | Transfer | ≥70% score ≥14/20; median ≥15/20; no more than 25% commit a critical error (no trunk, wrong VLAN on all access ports, duplicate address, or unrecovered fault). |
 | Retention | Delayed mean ≥70% of the post-test mean; ≥60% score ≥6/8; ≥60% score ≥4/5 on config recall. |
-| Content | Two instructors independently rate ≥90% of the 33 checks technically correct; zero unresolved P0 errors; all P1 errors resolved or explicitly accepted with a written rationale. |
+| Content | Two instructors independently rate ≥90% of the 39 checks technically correct; zero unresolved P0 errors; all P1 errors resolved or explicitly accepted with a written rationale. |
 | Usability | Mean ≥4.0/5 on “I could find what I needed”; no participant abandons the transfer task because of the interface rather than the networking content. |
 | Native strings | Zero unresolved P0 translation errors; ≥95% of reviewed strings accepted or needing only minor edits; terminology decisions recorded. |
 
