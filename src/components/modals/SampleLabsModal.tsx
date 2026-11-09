@@ -2,13 +2,15 @@
 
 import React, { useRef, useEffect } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
-import { NetworkDevice, NetworkLink } from '@/types/network'
+import { NetworkLink } from '@/types/network'
 import { createDevice } from '@/simulator/deviceFactory'
 import { getVlanSwitchLab, getCcnaEnterpriseLab, getWirelessLab, getPtAnywhereLab, getWlcLab, getIotLab } from '@/simulator/starterLabs'
 import { useI18n } from '@/i18n/useI18n'
 import { useActivityStore } from '@/store/activityStore'
 import { getOspfPracticeLab } from '@/simulator/ospfLab'
 import { getRipPracticeLab } from '@/simulator/ripLab'
+import { getVoiceTelephonyLab } from '@/simulator/pastExamLabs'
+import { useMidtermQuestStore } from '@/store/midtermQuestStore'
 
 export function SampleLabsModal() {
   const { t } = useI18n()
@@ -328,6 +330,94 @@ export function SampleLabsModal() {
       </p>
 
       <ol>
+        <li style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: '#10b981' }}>
+          <h3 style={{ color: '#047857' }}>🎯 {t('Predicted Midterm Exam 2026 (Live Interactive Lab)')}</h3>
+          <p>
+            {t(
+              'Predicted 2026 exam synthesis: 3-Switch distribution ring + Router-on-a-stick + VLANs 10, 20, 30 across multi-class subnets with PortFast and SVI.'
+            )}
+          </p>
+          <small dir="ltr">NDI704 · Predicted 2026 · 10 Devices</small>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveModal(null)
+              useMidtermQuestStore.getState().startQuest('predicted-2026')
+            }}
+            style={{ fontWeight: 'bold', background: '#059669', color: '#fff' }}
+          >
+            {t('Launch Canvas Quest')}
+          </button>
+        </li>
+        <li style={{ background: 'rgba(2, 132, 199, 0.08)', borderColor: '#0284c7' }}>
+          <h3 style={{ color: '#0369a1' }}>☎️ {t('Lab 4: Voice VLAN & IP Telephony (Unconfigured Template)')}</h3>
+          <p>
+            {t(
+              'CCNA2 Lab 4 unconfigured student topology: Cisco 2811 router, 2960 switch, two 7960 IP phones, and two daisy-chained PCs. Pre-wired cables with completely blank configs. Configure Router-on-a-stick, DHCP Option 150, CME, and Voice VLANs from scratch.'
+            )}
+          </p>
+          <small dir="ltr">CCNA2 · Lab 4 · Dr. Diana & Dr. Shavan · 6 Devices · Unconfigured</small>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveModal(null)
+                useMidtermQuestStore.getState().startQuest('voice-telephony')
+              }}
+              style={{ fontWeight: 'bold', background: '#0284c7', color: '#fff' }}
+            >
+              {t('Launch Interactive Quest')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const lab = getVoiceTelephonyLab()
+                loadLab(lab.devices, lab.links, lab.annotations)
+                setActiveModal(null)
+              }}
+            >
+              {t('Load Template Only')}
+            </button>
+          </div>
+        </li>
+        <li>
+          <h3>📜 {t('Midterm 2024–2025 (Official Topology)')}</h3>
+          <p>
+            {t(
+              'Dr. Reben Kurda official midterm paper topology: 3 switches, 9 PCs, central router, laptop, Class A (110.x), Class B (130.x), Class C (193.x).'
+            )}
+          </p>
+          <small dir="ltr">NDI704 · Midterm 2024–2025 · 14 Devices</small>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveModal(null)
+              useMidtermQuestStore.getState().startQuest('midterm-2024')
+            }}
+            style={{ fontWeight: 'bold' }}
+          >
+            {t('Launch Canvas Quest')}
+          </button>
+        </li>
+        <li>
+          <h3>📜 {t('Final 2025–2026 [Group A] (VLSM Campus Lab)')}</h3>
+          <p>
+            {t(
+              'Official Group A final examination: Subnetting 10.10.10.0/23 for Students (63 users), Teachers (100 users), and Admin (6 users + IP cameras).'
+            )}
+          </p>
+          <small dir="ltr">NDI704 · Final 2025–2026 · 5 Devices</small>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveModal(null)
+              useMidtermQuestStore.getState().startQuest('final-2025')
+            }}
+            style={{ fontWeight: 'bold' }}
+          >
+            {t('Launch Canvas Quest')}
+          </button>
+        </li>
         <li>
           <h3>{t('RIP route learning and failover')}</h3>
           <p>{t('Three routers exchange RIP updates. Inspect hop counts, ping between student PCs, and shut a transit interface to observe route withdrawal and failover.')}</p>

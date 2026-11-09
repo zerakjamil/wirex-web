@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { ccnaChecks, ccnaRescuePaths, ccnaSectionById, ccnaSections } from '@/content/ccnaCourse'
 
 export const ACADEMY_STORAGE_KEY = 'wirex-academy-v1'
-export type AcademyView = 'home' | 'reader' | 'practice' | 'rescue'
+export type AcademyView = 'home' | 'reader' | 'practice' | 'rescue' | 'midterm'
 
 export interface AcademyProgress {
   completedSections: string[]
@@ -17,7 +17,7 @@ interface AcademyStore extends AcademyProgress {
   view: AcademyView
   sectionId: string | null
   initialized: boolean
-  openAcademy: () => void
+  openAcademy: (targetView?: AcademyView) => void
   closeAcademy: () => void
   setView: (view: AcademyView) => void
   openSection: (sectionId: string) => void
@@ -97,7 +97,7 @@ export const useAcademyStore = create<AcademyStore>((set, get) => ({
   lastSectionId: null,
   activeRescueId: null,
   practiceBest: 0,
-  openAcademy: () => set({ open: true, view: 'home' }),
+  openAcademy: targetView => set({ open: true, view: targetView ?? 'home' }),
   closeAcademy: () => set({ open: false }),
   setView: view => set({ open: true, view, sectionId: view === 'reader' ? get().sectionId : null }),
   openSection: sectionId => {

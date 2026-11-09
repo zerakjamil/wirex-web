@@ -147,10 +147,20 @@ test('DNS service settings and records survive workspace restore and reject malf
   const server = createDevice('server', 10, 20)
   server.config.dnsServiceEnabled = true
   server.config.dnsRecords = [{ domain: 'wirex.test', ip: '192.168.1.100' }]
+  server.config.dnsMxRecords = [{ domain: 'classroom.test', exchange: 'mail.classroom.test', preference: 10 }]
   const restored = parseWorkspace({ version: 1, devices: [server], links: [] }).devices[0]
   assert.equal(restored.config.dnsServiceEnabled, true)
   assert.deepEqual(restored.config.dnsRecords, [{ domain: 'wirex.test', ip: '192.168.1.100' }])
+  assert.deepEqual(restored.config.dnsMxRecords, [{ domain: 'classroom.test', exchange: 'mail.classroom.test', preference: 10 }])
   assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...server, config: { ...server.config, dnsServiceEnabled: 'yes' } }], links: [] }))
+  for (const record of [
+    { domain: 'not a domain', exchange: 'mail.classroom.test', preference: 10 },
+    { domain: 'classroom.test', exchange: 'bad..host', preference: 10 },
+    { domain: 'classroom.test', exchange: 'mail.classroom.test', preference: -1 },
+    { domain: 'classroom.test', exchange: 'mail.classroom.test', preference: 65_536 },
+  ]) {
+    assert.throws(() => parseWorkspace({ version: 1, devices: [{ ...server, config: { ...server.config, dnsMxRecords: [record] } }], links: [] }))
+  }
 })
 test('UDP Echo service settings and listening ports survive workspace restore and reject invalid ports', () => {
   const server = createDevice('server', 10, 20)
@@ -345,4 +355,26 @@ test('spanning-tree guard settings survive restore while transient Root Guard st
   const bad = JSON.parse(JSON.stringify({ version: 1, devices: [sw], links: [] }))
   bad.devices[0].ports[0].bpduGuard = 'yes'
   assert.throws(() => parseWorkspace(bad), /guard/i)
+})
+
+test('IoT MCU programCode, programLanguage, and pinStates survive workspace restore', () => {
+  const mcu = createDevice('iot', 10, 20, 'MCU-PT')
+  mcu.config.programCode = 'digitalWrite(D0, HIGH)'
+  mcu.config.programLanguage = 'javascript'
+  mcu.config.programRunning = true
+  mcu.config.programError = 'unsupported-syntax'
+  mcu.config.pinStates = {
+    D0: { mode: 'OUTPUT', value: 1023 },
+    A0: { mode: 'INPUT', value: 512 },
+  }
+  const payload = JSON.parse(JSON.stringify({ version: 1, devices: [mcu], links: [] }))
+  const restored = parseWorkspace(payload).devices[0]
+  assert.equal(restored.config.programCode, 'digitalWrite(D0, HIGH)')
+  assert.equal(restored.config.programLanguage, 'javascript')
+  assert.equal(restored.config.programRunning, true)
+  assert.equal(restored.config.programError, 'unsupported-syntax')
+  assert.deepEqual(restored.config.pinStates, {
+    D0: { mode: 'OUTPUT', value: 1023 },
+    A0: { mode: 'INPUT', value: 512 },
+  })
 })

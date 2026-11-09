@@ -1,4 +1,4 @@
-import { NetworkDevice, DeviceType, NetworkPort } from '@/types/network'
+import { NetworkDevice, DeviceType, NetworkPort, PortType, DeviceConfig } from '@/types/network'
 import { generateMacAddress } from './protocols/ip'
 import { defaultIotState, iotThingSpec } from './iot'
 import { isGenericEndDeviceModel } from './endDevice'
@@ -33,6 +33,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   let model = customModel || ''
   let ports: NetworkPort[] = []
   let iotKind: NetworkDevice['config']['iotKind']
+  const extraConfig: Partial<DeviceConfig> = {}
 
   switch (type) {
     case 'router': {
@@ -94,13 +95,43 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('Serial0/0', 'Se0/0', 'serial', 'down'),
           createPort('Serial0/1', 'Se0/1', 'serial', 'down'),
         ]
-      } else if (model === 'PT8200') {
+      } else if (model === 'PT8200' || model === 'PT8000 Activated') {
         ports = [
           createPort('GigabitEthernet0/0/0', 'Gi0/0/0', 'gigabitethernet', 'down'),
           createPort('GigabitEthernet0/0/1', 'Gi0/0/1', 'gigabitethernet', 'down'),
           createPort('Serial0/1/0', 'Se0/1/0', 'serial', 'down'),
           createPort('Serial0/1/1', 'Se0/1/1', 'serial', 'down'),
         ]
+      } else if (model === '1841 WIC-2T') {
+        ports = [
+          createPort('FastEthernet0/0', 'Fa0/0', 'fastethernet', 'down'),
+          createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'down'),
+          createPort('Serial0/0/0', 'Se0/0/0', 'serial', 'down'),
+          createPort('Serial0/0/1', 'Se0/0/1', 'serial', 'down'),
+        ]
+      } else if (model === '2621XM NM-2FE2W (2) WIC-2T') {
+        ports = [
+          createPort('FastEthernet0/0', 'Fa0/0', 'fastethernet', 'down'),
+          createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'down'),
+          createPort('FastEthernet1/0', 'Fa1/0', 'fastethernet', 'down'),
+          createPort('FastEthernet1/1', 'Fa1/1', 'fastethernet', 'down'),
+          createPort('Serial0/0', 'Se0/0', 'serial', 'down'),
+          createPort('Serial0/1', 'Se0/1', 'serial', 'down'),
+          createPort('Serial0/2', 'Se0/2', 'serial', 'down'),
+          createPort('Serial0/3', 'Se0/3', 'serial', 'down'),
+        ]
+      } else if (model === '2811 NM-ESW-161 (2) WIC-2T') {
+        ports = [
+          createPort('FastEthernet0/0', 'Fa0/0', 'fastethernet', 'down'),
+          createPort('FastEthernet0/1', 'Fa0/1', 'fastethernet', 'down'),
+          createPort('Serial0/0/0', 'Se0/0/0', 'serial', 'down'),
+          createPort('Serial0/0/1', 'Se0/0/1', 'serial', 'down'),
+          createPort('Serial0/1/0', 'Se0/1/0', 'serial', 'down'),
+          createPort('Serial0/1/1', 'Se0/1/1', 'serial', 'down'),
+        ]
+        for (let i = 0; i < 16; i++) {
+          ports.push(createPort(`FastEthernet1/${i}`, `Fa1/${i}`, 'fastethernet', 'down'))
+        }
       } else if (model === '2620XM') {
         ports = [
           createPort('FastEthernet0/0', 'Fa0/0', 'fastethernet', 'down'),
@@ -199,6 +230,18 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
         // The Sniffer is a two-slot repeater and ships with both bays empty.
         name = `Sniffer${index}`
         ports = []
+      } else if (model === 'Copper Patch Panel') {
+        name = `PatchPanel${index}`
+        ports = Array.from({ length: 24 }, (_, i) => createPort(`Jack${i + 1}`, `J${i + 1}`, 'fastethernet', 'up'))
+      } else if (model === 'Fiber Patch Panel') {
+        name = `FiberPatchPanel${index}`
+        ports = Array.from({ length: 17 }, (_, i) => ({ ...createPort(`Jack${i + 1}`, `J${i + 1}`, 'gigabitethernet', 'up'), media: 'fiber' as const }))
+      } else if (model === 'Copper Wall Mount') {
+        name = `WallMount${index}`
+        ports = Array.from({ length: 4 }, (_, i) => createPort(`Jack${i + 1}`, `J${i + 1}`, 'fastethernet', 'up'))
+      } else if (model === 'Fiber Wall Mount') {
+        name = `FiberWallMount${index}`
+        ports = Array.from({ length: 4 }, (_, i) => ({ ...createPort(`Jack${i + 1}`, `J${i + 1}`, 'gigabitethernet', 'up'), media: 'fiber' as const }))
       } else {
         ports = [
           createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
@@ -223,6 +266,42 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('Ethernet 3', 'Eth3', 'fastethernet', 'up'),
           createPort('Ethernet 4', 'Eth4', 'fastethernet', 'up'),
           createPort('Wireless-N', 'Wlan0', 'wireless', 'up'),
+        ]
+      } else if (model === 'DLC100') {
+        name = `DLC${index}`
+        ports = [
+          createPort('Internet', 'Internet', 'fastethernet', 'up'),
+          createPort('Ethernet 1', 'Eth1', 'fastethernet', 'up'),
+          createPort('Ethernet 2', 'Eth2', 'fastethernet', 'up'),
+          createPort('Ethernet 3', 'Eth3', 'fastethernet', 'up'),
+          createPort('Ethernet 4', 'Eth4', 'fastethernet', 'up'),
+          createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
+        ]
+      } else if (model === 'Central-Office-Server') {
+        name = `COServer${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('Coaxial0', 'Coax0', 'coaxial', 'up'),
+          createPort('Coaxial1', 'Coax1', 'coaxial', 'up'),
+          createPort('Coaxial2', 'Coax2', 'coaxial', 'up'),
+          createPort('Coaxial3', 'Coax3', 'coaxial', 'up'),
+          createPort('Coaxial4', 'Coax4', 'coaxial', 'up'),
+          createPort('Coaxial5', 'Coax5', 'coaxial', 'up'),
+        ]
+      } else if (model === 'Meraki-MX65W') {
+        name = `MerakiMX${index}`
+        ports = [
+          createPort('Internet 1', 'Internet1', 'gigabitethernet', 'up'),
+          createPort('Internet 2', 'Internet2', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 1', 'Gi1', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 2', 'Gi2', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 3', 'Gi3', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 4', 'Gi4', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 5', 'Gi5', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 6', 'Gi6', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 7', 'Gi7', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 8', 'Gi8', 'gigabitethernet', 'up'),
+          createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
         ]
       } else {
         // Access Point (autonomous) and Lightweight Access Point
@@ -249,16 +328,236 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
       model = spec.model
       iotKind = spec.kind
       name = `${spec.label.replace(/\s+/g, '')}${index}`
-      ports = [
-        createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
-        createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
-      ]
+
+      if (model === 'MCU-PT') {
+        name = `MCU${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('D4', 'D4', 'digital', 'up'),
+          createPort('D5', 'D5', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+          createPort('A2', 'A2', 'analog', 'up'),
+          createPort('A3', 'A3', 'analog', 'up'),
+        ]
+        extraConfig.pinStates = {
+          D0: { mode: 'OUTPUT', value: 0 },
+          D1: { mode: 'OUTPUT', value: 0 },
+          D2: { mode: 'OUTPUT', value: 0 },
+          D3: { mode: 'OUTPUT', value: 0 },
+          D4: { mode: 'OUTPUT', value: 0 },
+          D5: { mode: 'OUTPUT', value: 0 },
+          A0: { mode: 'INPUT', value: 0 },
+          A1: { mode: 'INPUT', value: 0 },
+          A2: { mode: 'INPUT', value: 0 },
+          A3: { mode: 'INPUT', value: 0 },
+        }
+      } else if (model === 'SBC-PT') {
+        name = `SBC${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
+          createPort('USB0', 'USB0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('D4', 'D4', 'digital', 'up'),
+          createPort('D5', 'D5', 'digital', 'up'),
+          createPort('D6', 'D6', 'digital', 'up'),
+          createPort('D7', 'D7', 'digital', 'up'),
+          createPort('D8', 'D8', 'digital', 'up'),
+          createPort('D9', 'D9', 'digital', 'up'),
+        ]
+        extraConfig.pinStates = {
+          D0: { mode: 'OUTPUT', value: 0 },
+          D1: { mode: 'OUTPUT', value: 0 },
+          D2: { mode: 'OUTPUT', value: 0 },
+          D3: { mode: 'OUTPUT', value: 0 },
+          D4: { mode: 'OUTPUT', value: 0 },
+          D5: { mode: 'OUTPUT', value: 0 },
+          D6: { mode: 'OUTPUT', value: 0 },
+          D7: { mode: 'OUTPUT', value: 0 },
+          D8: { mode: 'OUTPUT', value: 0 },
+          D9: { mode: 'OUTPUT', value: 0 },
+        }
+      } else if (model === 'Thing') {
+        name = `Thing${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('D4', 'D4', 'digital', 'up'),
+          createPort('D5', 'D5', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+          createPort('A2', 'A2', 'analog', 'up'),
+          createPort('A3', 'A3', 'analog', 'up'),
+        ]
+        extraConfig.pinStates = {
+          D0: { mode: 'OUTPUT', value: 0 },
+          D1: { mode: 'OUTPUT', value: 0 },
+          D2: { mode: 'OUTPUT', value: 0 },
+          D3: { mode: 'OUTPUT', value: 0 },
+          D4: { mode: 'OUTPUT', value: 0 },
+          D5: { mode: 'OUTPUT', value: 0 },
+          A0: { mode: 'INPUT', value: 0 },
+          A1: { mode: 'INPUT', value: 0 },
+          A2: { mode: 'INPUT', value: 0 },
+          A3: { mode: 'INPUT', value: 0 },
+        }
+      } else if (model === 'RFID Card') {
+        name = `RFIDCard${index}`
+        ports = [createPort('RFID0', 'RFID0', 'wireless', 'up')]
+        extraConfig.cardId = 1001
+      } else if (model === 'RFID Reader') {
+        name = `RFIDReader${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+        ]
+      } else if (model === 'PLC-PT') {
+        name = `PLC${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('D4', 'D4', 'digital', 'up'),
+          createPort('D5', 'D5', 'digital', 'up'),
+          ...Array.from({ length: 10 }, (_, i) => createPort(`A${i}`, `A${i}`, 'analog', 'up')),
+        ]
+      } else if (model === 'HMI' || model === 'HMI-PT') {
+        name = `HMI${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+          createPort('A2', 'A2', 'analog', 'up'),
+          createPort('A3', 'A3', 'analog', 'up'),
+        ]
+      } else if (
+        model === 'Air Cooler' ||
+        model === 'Alarm' ||
+        model === 'Ceiling Sprinkler' ||
+        model === 'Dimmable LED' ||
+        model === 'Floor Sprinkler' ||
+        model === 'Heating Element' ||
+        model === 'LCD' ||
+        model === 'Motor' ||
+        model === 'Piezo Speaker' ||
+        model === 'Servo' ||
+        model === 'Smart LED'
+      ) {
+        ports = [
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+        ]
+      } else if (model === 'LED') {
+        ports = [createPort('D0', 'D0', 'digital', 'up')]
+      } else if (model === 'RGB LED') {
+        ports = [
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+        ]
+      } else if (model === 'Speaker') {
+        ports = [createPort('A0', 'A0', 'analog', 'up')]
+      } else if (
+        model === 'Flex Sensor' ||
+        model === 'Generic Sensor' ||
+        model === 'Humidity Sensor' ||
+        model === 'Membrane Potentiometer' ||
+        model === 'Photo Sensor' ||
+        model === 'Potentiometer' ||
+        model === 'Smoke Sensor' ||
+        model === 'Water Sensor'
+      ) {
+        ports = [createPort('A0', 'A0', 'analog', 'up')]
+      } else if (model === 'Generic Environment Sensor') {
+        ports = [
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+          createPort('A2', 'A2', 'analog', 'up'),
+          createPort('A3', 'A3', 'analog', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+        ]
+      } else if (model === 'Humiture Sensor') {
+        ports = [
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+        ]
+      } else if (
+        model === 'Metal Sensor' ||
+        model === 'Sound Sensor' ||
+        model === 'Temperature Sensor' ||
+        model === 'Wind Sensor'
+      ) {
+        ports = [
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+        ]
+      } else if (
+        model === 'Motion Sensor' ||
+        model === 'Rocker Switch' ||
+        model === 'Toggle Push Button' ||
+        model === 'Trip Wire' ||
+        model === 'Water Detector' ||
+        model === 'Push Button'
+      ) {
+        ports = [createPort('D0', 'D0', 'digital', 'up')]
+      } else if (model === 'Push Button Toggle Switch') {
+        ports = [
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+        ]
+      } else {
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
+        ]
+      }
       break
     }
 
     case 'security': {
       model = customModel || '5505'
       name = `ASA${index}`
+      if (model === 'Meraki-MX65W') {
+        name = `MerakiMX${index}`
+        ports = [
+          createPort('Internet 1', 'Internet1', 'gigabitethernet', 'up'),
+          createPort('Internet 2', 'Internet2', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 1', 'Gi1', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 2', 'Gi2', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 3', 'Gi3', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 4', 'Gi4', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 5', 'Gi5', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 6', 'Gi6', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 7', 'Gi7', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet 8', 'Gi8', 'gigabitethernet', 'up'),
+          createPort('Wireless0', 'Wlan0', 'wireless', 'up'),
+        ]
+        break
+      }
       if (model === CYBER_OBSERVER_MODEL) {
         name = `CyberObserver${index}`
         ports = [
@@ -340,6 +639,33 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
           createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
           createPort('GigabitEthernet1', 'Gi1', 'gigabitethernet', 'up'),
         ]
+      } else if (model === 'PLC-PT') {
+        name = `PLC${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('D4', 'D4', 'digital', 'up'),
+          createPort('D5', 'D5', 'digital', 'up'),
+          ...Array.from({ length: 10 }, (_, i) => createPort(`A${i}`, `A${i}`, 'analog', 'up')),
+        ]
+      } else if (model === 'HMI' || model === 'HMI-PT') {
+        name = `HMI${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('D0', 'D0', 'digital', 'up'),
+          createPort('D1', 'D1', 'digital', 'up'),
+          createPort('D2', 'D2', 'digital', 'up'),
+          createPort('D3', 'D3', 'digital', 'up'),
+          createPort('A0', 'A0', 'analog', 'up'),
+          createPort('A1', 'A1', 'analog', 'up'),
+          createPort('A2', 'A2', 'analog', 'up'),
+          createPort('A3', 'A3', 'analog', 'up'),
+        ]
       } else {
         name = `PC${index}`
         ports = [model === 'Wireless PC'
@@ -363,11 +689,36 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
 
     case 'server': {
       model = customModel || 'Server-PT'
-      name = `Server${index}`
-      ports = [
-        createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
-        createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
-      ]
+      if (model === 'Meraki-Server') {
+        name = `MerakiServer${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet1', 'Gi1', 'gigabitethernet', 'up'),
+        ]
+      } else if (model === 'DataHistorianServer') {
+        name = `DataHistorian${index}`
+        ports = [
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+          createPort('GigabitEthernet1', 'Gi1', 'gigabitethernet', 'up'),
+        ]
+      } else if (model === 'Central-Office-Server') {
+        name = `COServer${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('Coaxial0', 'Coax0', 'coaxial', 'up'),
+          createPort('Coaxial1', 'Coax1', 'coaxial', 'up'),
+          createPort('Coaxial2', 'Coax2', 'coaxial', 'up'),
+          createPort('Coaxial3', 'Coax3', 'coaxial', 'up'),
+          createPort('Coaxial4', 'Coax4', 'coaxial', 'up'),
+          createPort('Coaxial5', 'Coax5', 'coaxial', 'up'),
+        ]
+      } else {
+        name = `Server${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('GigabitEthernet0', 'Gi0', 'gigabitethernet', 'up'),
+        ]
+      }
       break
     }
 
@@ -380,11 +731,22 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
 
     case 'phone': {
       model = customModel || 'IP-Phone-PT'
-      name = `IP Phone${index}`
-      ports = [
-        createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
-        createPort('PC Port', 'PCPort', 'fastethernet', 'up'),
-      ]
+      if (model === 'Analog-Phone-PT') {
+        name = `AnalogPhone${index}`
+        ports = [createPort('Phone0', 'Phone0', 'phone', 'up')]
+      } else if (model === 'Home-VoIP-PT') {
+        name = `HomeVoIP${index}`
+        ports = [
+          createPort('Ethernet0', 'Eth0', 'fastethernet', 'up'),
+          createPort('Phone1', 'Phone1', 'phone', 'up'),
+        ]
+      } else {
+        name = `IP Phone${index}`
+        ports = [
+          createPort('FastEthernet0', 'Fa0', 'fastethernet', 'up'),
+          createPort('PC Port', 'PCPort', 'fastethernet', 'up'),
+        ]
+      }
       break
     }
 
@@ -414,17 +776,25 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
 
     case 'cloud': {
       model = customModel || 'Cloud-PT'
-      name = `Cloud${index}`
-      ports = [
-        createPort('Ethernet6', 'Eth6', 'fastethernet', 'up'),
-        createPort('Ethernet7', 'Eth7', 'fastethernet', 'up'),
-        createPort('Ethernet8', 'Eth8', 'fastethernet', 'up'),
-        createPort('Serial0', 'Se0', 'serial', 'up'),
-        createPort('Serial1', 'Se1', 'serial', 'up'),
-        createPort('Serial2', 'Se2', 'serial', 'up'),
-        createPort('Coaxial7', 'Coax7', 'coaxial', 'up'),
-        createPort('Modem4', 'Modem4', 'phone', 'up'),
-      ]
+      if (model === 'Multiuser Connection') {
+        name = `Multiuser${index}`
+        ports = [
+          createPort('Peer0', 'Peer0', 'fastethernet', 'up'),
+          createPort('Peer1', 'Peer1', 'fastethernet', 'up'),
+        ]
+      } else {
+        name = `Cloud${index}`
+        ports = [
+          createPort('Ethernet6', 'Eth6', 'fastethernet', 'up'),
+          createPort('Ethernet7', 'Eth7', 'fastethernet', 'up'),
+          createPort('Ethernet8', 'Eth8', 'fastethernet', 'up'),
+          createPort('Serial0', 'Se0', 'serial', 'up'),
+          createPort('Serial1', 'Se1', 'serial', 'up'),
+          createPort('Serial2', 'Se2', 'serial', 'up'),
+          createPort('Coaxial7', 'Coax7', 'coaxial', 'up'),
+          createPort('Modem4', 'Modem4', 'phone', 'up'),
+        ]
+      }
       break
     }
 
@@ -443,15 +813,19 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   const cyberObserverSecurity = type === 'security' && model === CYBER_OBSERVER_MODEL
   const defaultModules: Record<DeviceType, string[]> = {
     laptop: [model === 'Wireless Laptop' ? 'WPC300N' : 'PT-LAPTOP-NM-1CFE'],
-    pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' || model === 'NetworkController' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
-    router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')?[ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']:[],
+    pc: model === 'WirelessEndDevice-PT' || model === 'WiredEndDevice-PT' || model === 'NetworkController' || model === 'PLC-PT' || model === 'HMI' ? [] : [model === 'Wireless PC' ? 'WPC300N' : 'PT-HOST-NM-1CFE'],
+    router: !['819IOX','819HGW','819HG-4G-IOX','829','1240','CGR1240','IR1101'].includes(model)&&ports.some(p=>p.type==='serial')
+      ? model === '2621XM NM-2FE2W (2) WIC-2T' || model === '2811 NM-ESW-161 (2) WIC-2T'
+        ? ['WIC-2T', 'WIC-2T']
+        : [ports.filter(p=>p.type==='serial').length===1?'WIC-1T':'WIC-2T']
+      : [],
     switch: [],
     wireless: [],
     wlc: [],
     iot: [],
     smartphone: [],
     tablet: [],
-    server: ['PT-HOST-NM-1CGE'],
+    server: model === 'Meraki-Server' || model === 'DataHistorianServer' ? [] : ['PT-HOST-NM-1CGE'],
     printer: [],
     phone: [],
     tv: [],
@@ -467,7 +841,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
   }
   ports = ports.map(port => ({
     ...port,
-    ...((!isGenericEndDeviceModel(model) && model !== 'NetworkController' && ['laptop', 'pc'].includes(type)) || (type === 'server' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
+    ...((!isGenericEndDeviceModel(model) && model !== 'NetworkController' && model !== 'PLC-PT' && model !== 'HMI' && ['laptop', 'pc'].includes(type)) || (type === 'server' && model !== 'Meraki-Server' && model !== 'DataHistorianServer' && port.name === 'GigabitEthernet0') || (type === 'router' && port.type === 'serial' && defaultModules.router.length>0) ? { moduleSlot: 0 } : {})
   }))
   return {
     id,
@@ -480,6 +854,7 @@ export function createDevice(type: DeviceType, x: number, y: number, customModel
     power: true,
     modules: emptyChassis ? [] : [...(defaultModules[type] || [])],
     config: {
+      ...extraConfig,
       hostname: cyberObserverSecurity ? name : type === 'security' ? 'ciscoasa' : name,
       banner: 'Unauthorized access is prohibited!',
       vlans: type === 'security'
@@ -856,13 +1231,51 @@ export const MODULE_CATALOG: Record<string, ModuleDefinition> = {
   'PT-SWITCH-NM-1CGE': {id:'PT-SWITCH-NM-1CGE',name:'Switch Gigabit Copper Adapter',description:'Adds one copper Gigabit Ethernet connector.',applicableTypes:['switch'],portType:'gigabitethernet',portName:'GigabitEthernet0',shortName:'Gi0'},
   'PT-SWITCH-NM-1FFE': {id:'PT-SWITCH-NM-1FFE',name:'Switch FastEthernet Fiber Adapter',description:'Adds one optical FastEthernet connector.',applicableTypes:['switch'],portType:'fastethernet',portName:'FastEthernet0',shortName:'Fa0'},
   'PT-SWITCH-NM-1FGE': {id:'PT-SWITCH-NM-1FGE',name:'Switch Gigabit Fiber Adapter',description:'Adds one optical Gigabit Ethernet connector.',applicableTypes:['switch'],portType:'gigabitethernet',portName:'GigabitEthernet0',shortName:'Gi0'},
+  'PT-IOT-NM-1CFE': {
+    id: 'PT-IOT-NM-1CFE',
+    name: '1-Port 100BASE-TX FastEthernet Network Adapter',
+    description: 'Adds one copper FastEthernet interface to an MCU, SBC, or Thing.',
+    applicableTypes: ['iot'],
+    portType: 'fastethernet',
+    media: 'copper',
+    portName: 'FastEthernet0',
+    shortName: 'Fa0',
+  },
+  'PT-IOT-NM-1W': {
+    id: 'PT-IOT-NM-1W',
+    name: '1-Port 802.11b/g/n Wireless Adapter',
+    description: 'Adds an 802.11b/g/n wireless network interface to an MCU, SBC, or Thing.',
+    applicableTypes: ['iot'],
+    portType: 'wireless',
+    portName: 'Wireless0',
+    shortName: 'Wlan0',
+  },
+  'PT-IOT-NM-1CG': {
+    id: 'PT-IOT-NM-1CG',
+    name: '1-Port 3G/4G Cellular Adapter',
+    description: 'Adds a 3G/4G cellular network interface to an MCU, SBC, or Thing.',
+    applicableTypes: ['iot'],
+    portType: 'wireless',
+    portName: 'Cellular0',
+    shortName: 'Cell0',
+  },
+  'PT-IOT-NM-1CGE': {
+    id: 'PT-IOT-NM-1CGE',
+    name: '1-Port 1000BASE-T Gigabit Ethernet Network Adapter',
+    description: 'Adds one copper Gigabit Ethernet interface.',
+    applicableTypes: ['iot'],
+    portType: 'gigabitethernet',
+    media: 'copper',
+    portName: 'GigabitEthernet0',
+    shortName: 'Gi0',
+  },
 }
 
 
 export function createPort(
   id: string,
   shortName: string,
-  type: 'fastethernet' | 'gigabitethernet' | 'serial' | 'wireless' | 'coaxial' | 'phone',
+  type: PortType,
   adminStatus: 'up' | 'down'
 ): NetworkPort {
   return {

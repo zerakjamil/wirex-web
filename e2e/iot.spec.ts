@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { startNewWorkspace } from './start'
+import { createDevice } from '../src/simulator/deviceFactory'
 
 interface BrowserIotThingState { power?: boolean; open?: boolean; level?: number; temperature?: number; smoke?: boolean; pressedAtTick?: number }
 interface BrowserIotDevice {
@@ -76,7 +77,7 @@ const lab = Buffer.from(JSON.stringify({
   annotations: [],
 }), 'utf8').toString('base64')
 
-test('the smart-home lab registers every IoT device and forwards server commands', async ({ page, baseURL }) => {
+test('the smart-home lab registers every IoT device and forwards server commands', async ({ page }) => {
   await startNewWorkspace(page)
   await page.locator('button[aria-haspopup="menu"]', { hasText: 'Help' }).click()
   await page.getByRole('menuitem', { name: 'Practice Labs' }).click()
@@ -162,4 +163,31 @@ test('an IoT device restored from a shared lab registers and edits its local sta
     const tick = state?.simulationTick ?? 0
     return !!client && tick - client.lastSeenTick <= 150 && client.address === '192.168.10.21'
   }, undefined, { timeout: 30_000 })
+})
+
+test('a board rejects imported host code in the Programming tab without executing it', async ({ page, baseURL }) => {
+  const board = createDevice('iot', 320, 220, 'MCU-PT')
+  board.id = 'security-board'
+  board.name = 'Security Board'
+  board.config.programRunning = true
+  const lab = Buffer.from(JSON.stringify({
+    version: 1,
+    fileName: 'Board program security acceptance',
+    devices: [board],
+    links: [],
+    annotations: [],
+  }), 'utf8').toString('base64')
+  const escapeKey = '__wirex_browser_program_escape__'
+
+  await page.goto(`${baseURL}/#lab=${lab}`)
+  await expect(page.getByRole('heading', { name: /Devices 1/i })).toBeVisible()
+  const navigator = page.locator('.pt-device-navigator')
+  await navigator.getByRole('button', { name: /Security Board/ }).click()
+  const deviceWindow = page.locator('.pt-device-window[aria-label="Security Board window"]')
+  await expect(deviceWindow).toBeVisible()
+  await deviceWindow.getByRole('tab', { name: 'Programming', exact: true }).click()
+  await deviceWindow.locator('textarea').fill(`globalThis.${escapeKey} = 'executed'`)
+
+  await expect(deviceWindow.getByRole('alert')).toContainText('Program rejected')
+  await expect.poll(() => page.evaluate(key => (window as unknown as Record<string, unknown>)[key], escapeKey)).toBeUndefined()
 })

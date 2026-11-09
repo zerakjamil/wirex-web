@@ -55,3 +55,44 @@ test('PKT export generates HSRP interface configuration for a new workspace',()=
   const imported=parsePktXml(decodePkt(exportLabToPkt([router],[]))).devices[0]
   assert.deepEqual(imported.ports[0].hsrpGroups,[{group:5,virtualIp:'198.51.100.1',priority:105,preempt:true}])
 })
+test('PKT export preserves unsupported OSPF and RIP directives while regenerating modeled settings',()=>{
+  const router=createDevice('router',0,0,'2811')
+  router.importedRunningConfig=[
+    'hostname R1',
+    'router ospf 1',
+    ' router-id 1.1.1.1',
+    ' network 10.0.0.0 0.0.0.255 area 0',
+    ' area 0 authentication message-digest',
+    '!',
+    'router rip',
+    ' version 2',
+    ' network 10.0.0.0',
+    ' maximum-paths 4',
+    '!',
+    'interface FastEthernet0/0',
+    ' ip ospf cost 10',
+    ' ip ospf authentication message-digest',
+    '!',
+    'end',
+  ]
+  router.config.ospfProcessId=1
+  router.config.ospfRouterId='2.2.2.2'
+  router.config.ospfNetworks=[{network:'192.0.2.0',wildcard:'0.0.0.255',area:1}]
+  router.config.ripVersion=2
+  router.config.ripNetworks=['192.0.2.0']
+  router.ports[0].ospfCost=20
+
+  const imported=parsePktXml(decodePkt(exportLabToPkt([router],[]))).devices[0]
+  const lines=imported.importedRunningConfig??[]
+  assert.ok(lines.includes(' area 0 authentication message-digest'))
+  assert.ok(lines.includes(' maximum-paths 4'))
+  assert.ok(lines.includes(' ip ospf authentication message-digest'))
+  assert.ok(lines.includes(' router-id 2.2.2.2'))
+  assert.ok(lines.includes(' network 192.0.2.0 0.0.0.255 area 1'))
+  assert.ok(lines.includes(' ip ospf cost 20'))
+  assert.ok(lines.includes(' network 192.0.2.0'))
+  assert.ok(!lines.includes(' router-id 1.1.1.1'))
+  assert.ok(!lines.includes(' network 10.0.0.0 0.0.0.255 area 0'))
+  assert.ok(!lines.includes(' network 10.0.0.0'))
+  assert.ok(!lines.includes(' ip ospf cost 10'))
+})

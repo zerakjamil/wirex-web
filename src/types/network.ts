@@ -17,7 +17,15 @@ export type DeviceType =
   | 'cloud'
   | 'modem'
 
-export type PortType = 'fastethernet' | 'gigabitethernet' | 'serial' | 'wireless' | 'coaxial' | 'phone'
+export type PortType =
+  | 'fastethernet'
+  | 'gigabitethernet'
+  | 'serial'
+  | 'wireless'
+  | 'coaxial'
+  | 'phone'
+  | 'digital'
+  | 'analog'
 
 export type LinkStatus = 'up' | 'down' | 'learning'
 
@@ -330,6 +338,7 @@ export interface DeviceConfig {
     leaseDurationSeconds?: number
     state?: 'bound' | 'renewing' | 'rebinding'
     lastRequestAtMs?: number
+    option43WlcIp?: string
   }
   dhcpBindings?: Array<{
     ipAddress: string
@@ -344,6 +353,7 @@ export interface DeviceConfig {
   ipv6DefaultGateway?: string
   dnsServer?: string
   dnsServiceEnabled?: boolean
+  dnsMxRecords?: Array<{ domain: string; exchange: string; preference: number }>
   httpServiceEnabled?: boolean
   emailService?: EmailServiceConfig
   emailAccount?: EmailAccountConfig
@@ -393,6 +403,13 @@ export interface DeviceConfig {
   iotServerAddress?: string
   iotServiceEnabled?: boolean
   iotCredentials?: { username: string; password: string }
+  pinStates?: Record<string, { mode: 'INPUT' | 'OUTPUT'; value: number }>
+  cardId?: number
+  wlcIp?: string
+  programCode?: string
+  programLanguage?: 'javascript' | 'python'
+  programRunning?: boolean
+  programError?: 'unsupported-syntax'
   ripNetworks?: string[]
   ripVersion?: 1 | 2
   ripAutoSummary?: boolean
@@ -427,7 +444,7 @@ export interface DeviceConfig {
   ipv6EigrpPassiveDefault?: boolean
   ipv6EigrpPassiveInterfaces?: string[]
   ipv6EigrpActiveInterfaces?: string[]
-  dhcpPools?: Array<{ name: string; network: string; mask: string; startIp?: string; defaultRouter?: string; dnsServer?: string; tftpServer?: string; leaseDurationSeconds?: number; hostIp?: string; hostMask?: string; hardwareAddress?: string; clientIdentifier?: string }>
+  dhcpPools?: Array<{ name: string; network: string; mask: string; startIp?: string; defaultRouter?: string; dnsServer?: string; tftpServer?: string; option43?: string; leaseDurationSeconds?: number; hostIp?: string; hostMask?: string; hardwareAddress?: string; clientIdentifier?: string }>
   dhcpv6Pools?: Array<{ name: string; prefix: string; prefixLength: number; startAddress?: string }>
   dhcpv6Bindings?: Array<{ address: string; clientDeviceId: string; clientMac: string; acquiredAtMs?: number }>
   dhcpv6Lease?: { serverId: string; address: string; prefixLength: number }
@@ -599,6 +616,8 @@ export type IotThingKind =
   | 'battery'
   | 'valve'
   | 'fire-detector'
+  | 'board'
+  | 'actuator'
 
 export interface IotThingState {
   power?: boolean
@@ -729,6 +748,7 @@ export type CableType =
   | 'octal'
   | 'usb'
   | 'wireless'
+  | 'iot'
 
 export interface NetworkLink {
   id: string
@@ -1086,7 +1106,9 @@ export interface PacketPdu {
     dhcpProbeIp?: string
     dhcpErrorReason?: string
     dnsQuery?: string
+    dnsQueryType?: 'A' | 'MX'
     dnsResolvedIp?: string
+    dnsResolvedMxRecords?: Array<{ exchange: string; preference: number }>
     dnsMessageType?: 'query' | 'response'
     dnsRequestId?: string
     dnsSourceDeviceId?: string
@@ -1200,8 +1222,10 @@ export interface DnsTransactionResult {
   requestId: string
   sourceDeviceId: string
   domain: string
+  queryType?: 'A' | 'MX'
   status: 'successful' | 'failed'
   resolvedIp?: string
+  resolvedMxRecords?: Array<{ exchange: string; preference: number }>
   reason?: string
 }
 
@@ -1296,3 +1320,63 @@ export interface SimulationEvent {
   pdu: PacketPdu
   status: 'pending' | 'in-flight' | 'received' | 'dropped'
 }
+
+export const DEVICE_MODELS = [
+  // Network Devices -> Routers (18)
+  '1841', '1941', '2620XM', '2621XM', '2901', '2911', '819HG-4G-IOX', '819HGW', '829',
+  'CGR1240', 'IR1101', 'IR8340', 'ISR4321', 'ISR4331', 'PT8200', 'Router-PT', 'Router-PT-Empty', '2811 IOS15',
+  // Network Devices -> Switches (11)
+  '2960 IOS15', '2950-24', '2950T-24', 'Switch-PT', 'Switch-PT-Empty', '3560-24PS', '3650-24PS',
+  'IE-2000', 'IE-3400', 'IE-9320', 'Bridge-PT',
+  // Network Devices -> Hubs (3)
+  'Hub-PT', 'Repeater-PT', 'CoAxialSplitter-PT',
+  // Network Devices -> Wireless Devices (15)
+  'AccessPoint-PT', 'AccessPoint-PT-A', 'AccessPoint-PT-AC', 'AccessPoint-PT-N', 'Linksys-WRT300N',
+  'HomeRouter-PT-AC', 'DLC100', 'Cell-Tower', 'Central-Office-Server', 'WLC-2504', 'WLC-3504',
+  'WLC-PT', '3702i', 'LAP-PT', 'Meraki-MX65W',
+  // Network Devices -> Security (4)
+  '5505', '5506-X', 'ISA-3000', 'CyberObserver',
+  // Network Devices -> WAN Emulation (4)
+  'Cloud-PT', 'Cloud-PT-Empty', 'DSL-Modem-PT', 'Cable-Modem-PT',
+  // End Devices -> End Devices (15)
+  'PC-PT', 'Laptop-PT', 'Server-PT', 'Meraki-Server', 'NetworkController', 'Printer-PT', '7960',
+  'Home-VoIP-PT', 'Analog-Phone-PT', 'TV-PT', 'TabletPC-PT', 'SMARTPHONE-PT', 'WirelessEndDevice-PT',
+  'WiredEndDevice-PT', 'Sniffer',
+  // End Devices -> Smart Home (21)
+  'AC', 'Appliance', 'Bluetooth Speaker', 'Ceiling Fan', 'Door', 'Furnace', 'Garage Door',
+  'Home Speaker', 'Humidifier', 'Humiture Monitor', 'Lawn Sprinkler', 'Light', 'Motion Detector',
+  'Portable Music Player', 'Siren', 'Smoke Detector', 'Sound Frequency Detector', 'Thermostat',
+  'Water Level Monitor', 'Webcam', 'Window',
+  // End Devices -> Smart City (16)
+  'Atm Pressure Monitor', 'Beacon', 'Carbon Dioxide Detector', 'Carbon Monoxide Detector',
+  'Fire Monitor', 'Fire Sprinkler', 'Humidity Monitor', 'Old Car', 'RFID Card', 'RFID Reader',
+  'Smart LED', 'Street Lamp', 'Temperature Monitor', 'Trip Sensor', 'Water Drain', 'Wind Detector',
+  // End Devices -> Industrial - OT (6)
+  'PLC-PT', 'DataHistorianServer', 'Blower', 'HMI', 'Signal Generator',
+  // End Devices -> Power Grid (4)
+  'Battery', 'Power Meter', 'Solar Panel', 'Wind Turbine',
+  // Components -> Boards (3)
+  'MCU-PT', 'SBC-PT', 'Thing',
+  // Components -> Actuators (14)
+  'Air Cooler', 'Alarm', 'Ceiling Sprinkler', 'Dimmable LED', 'Floor Sprinkler', 'Heating Element',
+  'LCD', 'LED', 'Motor', 'Piezo Speaker', 'RGB LED', 'Servo', 'Speaker',
+  // Components -> Sensors (21)
+  'Flex Sensor', 'Generic Environment Sensor', 'Generic Sensor', 'Humidity Sensor',
+  'Humiture Sensor', 'Membrane Potentiometer', 'Metal Sensor', 'Motion Sensor', 'Photo Sensor',
+  'Potentiometer', 'Push Button Toggle Switch', 'Push Button', 'Rocker Switch', 'Smoke Sensor',
+  'Sound Sensor', 'Temperature Sensor', 'Toggle Push Button', 'Trip Wire', 'Water Detector',
+  'Water Sensor', 'Wind Sensor',
+  // Connections -> Connections (13)
+  'Automatically Choose Connection Type', 'Console', 'Copper Straight-Through', 'Copper Cross-Over',
+  'Single Mode Fiber', 'Multi Mode Fiber', 'Phone', 'Coaxial', 'Serial DCE', 'Serial DTE',
+  'Octal', 'IoT Custom Cable', 'USB',
+  // Connections -> Structured Cabling (4)
+  'Copper Patch Panel', 'Fiber Patch Panel', 'Copper Wall Mount', 'Fiber Wall Mount',
+  // Miscellaneous (8)
+  '1841 WIC-2T', '2621XM NM-2FE2W (2) WIC-2T', '2811 with IOS 12', '2811 NM-ESW-161 (2) WIC-2T',
+  '2960 with IOS 12', 'PT8000 Activated', 'Wireless Laptop', 'Wireless PC',
+  // Multiuser Connection (1)
+  'Multiuser Connection',
+] as const
+
+export type DeviceModelId = (typeof DEVICE_MODELS)[number]

@@ -30,17 +30,40 @@ export function Cisco3DIcon({
     >
       {type === 'router' && <Router3DIcon size={size} model={model} />}
       {type === 'switch' && <Switch3DIcon size={size} model={model} />}
-      {type === 'pc' && (model === 'NetworkController' ? <NetworkController3DIcon /> : <Pc3DIcon size={size} />)}
+      {type === 'pc' && (
+        model === 'NetworkController' ? <NetworkController3DIcon /> :
+        model === 'PLC-PT' ? <Plc3DIcon /> :
+        model === 'HMI' ? <Hmi3DIcon /> :
+        <Pc3DIcon size={size} />
+      )}
       {type === 'laptop' && <Laptop3DIcon size={size} />}
-      {type === 'wireless' && <AccessPoint3DIcon size={size} model={model} />}
+      {type === 'wireless' && (
+        model === 'DLC100' ? <Dlc1003DIcon /> :
+        model === 'Meraki-MX65W' ? <MerakiMx65w3DIcon /> :
+        model === 'Cell-Tower' ? <CellTower3DIcon /> :
+        model === 'Central-Office-Server' ? <CentralOfficeServer3DIcon /> :
+        <AccessPoint3DIcon size={size} model={model} />
+      )}
       {type === 'smartphone' && <Smartphone3DIcon size={size} />}
       {type === 'tablet' && <Tablet3DIcon size={size} />}
-      {type === 'server' && <Server3DIcon size={size} />}
-      {type === 'cloud' && <Cloud3DIcon size={size} />}
-      {type === 'hub' && (model === 'Sniffer' ? <Sniffer3DIcon /> : <Hub3DIcon size={size} />)}
+      {type === 'server' && (
+        model === 'Meraki-Server' ? <MerakiServer3DIcon /> :
+        model === 'DataHistorianServer' ? <DataHistorian3DIcon /> :
+        <Server3DIcon size={size} />
+      )}
+      {type === 'cloud' && (
+        model === 'Multiuser Connection' ? <Multiuser3DIcon /> :
+        <Cloud3DIcon size={size} />
+      )}
+      {type === 'hub' && (
+        model === 'Sniffer' ? <Sniffer3DIcon /> :
+        model === 'Copper Patch Panel' || model === 'Fiber Patch Panel' ? <PatchPanel3DIcon fiber={model.includes('Fiber')} /> :
+        model === 'Copper Wall Mount' || model === 'Fiber Wall Mount' ? <WallMount3DIcon fiber={model.includes('Fiber')} /> :
+        <Hub3DIcon size={size} />
+      )}
       {type === 'security' && (model === 'ISA-3000' ? <Isa3DIcon size={size} /> : model === 'CyberObserver' ? <CyberObserver3DIcon /> : <Security3DIcon size={size} />)}
       {type === 'printer' && <Printer3DIcon size={size} />}
-      {type === 'phone' && <Phone3DIcon size={size} />}
+      {type === 'phone' && (model === 'Analog-Phone-PT' ? <AnalogPhone3DIcon /> : <Phone3DIcon size={size} />)}
       {type === 'tv' && <Tv3DIcon size={size} />}
       {type === 'modem' && <Modem3DIcon size={size} />}
       {type === 'wlc' && <Wlc3DIcon />}
@@ -1040,6 +1063,393 @@ function Modem3DIcon({ size }: { size: number }) {
       {[24, 34, 44, 54].map((x) => (
         <circle key={x} cx={x} cy={45} r="2" fill="#22c55e" />
       ))}
+    </svg>
+  )
+}
+
+function Plc3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="plc-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="plc-chassis" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#475569" />
+          <stop offset="100%" stopColor="#1e293b" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="70" rx="38" ry="8" fill="url(#plc-shadow)" />
+      <rect x="22" y="10" width="56" height="58" rx="3" fill="#0f172a" />
+      <rect x="24" y="12" width="52" height="54" rx="2" fill="url(#plc-chassis)" stroke="#334155" strokeWidth="1" />
+      <rect x="26" y="14" width="48" height="10" rx="1" fill="#0f172a" stroke="#475569" strokeWidth="0.8" />
+      {[30, 38, 46, 54, 62, 70].map(x => (
+        <circle key={x} cx={x} cy={19} r="2" fill="#94a3b8" stroke="#0f172a" strokeWidth="0.6" />
+      ))}
+      <rect x="26" y="54" width="48" height="10" rx="1" fill="#0f172a" stroke="#475569" strokeWidth="0.8" />
+      {[30, 38, 46, 54, 62, 70].map(x => (
+        <circle key={x} cx={x} cy={59} r="2" fill="#94a3b8" stroke="#0f172a" strokeWidth="0.6" />
+      ))}
+      <rect x="28" y="27" width="44" height="24" rx="2" fill="#020617" stroke="#334155" strokeWidth="0.8" />
+      <text x="32" y="36" fontSize="6" fontWeight="bold" fill="#38bdf8" fontFamily="monospace">PLC-PT</text>
+      <circle cx="34" cy="44" r="1.6" fill="#22c55e" />
+      <circle cx="41" cy="44" r="1.6" fill="#22c55e" />
+      <circle cx="48" cy="44" r="1.6" fill="#eab308" />
+      <circle cx="55" cy="44" r="1.6" fill="#ef4444" opacity="0.3" />
+      <text x="64" y="46" fontSize="5" fill="#64748b" fontFamily="monospace">RUN</text>
+    </svg>
+  )
+}
+
+function Hmi3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="hmi-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="hmi-bezel" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#64748b" />
+          <stop offset="50%" stopColor="#475569" />
+          <stop offset="100%" stopColor="#334155" />
+        </linearGradient>
+        <linearGradient id="hmi-screen" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#0c4a6e" />
+          <stop offset="100%" stopColor="#082f49" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="72" rx="40" ry="7" fill="url(#hmi-shadow)" />
+      <rect x="12" y="14" width="76" height="54" rx="4" fill="url(#hmi-bezel)" stroke="#1e293b" strokeWidth="1.5" />
+      <circle cx="16" cy="18" r="1.2" fill="#cbd5e1" />
+      <circle cx="84" cy="18" r="1.2" fill="#cbd5e1" />
+      <circle cx="16" cy="64" r="1.2" fill="#cbd5e1" />
+      <circle cx="84" cy="64" r="1.2" fill="#cbd5e1" />
+      <rect x="18" y="20" width="64" height="38" rx="2" fill="url(#hmi-screen)" stroke="#0284c7" strokeWidth="0.8" />
+      <rect x="22" y="24" width="22" height="4" rx="1" fill="#0284c7" />
+      <rect x="22" y="30" width="16" height="4" rx="1" fill="#22c55e" />
+      <rect x="22" y="36" width="20" height="4" rx="1" fill="#f59e0b" />
+      <circle cx="64" cy="33" r="10" fill="#0f172a" stroke="#38bdf8" strokeWidth="1" />
+      <path d="M 58 37 A 7 7 0 1 1 70 37" fill="none" stroke="#22c55e" strokeWidth="1.5" />
+      <line x1="64" y1="33" x2="68" y2="28" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="64" cy="33" r="1.5" fill="#f8fafc" />
+      {[22, 34, 46, 58, 70].map(x => (
+        <rect key={x} x={x} y="60" width="8" height="4" rx="1" fill="#1e293b" stroke="#334155" strokeWidth="0.6" />
+      ))}
+      <circle cx="82" cy="62" r="1.2" fill="#22c55e" />
+    </svg>
+  )
+}
+
+function AnalogPhone3DIcon() {
+  return (
+    <svg viewBox="0 0 85 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="ap3d-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.38" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="ap3d-body" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#e2e8f0" />
+          <stop offset="100%" stopColor="#94a3b8" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="44" cy="68" rx="34" ry="8" fill="url(#ap3d-shadow)" />
+      <polygon points="16,32 68,32 74,64 12,64" fill="url(#ap3d-body)" stroke="#64748b" strokeWidth="1.2" />
+      <rect x="36" y="38" width="28" height="22" rx="2" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="0.8" />
+      {[42, 48, 54].map(x => (
+        <g key={x}>
+          {[42, 47, 52, 57].map(y => (
+            <circle key={y} cx={x} cy={y} r="1.3" fill="#334155" />
+          ))}
+        </g>
+      ))}
+      <g transform="rotate(-15 22 45)">
+        <ellipse cx="22" cy="24" rx="7" ry="5" fill="#475569" stroke="#334155" strokeWidth="1" />
+        <rect x="18" y="24" width="8" height="38" rx="3" fill="#64748b" stroke="#334155" strokeWidth="1" />
+        <ellipse cx="22" cy="62" rx="7" ry="5" fill="#475569" stroke="#334155" strokeWidth="1" />
+      </g>
+      <path d="M 12 56 Q 8 60 10 66 Q 14 70 12 74" fill="none" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function Dlc1003DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="dlc-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="dlc-metal" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#334155" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="68" rx="38" ry="9" fill="url(#dlc-shadow)" />
+      <line x1="76" y1="36" x2="82" y2="8" stroke="#1e293b" strokeWidth="3.2" strokeLinecap="round" />
+      <circle cx="82" cy="8" r="2.2" fill="#0284c7" />
+      <polygon points="18,36 74,36 74,60 18,60" fill="url(#dlc-metal)" stroke="#1e293b" strokeWidth="1.2" />
+      <polygon points="74,36 88,24 88,48 74,60" fill="#0f172a" stroke="#1e293b" strokeWidth="1.2" />
+      <polygon points="18,36 32,24 88,24 74,36" fill="#475569" stroke="#64748b" strokeWidth="0.8" />
+      <rect x="24" y="50" width="2" height="4" fill="#22c55e" />
+      <rect x="28" y="48" width="2" height="6" fill="#22c55e" />
+      <rect x="32" y="46" width="2" height="8" fill="#22c55e" />
+      <rect x="36" y="44" width="2" height="10" fill="#22c55e" />
+      <rect x="44" y="44" width="9" height="9" rx="1" fill="#020617" stroke="#475569" strokeWidth="0.6" />
+      <rect x="56" y="44" width="9" height="9" rx="1" fill="#020617" stroke="#475569" strokeWidth="0.6" />
+      <text x="36" y="32" fontSize="5" fontWeight="bold" fill="#94a3b8" fontFamily="sans-serif">DLC100</text>
+    </svg>
+  )
+}
+
+function MerakiMx65w3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="meraki-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.3" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="meraki-white" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e2e8f0" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="65" rx="38" ry="9" fill="url(#meraki-shadow)" />
+      <line x1="24" y1="34" x2="16" y2="10" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="16" cy="10" r="2.2" fill="#94a3b8" />
+      <line x1="76" y1="34" x2="84" y2="10" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="84" cy="10" r="2.2" fill="#94a3b8" />
+      <polygon points="16,40 76,40 76,56 16,56" fill="url(#meraki-white)" stroke="#cbd5e1" strokeWidth="1" />
+      <polygon points="76,40 90,28 90,44 76,56" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" />
+      <polygon points="16,40 30,28 90,28 76,40" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="0.8" />
+      <circle cx="26" cy="48" r="2.2" fill="#10b981" />
+      {[38, 46, 54, 62].map(x => (
+        <rect key={x} x={x} y="45" width="5" height="6" rx="0.8" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.5" />
+      ))}
+    </svg>
+  )
+}
+
+function PatchPanel3DIcon({ fiber }: { fiber?: boolean }) {
+  const portColor = fiber ? '#06b6d4' : '#1e293b'
+  const pinColor = fiber ? '#22d3ee' : '#eab308'
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="pp-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="pp-face" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#334155" />
+          <stop offset="100%" stopColor="#1e293b" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="62" rx="44" ry="8" fill="url(#pp-shadow)" />
+      <polygon points="10,34 82,34 82,50 10,50" fill="url(#pp-face)" stroke="#0f172a" strokeWidth="1.2" />
+      <polygon points="82,34 94,26 94,42 82,50" fill="#0f172a" stroke="#1e293b" strokeWidth="1" />
+      <polygon points="10,34 22,26 94,26 82,34" fill="#475569" stroke="#64748b" strokeWidth="0.8" />
+      <rect x="7" y="34" width="4" height="16" fill="#1e293b" stroke="#0f172a" strokeWidth="0.8" />
+      <circle cx="9" cy="38" r="1" fill="#94a3b8" />
+      <circle cx="9" cy="46" r="1" fill="#94a3b8" />
+      <rect x="81" y="34" width="4" height="16" fill="#1e293b" stroke="#0f172a" strokeWidth="0.8" />
+      <circle cx="83" cy="38" r="1" fill="#94a3b8" />
+      <circle cx="83" cy="46" r="1" fill="#94a3b8" />
+      {[16, 26, 36, 46, 56, 66].map(x => (
+        <g key={x}>
+          <rect x={x} y="37" width="7" height="4.5" rx="0.5" fill={portColor} stroke="#0f172a" strokeWidth="0.5" />
+          <rect x={x + 1} y="38" width="5" height="1.5" fill={pinColor} />
+          <rect x={x} y="43" width="7" height="4.5" rx="0.5" fill={portColor} stroke="#0f172a" strokeWidth="0.5" />
+          <rect x={x + 1} y="44" width="5" height="1.5" fill={pinColor} />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+function WallMount3DIcon({ fiber }: { fiber?: boolean }) {
+  const jackColor = fiber ? '#06b6d4' : '#0f172a'
+  const contactColor = fiber ? '#22d3ee' : '#eab308'
+  return (
+    <svg viewBox="0 0 80 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="wm-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.3" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="wm-plate" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="40" cy="70" rx="28" ry="6" fill="url(#wm-shadow)" />
+      <rect x="22" y="12" width="36" height="56" rx="4" fill="url(#wm-plate)" stroke="#94a3b8" strokeWidth="1.2" />
+      <circle cx="40" cy="18" r="1.6" fill="#94a3b8" stroke="#64748b" strokeWidth="0.6" />
+      <line x1="38.8" y1="18" x2="41.2" y2="18" stroke="#334155" strokeWidth="0.6" />
+      <circle cx="40" cy="62" r="1.6" fill="#94a3b8" stroke="#64748b" strokeWidth="0.6" />
+      <line x1="38.8" y1="62" x2="41.2" y2="62" stroke="#334155" strokeWidth="0.6" />
+      <rect x="31" y="32" width="18" height="18" rx="1.5" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.8" />
+      <rect x="34" y="35" width="12" height="12" rx="1" fill={jackColor} stroke="#475569" strokeWidth="0.8" />
+      <rect x="36" y="37" width="8" height="3" fill={contactColor} />
+    </svg>
+  )
+}
+
+function CellTower3DIcon() {
+  return (
+    <svg viewBox="0 0 100 80" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="ct-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.35" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="50" cy="70" rx="36" ry="7" fill="url(#ct-shadow)" />
+      <path d="M 40 18 A 14 14 0 0 1 60 18" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" opacity="0.8" />
+      <path d="M 33 13 A 22 22 0 0 1 67 13" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
+      <polygon points="46,14 54,14 62,66 38,66" fill="#e2e8f0" stroke="#475569" strokeWidth="1" opacity="0.3" />
+      <line x1="46" y1="14" x2="38" y2="66" stroke="#475569" strokeWidth="1.8" />
+      <line x1="54" y1="14" x2="62" y2="66" stroke="#475569" strokeWidth="1.8" />
+      <line x1="44" y1="26" x2="56" y2="26" stroke="#64748b" strokeWidth="1.2" />
+      <line x1="44" y1="26" x2="58" y2="40" stroke="#64748b" strokeWidth="1" />
+      <line x1="56" y1="26" x2="42" y2="40" stroke="#64748b" strokeWidth="1" />
+      <line x1="42" y1="40" x2="58" y2="40" stroke="#64748b" strokeWidth="1.2" />
+      <line x1="42" y1="40" x2="60" y2="54" stroke="#64748b" strokeWidth="1" />
+      <line x1="58" y1="40" x2="40" y2="54" stroke="#64748b" strokeWidth="1" />
+      <line x1="40" y1="54" x2="60" y2="54" stroke="#64748b" strokeWidth="1.2" />
+      <line x1="42" y1="14" x2="58" y2="14" stroke="#334155" strokeWidth="2.5" />
+      <rect x="40" y="8" width="4" height="10" rx="1" fill="#0284c7" />
+      <rect x="56" y="8" width="4" height="10" rx="1" fill="#0284c7" />
+      <circle cx="50" cy="14" r="2" fill="#ef4444" />
+    </svg>
+  )
+}
+
+function CentralOfficeServer3DIcon() {
+  return (
+    <svg viewBox="0 0 100 85" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="co-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="co-metal" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#1e3a8a" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="74" rx="40" ry="8" fill="url(#co-shadow)" />
+      <polygon points="20,18 70,18 70,70 20,70" fill="url(#co-metal)" stroke="#0f172a" strokeWidth="1.5" />
+      <polygon points="70,18 84,10 84,60 70,70" fill="#0f172a" />
+      <polygon points="20,18 34,10 84,10 70,18" fill="#3b82f6" stroke="#93c5fd" strokeWidth="0.8" />
+      {[24, 34, 44, 54].map(y => (
+        <g key={y}>
+          <rect x="25" y={y} width="40" height="7" rx="1" fill="#1e293b" stroke="#3b82f6" strokeWidth="0.6" />
+          <circle cx="30" cy={y + 3.5} r="1.3" fill="#22c55e" />
+          <line x1="36" y1={y + 3.5} x2="60" y2={y + 3.5} stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="2 2" />
+        </g>
+      ))}
+      <circle cx="30" cy="65" r="1.8" fill="#38bdf8" />
+    </svg>
+  )
+}
+
+function MerakiServer3DIcon() {
+  return (
+    <svg viewBox="0 0 100 85" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="ms-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.35" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="ms-front" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="74" rx="40" ry="8" fill="url(#ms-shadow)" />
+      <polygon points="20,24 68,24 68,70 20,70" fill="url(#ms-front)" stroke="#94a3b8" strokeWidth="1.2" />
+      <polygon points="68,24 84,12 84,58 68,70" fill="#cbd5e1" />
+      <polygon points="20,24 36,12 84,12 68,24" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.8" />
+      {[30, 42, 54].map((y) => (
+        <g key={y}>
+          <rect x="25" y={y} width="38" height="8" rx="1" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.8" />
+          <circle cx="29" cy={y + 4} r="1.3" fill="#10b981" />
+          <line x1="34" y1={y + 4} x2="58" y2={y + 4} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
+        </g>
+      ))}
+      <circle cx="28" cy="65" r="1.8" fill="#10b981" />
+    </svg>
+  )
+}
+
+function DataHistorian3DIcon() {
+  return (
+    <svg viewBox="0 0 100 85" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="dh-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.4" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="dh-front" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#1e293b" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="74" rx="40" ry="8" fill="url(#dh-shadow)" />
+      <polygon points="20,24 68,24 68,70 20,70" fill="url(#dh-front)" stroke="#0f172a" strokeWidth="1.5" />
+      <polygon points="68,24 84,12 84,58 68,70" fill="#0f172a" />
+      <polygon points="20,24 36,12 84,12 68,24" fill="#334155" stroke="#475569" strokeWidth="0.8" />
+      <g transform="translate(36, 30)">
+        <ellipse cx="14" cy="6" rx="10" ry="3.5" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+        <path d="M 4 6 L 4 14 C 4 16 24 16 24 14 L 24 6" fill="#d97706" stroke="#b45309" strokeWidth="0.8" />
+        <ellipse cx="14" cy="14" rx="10" ry="3.5" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+        <path d="M 4 14 L 4 22 C 4 24 24 24 24 22 L 24 14" fill="#d97706" stroke="#b45309" strokeWidth="0.8" />
+        <ellipse cx="14" cy="22" rx="10" ry="3.5" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+      </g>
+      <circle cx="28" cy="65" r="1.5" fill="#22c55e" />
+    </svg>
+  )
+}
+
+function Multiuser3DIcon() {
+  return (
+    <svg viewBox="0 0 100 75" className="w-full h-full drop-shadow-md overflow-visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="mu-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.35" />
+          <stop offset="80%" stopColor="#0f172a" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="mu-grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#7dd3fc" />
+          <stop offset="100%" stopColor="#0284c7" />
+        </linearGradient>
+        <linearGradient id="mu-grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#a7f3d0" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="50" cy="62" rx="42" ry="10" fill="url(#mu-shadow)" />
+      <path
+        d="M 22 46 C 14 46 8 40 8 32 C 8 26 12 20 18 19 C 21 12 30 8 38 8 C 48 8 55 14 58 22 C 64 22 70 26 70 32 C 70 40 64 46 56 46 Z"
+        fill="url(#mu-grad1)"
+        stroke="#0369a1"
+        strokeWidth="1.2"
+        opacity="0.85"
+      />
+      <path
+        d="M 44 54 C 36 54 30 48 30 40 C 30 34 34 28 40 27 C 43 20 52 16 60 16 C 70 16 77 22 80 30 C 86 30 92 34 92 40 C 92 48 86 54 78 54 Z"
+        fill="url(#mu-grad2)"
+        stroke="#047857"
+        strokeWidth="1.2"
+        opacity="0.85"
+      />
+      <path d="M 36 34 L 64 34 M 58 30 L 64 34 L 58 38" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M 64 42 L 36 42 M 42 38 L 36 42 L 42 46" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

@@ -4,6 +4,7 @@ import { allowedChildKinds, canHoldDevices } from './physical'
 import { ipToNumber, isInSameSubnet, isValidIpv4 } from './protocols/ip'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from './tftp'
 import { isValidSnmpCommunity } from './snmp'
+import { isValidDnsName } from './dnsRecords'
 import { TRAFFIC_GENERATOR_MAX_INTERVAL_SECONDS, TRAFFIC_GENERATOR_MIN_INTERVAL_SECONDS, validateTrafficGeneratorSettings, type TrafficGeneratorApplication, type TrafficGeneratorSettings } from './trafficGenerator'
 
 type RecordValue = Record<string, unknown>
@@ -246,12 +247,35 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
         if (entry.wepKey !== undefined) string(entry.wepKey)
       }
     }
-    if (config.iotKind !== undefined) oneOf(config.iotKind, ['lamp', 'fan', 'door', 'window', 'blinds', 'sprinkler', 'siren', 'thermostat', 'smoke-detector', 'water-detector', 'light-sensor', 'push-button'])
+    if (config.iotKind !== undefined) oneOf(config.iotKind, [
+      'lamp', 'fan', 'door', 'window', 'blinds', 'sprinkler', 'siren', 'thermostat',
+      'smoke-detector', 'water-detector', 'light-sensor', 'push-button', 'appliance',
+      'speaker', 'humidifier', 'humiture', 'motion-sensor', 'sound-sensor', 'camera',
+      'sensor', 'generator', 'battery', 'valve', 'fire-detector', 'board', 'actuator',
+    ])
     if (config.iotState !== undefined) {
       const state = object(config.iotState)
-      for (const field of ['power', 'open', 'smoke']) if (state[field] !== undefined && typeof state[field] !== 'boolean') throw new Error('Invalid IoT state flag.')
-      for (const field of ['level', 'temperature', 'pressedAtTick']) if (state[field] !== undefined && !Number.isFinite(Number(state[field]))) throw new Error('Invalid IoT state value.')
+      for (const field of ['power', 'open', 'smoke', 'motion', 'fire']) if (state[field] !== undefined && typeof state[field] !== 'boolean') throw new Error('Invalid IoT state flag.')
+      for (const field of ['level', 'temperature', 'pressedAtTick', 'sound', 'reading', 'output', 'humidity']) if (state[field] !== undefined && !Number.isFinite(Number(state[field]))) throw new Error('Invalid IoT state value.')
+      if (state.unit !== undefined) string(state.unit)
     }
+    if (config.pinStates !== undefined) {
+      const pins = object(config.pinStates)
+      for (const val of Object.values(pins)) {
+        if (typeof val === 'object' && val !== null) {
+          const pinObj = val as { mode?: string; value?: number }
+          if (pinObj.mode !== undefined) oneOf(pinObj.mode, ['INPUT', 'OUTPUT'])
+          if (pinObj.value !== undefined && !Number.isFinite(Number(pinObj.value))) throw new Error('Invalid pin state value.')
+        } else if (!Number.isFinite(Number(val))) {
+          throw new Error('Invalid pin state value.')
+        }
+      }
+    }
+    if (config.programCode !== undefined) string(config.programCode)
+    if (config.programLanguage !== undefined) oneOf(config.programLanguage, ['javascript', 'python'])
+    if (config.programRunning !== undefined && typeof config.programRunning !== 'boolean') throw new Error('Invalid programRunning flag.')
+    if (config.programError !== undefined) oneOf(config.programError, ['unsupported-syntax'])
+    if (config.cardId !== undefined && (!Number.isInteger(config.cardId) || Number(config.cardId) < 0)) throw new Error('Invalid card ID.')
     if (config.iotServerAddress !== undefined) string(config.iotServerAddress)
     if (config.iotServiceEnabled !== undefined && typeof config.iotServiceEnabled !== 'boolean') throw new Error('Invalid IoT service flag.')
     if (config.iotCredentials !== undefined) {
@@ -298,7 +322,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     }
     for (const port of ports) {
       for (const key of ['name', 'shortName', 'macAddress']) string(port[key])
-      oneOf(port.type, ['fastethernet', 'gigabitethernet', 'serial', 'wireless', 'coaxial', 'phone'])
+      oneOf(port.type, ['fastethernet', 'gigabitethernet', 'serial', 'wireless', 'coaxial', 'phone', 'digital', 'analog'])
       oneOf(port.status, ['up', 'down', 'learning']); oneOf(port.adminStatus, ['up', 'down'])
       textFields(port, [], ['greSourceInterface', 'greDestinationIp'])
       if (port.isGreTunnel !== undefined && typeof port.isGreTunnel !== 'boolean') throw new Error('Invalid GRE tunnel interface flag.')
@@ -355,10 +379,10 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
     oneOf(device.currentCliMode, ['user', 'priv', 'config', 'config-if', 'config-subif', 'config-vlan', 'config-line', 'config-router', 'config-dhcp', 'config-telephony', 'config-ephone', 'config-ephone-dn'])
     for (const key of ['modules', 'importedRunningConfig', 'importedStartupConfig']) if (device[key] !== undefined) array(device[key], 10000).forEach(string)
     for (const key of ['bpduGuardDefault', 'bpduFilterDefault']) if (config[key] !== undefined && typeof config[key] !== 'boolean') throw new Error('Invalid spanning-tree guard default.')
-    for (const key of ['vlans', 'ospfNetworks', 'dhcpPools', 'dhcpBindings', 'dnsRecords', 'tftpFiles', 'tftpClientFiles', 'asaNatRules', 'accessLists']) if (config[key] !== undefined) array(config[key], 4096).forEach(object)
+    for (const key of ['vlans', 'ospfNetworks', 'dhcpPools', 'dhcpBindings', 'dnsRecords', 'dnsMxRecords', 'tftpFiles', 'tftpClientFiles', 'asaNatRules', 'accessLists']) if (config[key] !== undefined) array(config[key], 4096).forEach(object)
     for (const vlan of (config.vlans ?? []) as RecordValue[]) { finite(vlan.id); string(vlan.name) }
     for (const pool of (config.dhcpPools ?? []) as RecordValue[]) {
-      textFields(pool, ['name', 'network', 'mask'], ['defaultRouter', 'dnsServer', 'tftpServer', 'hostIp', 'hostMask', 'hardwareAddress', 'clientIdentifier'])
+      textFields(pool, ['name', 'network', 'mask'], ['defaultRouter', 'dnsServer', 'tftpServer', 'hostIp', 'hostMask', 'hardwareAddress', 'clientIdentifier', 'option43'])
       if (pool.hardwareAddress !== undefined && !/^(?:[0-9a-f]{12}|[0-9a-f]{4}(?:[.][0-9a-f]{4}){2}|[0-9a-f]{2}(?::[0-9a-f]{2}){5})$/i.test(String(pool.hardwareAddress))) throw new Error('Invalid DHCP hardware reservation.')
       if (pool.clientIdentifier !== undefined && !/^(?:[0-9a-f]{2}){2,32}$/i.test(String(pool.clientIdentifier).replace(/[.:-]/g, ''))) throw new Error('Invalid DHCP client identifier.')
       if (pool.hardwareAddress !== undefined && pool.clientIdentifier !== undefined) throw new Error('A DHCP manual binding can use only one client identifier method.')
@@ -371,6 +395,11 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
       oneOf(binding.type, ['automatic', 'manual'])
     }
     for (const record of (config.dnsRecords ?? []) as RecordValue[]) textFields(record, ['domain', 'ip'])
+    for (const record of (config.dnsMxRecords ?? []) as RecordValue[]) {
+      textFields(record, ['domain', 'exchange'])
+      if (!isValidDnsName(String(record.domain)) || !isValidDnsName(String(record.exchange))) throw new Error('Invalid DNS MX domain or exchange host.')
+      if (!Number.isInteger(record.preference) || Number(record.preference) < 0 || Number(record.preference) > 65_535) throw new Error('Invalid DNS MX preference.')
+    }
     const tftpNames = new Set<string>()
     for (const file of (config.tftpFiles ?? []) as RecordValue[]) {
       textFields(file, ['name', 'contents'])
@@ -397,6 +426,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
       if (lease.lastRequestAtMs !== undefined && (typeof lease.lastRequestAtMs !== 'number' || !Number.isFinite(lease.lastRequestAtMs) || lease.lastRequestAtMs < 0)) throw new Error('Invalid DHCP renewal time.')
       if (lease.leaseDurationSeconds !== undefined && (!Number.isInteger(lease.leaseDurationSeconds) || Number(lease.leaseDurationSeconds) < 60 || Number(lease.leaseDurationSeconds) > 1e7)) throw new Error('Invalid DHCP lease duration.')
       if (lease.state !== undefined) oneOf(lease.state, ['bound', 'renewing', 'rebinding'])
+      if (lease.option43WlcIp !== undefined) string(lease.option43WlcIp)
     }
     for (const key of ['ripNetworks', 'excludedDhcpIps']) if (config[key] !== undefined) array(config[key], 4096).forEach(string)
     if (config.accessLists) for (const acl of config.accessLists as RecordValue[]) array(acl.rules, 4096).forEach(object)
@@ -410,7 +440,7 @@ export function parseWorkspace(input: unknown): { version: 1; devices: NetworkDe
   const links = array(data.links, 4000).map(object); uniqueIds(links)
   const deviceMap = new Map(devices.map(device => [device.id, device]))
   for (const link of links) {
-    oneOf(link.type, ['auto', 'straight', 'crossover', 'fiber', 'serial', 'serial-dce', 'console', 'phone', 'coaxial', 'octal', 'usb', 'wireless'])
+    oneOf(link.type, ['auto', 'straight', 'crossover', 'fiber', 'serial', 'serial-dce', 'console', 'phone', 'coaxial', 'octal', 'usb', 'wireless', 'iot'])
     oneOf(link.status, ['up', 'down', 'learning'])
     for (const end of ['from', 'to']) {
       const device = deviceMap.get(link[`${end}DeviceId`])

@@ -50,6 +50,12 @@ interface WorkspaceStore {
   fileName: string
   showGrid: boolean
   showPduList: boolean
+  topCollapsed: boolean
+  bottomCollapsed: boolean
+  toggleTopCollapsed: () => void
+  toggleBottomCollapsed: () => void
+  setTopCollapsed: (collapsed: boolean) => void
+  setBottomCollapsed: (collapsed: boolean) => void
   pduView: 'pdus' | 'events'
   hiddenEventProtocols: string[]
   pduSource: string | null
@@ -113,7 +119,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   physicalPath: [], activeClusterId: null, canvasSelectionIds: [],
   setHoveredConnection: (info) => set({ hoveredConnection: info }),
   placement: null, canvasAction: null, past: [], future: [], clipboard: null, dialog: null,
-  status: '', fileName: '', showGrid: false, showPduList: true, pduView: 'pdus', hiddenEventProtocols: [], pduSource: null, pduDestination: null,
+  status: '', fileName: '', showGrid: false, showPduList: true, topCollapsed: false, bottomCollapsed: false,
+  toggleTopCollapsed: () => set(state => ({ topCollapsed: !state.topCollapsed })),
+  toggleBottomCollapsed: () => set(state => ({ bottomCollapsed: !state.bottomCollapsed })),
+  setTopCollapsed: (collapsed) => set({ topCollapsed: collapsed }),
+  setBottomCollapsed: (collapsed) => set({ bottomCollapsed: collapsed }),
+  pduView: 'pdus', hiddenEventProtocols: [], pduSource: null, pduDestination: null,
   pdus: [], scenario: 0, scenarios: [0],pduError:null,
   selectPduSource:(deviceId)=>{
     const device=useNetworkStore.getState().devices.find(d=>d.id===deviceId)

@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createPingPackets, stepSimulationTick } from './engine'
 import { createDevice } from './deviceFactory'
 import { deviceCatalog } from './deviceCatalog'
-import { apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isWifiRadioPort, wirelessKeyAccepted, wlcRegisteredAps, wlcWlans } from './capwap'
+import { apAdvertisedWlans, apRuntimeOf, apWirelessSettings, isWifiRadioPort, prepareCapwapTick, wirelessKeyAccepted, wlcRegisteredAps, wlcWlans } from './capwap'
 import { getWlcLab } from './starterLabs'
 import { synchronizeLinkState } from './linkState'
 import { useNetworkStore } from '../store/networkStore'
@@ -415,4 +415,53 @@ test('Wi-Fi association ignores the smartphone cellular modem', () => {
   const cellular = phone.ports.find(port => port.name === 'Cellular0')!
   assert.equal(isWifiRadioPort(wifi), true)
   assert.equal(isWifiRadioPort(cellular), false)
+})
+
+test('Lightweight AP discovers WLC via DHCP Option 43 and joins with VLAN mapping', () => {
+  const wlc = createDevice('wlc', 0, 0, 'WLC-PT')
+  addressPort(wlc, wlc.ports[0], '10.10.10.1')
+  wlc.config.wlans = [
+    { id: 1, name: 'CORP', ssid: 'CORP-NET', enabled: true, vlan: 20, security: 'none' },
+  ]
+
+  const lap = createDevice('wireless', 0, 0, 'LAP-PT')
+  // Simulated DHCP lease on a different subnet (192.168.20.0/24) with Option 43 pointing to WLC
+  lap.config.dhcpLease = {
+    serverId: 'router-dhcp',
+    ipAddress: '192.168.20.50',
+    option43WlcIp: '10.10.10.1',
+    leaseDurationSeconds: 86400,
+  }
+
+  const dummyLink: NetworkLink = {
+    id: 'link-lap-up',
+    type: 'straight',
+    fromDeviceId: lap.id,
+    fromPortId: lap.ports[0].id,
+    toDeviceId: 'sw-access',
+    toPortId: 'fa0/1',
+    status: 'up',
+  }
+  lap.ports[0].connectedLinkId = dummyLink.id
+  lap.ports[0].status = 'up'
+  lap.ports[0].adminStatus = 'up'
+
+  const dummySw: NetworkDevice = {
+    ...createDevice('switch', 0, 0, '2960-24TT'),
+    id: 'sw-access',
+  }
+  dummySw.ports[0].id = 'fa0/1'
+  dummySw.ports[0].connectedLinkId = dummyLink.id
+  dummySw.ports[0].status = 'up'
+  dummySw.ports[0].adminStatus = 'up'
+
+  // Run prepareCapwapTick
+  const result = prepareCapwapTick([wlc, lap, dummySw], [dummyLink], 1)
+  const updatedLap = result.devices.find((d: NetworkDevice) => d.id === lap.id)!
+  const updatedWlc = result.devices.find((d: NetworkDevice) => d.id === wlc.id)!
+
+  assert.equal(updatedLap.apRuntime?.state, 'run', 'LAP joined via Option 43')
+  assert.equal(updatedLap.apRuntime?.selectedWlcId, wlc.id)
+  assert.equal(apAdvertisedWlans(updatedLap)[0]?.vlan, 20, 'assigned VLAN 20 is advertised')
+  assert.ok(updatedWlc.wlcRuntime?.aps.some((a: { apId: string }) => a.apId === lap.id), 'WLC registered the AP')
 })

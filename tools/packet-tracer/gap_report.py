@@ -53,7 +53,7 @@ def wirex_model_keys() -> dict[str, str]:
     """Map every normalized wireX model key to its original spelling."""
     keys: dict[str, str] = {}
     text = CATALOG.read_text(encoding="utf-8")
-    for match in re.finditer(r"models:\[([^\]]*)\]", text):
+    for match in re.finditer(r"models:\s*\[([^\]]*)\]", text):
         for model in re.findall(r"'([^']+)'", match.group(1)):
             for key in keys_for(model):
                 keys.setdefault(key, model)

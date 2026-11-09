@@ -11,6 +11,8 @@ import { getNetworkAddress, isValidIpv4 } from '@/simulator/protocols/ip'
 import { parseIpv6WithPrefix } from '@/simulator/protocols/ipv6'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES } from '@/simulator/tftp'
 import { isValidSnmpCommunity, isValidSnmpOid } from '@/simulator/snmp'
+import { isValidDnsName, normalizeDnsName } from '@/simulator/dnsRecords'
+import { parseNslookupArguments } from '@/simulator/nslookup'
 import { usePingFeedback } from './usePingFeedback'
 import { isGenericEndDevice } from '@/simulator/endDevice'
 import { isSniffer } from '@/simulator/sniffer'
@@ -56,8 +58,9 @@ import { TrafficGeneratorApp } from './TrafficGeneratorApp'
 import { EndDeviceGui, EndDeviceHtmlTab } from './EndDeviceGui'
 import { SnifferApp } from './SnifferApp'
 import { IotTab, IotServiceSection } from './IotTabs'
+import { ProgrammingTab } from './ProgrammingTab'
 
-type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'isa' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported'
+type WindowTab = 'physical' | 'config' | 'cli' | 'desktop' | 'services' | 'iot' | 'asdm' | 'isa' | 'webadmin' | 'gui' | 'html' | 'attributes' | 'imported' | 'programming'
 
 function usesDesktop(device: NetworkDevice): boolean {
   if (isGenericEndDevice(device) || isNetworkController(device)) return false
@@ -97,7 +100,12 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
   else if (usesDesktop(device)) tabs.push({ id: 'desktop', label: t('Desktop') })
   else if (usesCli(device.type) && !isCyberObserver(device)) tabs.push({ id: 'cli', label: t('CLI') })
   if (device.type === 'server') tabs.push({ id: 'services', label: t('Services') })
-  if (device.type === 'iot') tabs.push({ id: 'iot', label: t('IoT') })
+  if (device.type === 'iot') {
+    tabs.push({ id: 'iot', label: t('IoT') })
+    if (['MCU-PT', 'SBC-PT', 'Thing'].includes(device.model) || device.config.pinStates) {
+      tabs.push({ id: 'programming', label: t('Programming') })
+    }
+  }
   if (device.type === 'security' && !isIsa3000(device) && !isCyberObserver(device)) tabs.push({ id: 'asdm', label: t('ASDM') })
   if (isIsa3000(device)) tabs.push({ id: 'isa', label: t('Firewall') })
   if (device.type === 'wlc') tabs.push({ id: 'webadmin', label: t('GUI') })
@@ -156,6 +164,7 @@ export function DeviceModal({ deviceId, onClose }: { deviceId: string; onClose: 
           {currentTab === 'webadmin' && device.type === 'wlc' && <WlcWebTab deviceId={device.id} />}
           {currentTab === 'services' && <ServicesTab deviceId={device.id} />}
           {currentTab === 'iot' && device.type === 'iot' && <IotTab deviceId={device.id} />}
+          {currentTab === 'programming' && <ProgrammingTab deviceId={device.id} />}
           {currentTab === 'desktop' && <DesktopTab deviceId={device.id} />}
           {currentTab === 'gui' && isSniffer(device) && <SnifferApp deviceId={device.id} />}
           {currentTab === 'gui' && isGenericEndDevice(device) && <EndDeviceGui deviceId={device.id} />}
@@ -261,19 +270,7 @@ export function CliTab({ deviceId, onSelectTab }: { deviceId: string; onSelectTa
 
 function CliSession({ device, isEndDevice }: { device: NetworkDevice; isEndDevice: boolean }) {
   const [inputVal, setInputVal] = useState('')
-  const [historyLines, setHistoryLines] = useState<Array<{ text: string; isInput?: boolean }>>(() => {
-    if (isEndDevice) {
-      return [
-        { text: 'Microsoft Windows [Version 10.0.19044.2006]' },
-        { text: '(c) Microsoft Corporation. All rights reserved.\n' },
-      ]
-    }
-    return [
-      { text: 'System Bootstrap, Version 15.1(4)M4, RELEASE SOFTWARE (fc1)' },
-      { text: `Cisco ${device.model} processor with 512MB of memory.` },
-      { text: 'Press RETURN to get started!\n' },
-    ]
-  })
+  const [historyLines, setHistoryLines] = useState<Array<{ text: string; isInput?: boolean }>>([])
 
   const [historyIndex, setHistoryIndex] = useState(-1)
   const appendOutput = useCallback((text: string) => setHistoryLines(lines => [...lines, { text }]), [])
@@ -293,6 +290,12 @@ function CliSession({ device, isEndDevice }: { device: NetworkDevice; isEndDevic
 
     if (!trimmed) {
       setHistoryLines((prev) => [...prev, { text: `${prompt} `, isInput: true }])
+      setInputVal('')
+      return
+    }
+
+    if (trimmed.toLowerCase() === 'clear' || trimmed.toLowerCase() === 'cls') {
+      setHistoryLines([])
       setInputVal('')
       return
     }
@@ -350,15 +353,6 @@ function CliSession({ device, isEndDevice }: { device: NetworkDevice; isEndDevic
     setHistoryIndex(-1)
   }
 
-  const runQuickCiscoCommand = (cmd: string) => {
-    const isConfig = prompt.includes('(config') || prompt.includes('-config')
-    if (isConfig && (cmd.startsWith('show') || cmd.startsWith('sh') || cmd.startsWith('write') || cmd === 'wr')) {
-      handleRunCommand(`do ${cmd}`)
-    } else {
-      handleRunCommand(cmd)
-    }
-  }
-
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0)
   const [dismissedSuggestions, setDismissedSuggestions] = useState(false)
 
@@ -374,6 +368,13 @@ function CliSession({ device, isEndDevice }: { device: NetworkDevice; isEndDevic
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setDismissedSuggestions(true)
+    } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+      e.preventDefault()
+      setHistoryLines((prev) => [...prev, { text: `${prompt} ^C`, isInput: true }])
+      setInputVal('')
+    } else if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+      e.preventDefault()
+      setHistoryLines([])
     } else if (e.key === 'Tab') {
       e.preventDefault()
       if (suggestions.length > 0) {
@@ -549,213 +550,6 @@ function CliSession({ device, isEndDevice }: { device: NetworkDevice; isEndDevic
         )}
 
         <div ref={terminalEndRef} />
-      </div>
-
-      {/* Mobile & Touch Quick-Command Study Bar */}
-      <div className="bg-[#0b0f19] border-t border-slate-800 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto select-none">
-        <span className="text-[10px] text-indigo-400 font-mono font-semibold uppercase tracking-wider flex-shrink-0 mr-1">
-          Quick CLI:
-        </span>
-        {isEndDevice ? (
-          <>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('ipconfig') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              ipconfig
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('ipconfig /renew') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              ipconfig /renew
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('arp -a') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-cyan-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              arp -a
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setInputVal('ping '); inputRef.current?.focus() }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-emerald-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              ping ...
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('enable') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-emerald-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              en
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('configure terminal') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-emerald-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              conf t
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); runQuickCiscoCommand('show ip interface brief') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              sh ip int br
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); runQuickCiscoCommand('show running-config') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              sh run
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); runQuickCiscoCommand('show ip route') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              sh ip route
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); runQuickCiscoCommand('show vlan brief') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-sky-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              sh vlan
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setInputVal('interface FastEthernet0/'); inputRef.current?.focus() }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-amber-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              int Fa0/...
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('no shutdown') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-emerald-400 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              no shut
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleRunCommand('exit') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-slate-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              exit
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); runQuickCiscoCommand('write memory') }}
-              className="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-950 text-purple-300 rounded border border-slate-700/80 text-[11px] font-mono whitespace-nowrap cursor-pointer transition"
-            >
-              wr
-            </button>
-          </>
-        )}
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (device.cliHistory.length > 0) {
-              const nextIdx = historyIndex + 1
-              if (nextIdx < device.cliHistory.length) {
-                setHistoryIndex(nextIdx)
-                setInputVal(device.cliHistory[device.cliHistory.length - 1 - nextIdx])
-              }
-            }
-          }}
-          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-xs font-mono font-bold cursor-pointer"
-          title="Previous command"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (historyIndex > 0) {
-              const nextIdx = historyIndex - 1
-              setHistoryIndex(nextIdx)
-              setInputVal(device.cliHistory[device.cliHistory.length - 1 - nextIdx])
-            } else if (historyIndex === 0) {
-              setHistoryIndex(-1)
-              setInputVal('')
-            }
-          }}
-          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-xs font-mono font-bold cursor-pointer"
-          title="Next command"
-        >
-          ↓
-        </button>
-      </div>
-
-      {/* Spacious, Elegant Terminal Control Bar (No Cramped Squeezed Boxes) */}
-      <div className="bg-[#0f172a] border-t border-slate-800 px-4 py-2.5 flex items-center justify-between flex-shrink-0 select-none">
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>IOS 15.1 Console (wireX Engine)</span>
-        </div>
-
-        {/* Clean, Spacious Shortcut Buttons */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleTabCompletion()
-            }}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-amber-300 rounded-md border border-slate-700 text-xs font-mono font-semibold cursor-pointer transition shadow-xs"
-            title="Auto-complete command (Tab key)"
-          >
-            Tab ⇥
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleRunCommand('?')
-            }}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-cyan-300 rounded-md border border-slate-700 text-xs font-mono font-semibold cursor-pointer transition shadow-xs"
-            title="Context-sensitive command help"
-          >
-            ? Help
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setHistoryLines((prev) => [...prev, { text: `${prompt} ^C`, isInput: true }])
-              setInputVal('')
-              inputRef.current?.focus()
-            }}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-rose-300 rounded-md border border-slate-700 text-xs font-mono font-semibold cursor-pointer transition shadow-xs"
-            title="Interrupt current command (Ctrl+C)"
-          >
-            Ctrl+C
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setHistoryLines([])
-              inputRef.current?.focus()
-            }}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-300 rounded-md border border-slate-700 text-xs font-mono font-semibold cursor-pointer transition shadow-xs"
-            title="Clear terminal screen"
-          >
-            Clear Screen
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -1887,6 +1681,10 @@ function ServicesSession({ device, initialService, onBack }: { device: NetworkDe
   const [dnsDraftDomain, setDnsDraftDomain] = useState('')
   const [dnsDraftIp, setDnsDraftIp] = useState('')
   const [dnsDraftError, setDnsDraftError] = useState('')
+  const [dnsMxDraftDomain, setDnsMxDraftDomain] = useState('')
+  const [dnsMxDraftExchange, setDnsMxDraftExchange] = useState('')
+  const [dnsMxDraftPreference, setDnsMxDraftPreference] = useState('10')
+  const [dnsMxDraftError, setDnsMxDraftError] = useState('')
   const [udpEchoPortDraft, setUdpEchoPortDraft] = useState('7')
   const [udpEchoPortError, setUdpEchoPortError] = useState('')
   const [tftpFileDraftName, setTftpFileDraftName] = useState('')
@@ -2166,6 +1964,59 @@ function ServicesSession({ device, initialService, onBack }: { device: NetworkDe
                   </div>
                 ))}
               </div>
+
+              <div className="border-t border-[#c8c8c8] pt-2 space-y-2">
+                <h5 className="text-[11px] font-bold text-[#222]">{t('MX Records')}</h5>
+                <form className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_auto] items-end gap-2" onSubmit={event => {
+                  event.preventDefault()
+                  const domain = normalizeDnsName(dnsMxDraftDomain)
+                  const exchange = normalizeDnsName(dnsMxDraftExchange)
+                  const preference = Number(dnsMxDraftPreference)
+                  if (!isValidDnsName(domain) || !isValidDnsName(exchange) || !Number.isInteger(preference) || preference < 0 || preference > 65_535) {
+                    setDnsMxDraftError(t('Enter valid MX domain, exchange host and preference from 0 to 65535.'))
+                    return
+                  }
+                  const current = device.config.dnsMxRecords ?? []
+                  updateDeviceConfig(device.id, { dnsMxRecords: [...current.filter(record => normalizeDnsName(record.domain) !== domain || normalizeDnsName(record.exchange) !== exchange), { domain, exchange, preference }] })
+                  setDnsMxDraftDomain('')
+                  setDnsMxDraftExchange('')
+                  setDnsMxDraftError('')
+                }}>
+                  <label className="block text-[11px] text-[#222]">{t('Mail domain')}
+                    <input aria-label={t('Mail domain')} value={dnsMxDraftDomain} onChange={event => setDnsMxDraftDomain(event.target.value)} placeholder="classroom.test" className="mt-0.5 h-[22px] w-full min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                  </label>
+                  <label className="block text-[11px] text-[#222]">{t('Exchange host')}
+                    <input aria-label={t('Exchange host')} value={dnsMxDraftExchange} onChange={event => setDnsMxDraftExchange(event.target.value)} placeholder="mail.classroom.test" className="mt-0.5 h-[22px] w-full min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                  </label>
+                  <label className="block text-[11px] text-[#222]">{t('Preference')}
+                    <input aria-label={t('Preference')} type="number" min={0} max={65_535} step={1} value={dnsMxDraftPreference} onChange={event => setDnsMxDraftPreference(event.target.value)} className="mt-0.5 h-[22px] w-full min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                  </label>
+                  <button type="submit" className="h-[24px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#222] shadow-[inset_0_1px_0_#fff] hover:bg-[#e2e2e2]">{t('Add MX record')}</button>
+                </form>
+                {dnsMxDraftError && <p role="alert" className="text-[11px] font-semibold text-[#a40000]">{dnsMxDraftError}</p>}
+                <div className="space-y-2">
+                  {(device.config.dnsMxRecords ?? []).map((record, index) => (
+                    <div key={`${record.domain}-${record.exchange}-${index}`} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_auto] gap-2 items-center border border-[#c8c8c8] p-2">
+                      <input aria-label={`${t('Mail domain')} ${index + 1}`} value={record.domain} onChange={event => {
+                        const dnsMxRecords = [...(device.config.dnsMxRecords ?? [])]
+                        dnsMxRecords[index] = { ...record, domain: event.target.value }
+                        updateDeviceConfig(device.id, { dnsMxRecords })
+                      }} className="h-[22px] min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                      <input aria-label={`${t('Exchange host')} ${index + 1}`} value={record.exchange} onChange={event => {
+                        const dnsMxRecords = [...(device.config.dnsMxRecords ?? [])]
+                        dnsMxRecords[index] = { ...record, exchange: event.target.value }
+                        updateDeviceConfig(device.id, { dnsMxRecords })
+                      }} className="h-[22px] min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                      <input aria-label={`${t('Preference')} ${index + 1}`} type="number" min={0} max={65_535} step={1} value={record.preference} onChange={event => {
+                        const dnsMxRecords = [...(device.config.dnsMxRecords ?? [])]
+                        dnsMxRecords[index] = { ...record, preference: Number(event.target.value) }
+                        updateDeviceConfig(device.id, { dnsMxRecords })
+                      }} className="h-[22px] min-w-0 border border-[#7f7f7f] bg-white px-1.5 font-mono text-[11px] text-[#111] outline-none focus:border-[#316ac5]" />
+                      <button type="button" aria-label={`${t('Remove')} ${record.exchange}`} onClick={() => updateDeviceConfig(device.id, { dnsMxRecords: (device.config.dnsMxRecords ?? []).filter((_, itemIndex) => itemIndex !== index) })} className="h-[22px] border border-[#7f7f7f] bg-[#efefef] px-2 text-[11px] text-[#7f1d1d] hover:bg-[#e2e2e2]">{t('Remove')}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
           )}
           {service === 'udp-echo' && (
@@ -2289,6 +2140,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
   const [browserRender, setBrowserRender] = useState<string | null>(null)
   const [activeHttpRequestId, setActiveHttpRequestId] = useState<string | null>(null)
   const [pendingBrowserRequest, setPendingBrowserRequest] = useState<{ requestId: string; path: string } | null>(null)
+  const [pendingCommandDnsLookup, setPendingCommandDnsLookup] = useState<{ requestId: string; domain: string; queryType: 'A' | 'MX' } | null>(null)
   const [tftpServerDraft, setTftpServerDraft] = useState('')
   const [tftpClientFileDraft, setTftpClientFileDraft] = useState('')
   const [tftpRequestId, setTftpRequestId] = useState<string | null>(null)
@@ -2377,6 +2229,27 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
     startedDnsHttpRequests.current.add(lookup.requestId)
     requestHttp(device.id, lookup.resolvedIp, pendingBrowserRequest.path, lookup.requestId)
   }, [device.id, dnsTransactions, pendingBrowserRequest, requestHttp])
+
+  useEffect(() => {
+    if (!pendingCommandDnsLookup) return
+    const pending = pendingCommandDnsLookup
+    const unsubscribe = useNetworkStore.subscribe(state => {
+      const lookup = state.dnsTransactions.find(item => item.requestId === pending.requestId)
+      if (!lookup || lookup.status === 'pending') return
+      const resolver = device.config.dnsServer || '0.0.0.0'
+      if (lookup.status === 'failed') {
+        appendCommand(`\nServer: ${resolver}\n*** DNS query failed: ${lookup.reason || 'No DNS answer was returned.'}`)
+      } else if (pending.queryType === 'MX') {
+        const rows = lookup.resolvedMxRecords?.map(record => `\tpreference = ${record.preference}, mail exchanger = ${record.exchange}`) ?? []
+        appendCommand(`\nServer: ${resolver}\nName: ${pending.domain}\n${rows.length ? `Mail exchanger records:\n${rows.join('\n')}` : 'No mail exchanger records returned.'}`)
+      } else {
+        appendCommand(`\nServer: ${resolver}\nName: ${pending.domain}\nAddress: ${lookup.resolvedIp || 'No A record returned.'}`)
+      }
+      setPendingCommandDnsLookup(current => current?.requestId === pending.requestId ? null : current)
+      unsubscribe()
+    })
+    return unsubscribe
+  }, [appendCommand, device.config.dnsServer, pendingCommandDnsLookup])
 
   // 1. IP Configuration App
   if (activeApp === 'ip') {
@@ -2945,6 +2818,19 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
         } else {
           commandFeedback.ping(device.id, target)
         }
+      } else if (command === 'nslookup') {
+        const parsed = parseNslookupArguments(parts.slice(1))
+        if (!parsed.ok && parsed.reason === 'unsupported-query-type') {
+          setCmdLines(prev => [...prev, { text: `Query type ${parsed.queryType} is not supported. Supported types: A, MX.` }])
+        } else if (!parsed.ok) {
+          setCmdLines(prev => [...prev, { text: 'Usage: nslookup [-type=A|MX] <domain>' }])
+        } else if (pendingCommandDnsLookup) {
+          setCmdLines(prev => [...prev, { text: 'A DNS lookup is already in progress.' }])
+        } else {
+          const requestId = requestDns(device.id, parsed.domain, parsed.queryType)
+          if (!requestId) setCmdLines(prev => [...prev, { text: `DNS query not sent: ${useNetworkStore.getState().simulationWarning || 'Check the DNS server, route, ACL and link.'}` }])
+          else setPendingCommandDnsLookup({ requestId, domain: parsed.domain, queryType: parsed.queryType })
+        }
       } else if (command === 'ipconfig') {
         if(parts[1]==='/renew'){setCmdLines(prev=>[...prev,{text:useNetworkStore.getState().requestDhcp(device.id)}]);setCmdInput('');return}
         const port = device.ports[0] || wirelessPort
@@ -2976,7 +2862,7 @@ function DesktopSession({ device }: { device: NetworkDevice }) {
       } else if (command === 'help') {
         setCmdLines((prev) => [
           ...prev,
-          { text: 'Available commands: PING, IPCONFIG, IPCONFIG /ALL, TRACERT, ARP -A, CLS, HELP' },
+          { text: 'Available commands: PING, IPCONFIG, IPCONFIG /ALL, NSLOOKUP [-TYPE=MX] <domain>, TRACERT, ARP -A, CLS, HELP' },
         ])
       } else {
         setCmdLines((prev) => [

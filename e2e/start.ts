@@ -1,14 +1,33 @@
 import { expect, type Page } from '@playwright/test'
 
-/**
- * Fresh browser contexts start on the welcome chooser instead of a seeded campus lab.
- * Load the enterprise lab through the same practice-lab path a learner would use.
- */
-export async function loadEnterpriseLab(page: Page) {
+async function openPracticeLabs(page: Page) {
   await page.goto('/')
+  await page.waitForFunction(() =>
+    Boolean(document.querySelector('[data-testid="welcome-dialog"][open]'))
+      || Boolean(localStorage.getItem('wireforge-workspace-v1'))
+      || localStorage.getItem('wireforge-welcome-dismissed-v1') === '1',
+    undefined,
+    { timeout: 15_000 },
+  )
   const welcome = page.getByTestId('welcome-dialog')
-  await expect(welcome).toBeVisible({ timeout: 10_000 })
-  await welcome.getByRole('button', { name: /Practice Labs/i }).click()
+  if (await welcome.isVisible()) {
+    await welcome.getByRole('button', { name: /Practice Labs/i }).click()
+    return
+  }
+
+  await expect(page.getByRole('heading', { name: /Devices \d+/i })).toBeVisible({ timeout: 15_000 })
+  await page.waitForFunction(() => typeof (window as Window & { __NET_STORE__?: unknown }).__NET_STORE__ === 'function')
+  const help = page.getByRole('navigation', { name: 'Application menus' }).getByRole('button', { name: 'Help' })
+  await help.click()
+  await expect(help).toHaveAttribute('aria-expanded', 'true')
+  const practiceLabs = page.getByRole('menuitem', { name: 'Practice Labs' })
+  await expect(practiceLabs).toBeVisible()
+  await practiceLabs.click()
+}
+
+/** Load a sample topology through the current Practice Labs entry point. */
+export async function loadEnterpriseLab(page: Page) {
+  await openPracticeLabs(page)
 
   const labs = page.locator('dialog.pt-training-catalog[open]')
   await expect(labs).toBeVisible()
@@ -19,10 +38,7 @@ export async function loadEnterpriseLab(page: Page) {
 
 /** Load the lab with an autonomous access point and two laptops. */
 export async function loadWirelessLab(page: Page) {
-  await page.goto('/')
-  const welcome = page.getByTestId('welcome-dialog')
-  await expect(welcome).toBeVisible({ timeout: 10_000 })
-  await welcome.getByRole('button', { name: /Practice Labs/i }).click()
+  await openPracticeLabs(page)
 
   const labs = page.locator('dialog.pt-training-catalog[open]')
   await expect(labs).toBeVisible()
@@ -43,7 +59,8 @@ export async function startNewWorkspace(page: Page) {
   await page.waitForFunction(
     () =>
       Boolean(document.querySelector('[data-testid="welcome-dialog"][open]')) ||
-      Boolean(localStorage.getItem('wireforge-workspace-v1')),
+      Boolean(localStorage.getItem('wireforge-workspace-v1')) ||
+      localStorage.getItem('wireforge-welcome-dismissed-v1') === '1',
     undefined,
     { timeout: 15_000 }
   ).catch(() => undefined)

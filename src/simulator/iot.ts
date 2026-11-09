@@ -7,6 +7,7 @@ import type {
   NetworkLink,
   PacketPdu,
 } from '../types/network'
+import { runBoardProgram } from './boardProgram'
 import { isValidIpv4 } from './protocols/ip'
 import { SIMULATION_TICK_MS } from './ospf'
 
@@ -36,6 +37,14 @@ export interface IotThingSpec {
   min?: number
   max?: number
   initial?: IotThingState
+  environmentVariable?: string
+  signalType?: 'digital' | 'analog'
+  analogRange?: [number, number]
+  digitalRange?: [number, number]
+  defaultPin?: string
+  allPins?: string[]
+  rateOfChange?: number
+  soundVolumeDb?: number
 }
 
 export const IOT_THINGS: IotThingSpec[] = [
@@ -94,12 +103,63 @@ export const IOT_THINGS: IotThingSpec[] = [
   { kind: 'generator', model: 'Wind Turbine', label: 'Wind Turbine', control: 'output' },
 ]
 
+export const COMPONENT_THINGS: IotThingSpec[] = [
+  // Boards
+  { kind: 'appliance', model: 'MCU-PT', label: 'MCU', control: 'toggle' },
+  { kind: 'appliance', model: 'SBC-PT', label: 'SBC', control: 'toggle' },
+  { kind: 'appliance', model: 'Thing', label: 'Thing', control: 'toggle' },
+  // Actuators
+  { kind: 'fan', model: 'Air Cooler', label: 'Air Cooler', control: 'toggle' },
+  { kind: 'siren', model: 'Alarm', label: 'Alarm', control: 'toggle' },
+  { kind: 'sprinkler', model: 'Ceiling Sprinkler', label: 'Ceiling Sprinkler', control: 'toggle' },
+  { kind: 'lamp', model: 'Dimmable LED', label: 'Dimmable LED', control: 'level', unit: '%', min: 0, max: 100 },
+  { kind: 'sprinkler', model: 'Floor Sprinkler', label: 'Floor Sprinkler', control: 'toggle' },
+  { kind: 'thermostat', model: 'Heating Element', label: 'Heating Element', control: 'temperature', unit: '°C', min: 0, max: 100 },
+  { kind: 'appliance', model: 'LCD', label: 'LCD', control: 'reading', unit: 'text', initial: { reading: 0, unit: 'text' } },
+  { kind: 'lamp', model: 'LED', label: 'LED', control: 'toggle' },
+  { kind: 'fan', model: 'Motor', label: 'Motor', control: 'level', unit: 'RPM', min: 0, max: 3000 },
+  { kind: 'speaker', model: 'Piezo Speaker', label: 'Piezo Speaker', control: 'toggle' },
+  { kind: 'lamp', model: 'RGB LED', label: 'RGB LED', control: 'level', unit: 'rgb', min: 0, max: 255 },
+  { kind: 'valve', model: 'Servo', label: 'Servo', control: 'level', unit: '°', min: 0, max: 180 },
+  { kind: 'speaker', model: 'Speaker', label: 'Speaker', control: 'toggle' },
+  { kind: 'lamp', model: 'Smart LED', label: 'Smart LED', control: 'toggle' },
+  // Sensors
+  { kind: 'sensor', model: 'Flex Sensor', label: 'Flex Sensor', control: 'reading', unit: '°', min: 0, max: 180, initial: { reading: 0, unit: '°' } },
+  { kind: 'sensor', model: 'Generic Environment Sensor', label: 'Generic Environment Sensor', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 50, unit: '%' } },
+  { kind: 'sensor', model: 'Generic Sensor', label: 'Generic Sensor', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 0, unit: '%' } },
+  { kind: 'sensor', model: 'Humidity Sensor', label: 'Humidity Sensor', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 40, unit: '%' } },
+  { kind: 'humiture', model: 'Humiture Sensor', label: 'Humiture Sensor', control: 'humiture' },
+  { kind: 'sensor', model: 'Membrane Potentiometer', label: 'Membrane Potentiometer', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 0, unit: '%' } },
+  { kind: 'sensor', model: 'Metal Sensor', label: 'Metal Sensor', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 0, unit: '%' } },
+  { kind: 'motion-sensor', model: 'Motion Sensor', label: 'Motion Sensor', control: 'motion' },
+  { kind: 'sensor', model: 'Photo Sensor', label: 'Photo Sensor', control: 'reading', unit: 'lx', min: 0, max: 1000, initial: { reading: 500, unit: 'lx' } },
+  { kind: 'sensor', model: 'Potentiometer', label: 'Potentiometer', control: 'reading', unit: '%', min: 0, max: 100, initial: { reading: 50, unit: '%' } },
+  { kind: 'push-button', model: 'Push Button', label: 'Push Button', control: 'button' },
+  { kind: 'push-button', model: 'Push Button Toggle Switch', label: 'Push Button Toggle Switch', control: 'button' },
+  { kind: 'push-button', model: 'Rocker Switch', label: 'Rocker Switch', control: 'toggle' },
+  { kind: 'smoke-detector', model: 'Smoke Sensor', label: 'Smoke Sensor', control: 'smoke' },
+  { kind: 'sound-sensor', model: 'Sound Sensor', label: 'Sound Sensor', control: 'sound', unit: 'dB', min: 0, max: 120 },
+  { kind: 'sensor', model: 'Temperature Sensor', label: 'Temperature Sensor', control: 'reading', unit: '°C', min: -40, max: 125, initial: { reading: 25, unit: '°C' } },
+  { kind: 'push-button', model: 'Toggle Push Button', label: 'Toggle Push Button', control: 'button' },
+  { kind: 'motion-sensor', model: 'Trip Wire', label: 'Trip Wire', control: 'motion' },
+  { kind: 'water-detector', model: 'Water Detector', label: 'Water Detector', control: 'level', unit: '%', min: 0, max: 100 },
+  { kind: 'water-detector', model: 'Water Sensor', label: 'Water Sensor', control: 'level', unit: '%', min: 0, max: 100 },
+  { kind: 'sensor', model: 'Wind Sensor', label: 'Wind Sensor', control: 'reading', unit: 'm/s', min: 0, max: 60, initial: { reading: 5, unit: 'm/s' } },
+  // Smart City RFID
+  { kind: 'sensor', model: 'RFID Card', label: 'RFID Card', control: 'reading', unit: 'id', min: 1000, max: 9999, initial: { reading: 1001, unit: 'id' } },
+  { kind: 'sensor', model: 'RFID Reader', label: 'RFID Reader', control: 'reading', unit: 'tag', min: 0, max: 9999, initial: { reading: 0, unit: 'tag' } },
+]
+
 export function iotThingSpec(model: string): IotThingSpec {
-  return IOT_THINGS.find(spec => spec.model === model) ?? IOT_THINGS[0]
+  return IOT_THINGS.find(spec => spec.model === model)
+    ?? COMPONENT_THINGS.find(spec => spec.model === model)
+    ?? IOT_THINGS[0]
 }
 
 export function iotThingSpecByKind(kind: IotThingKind): IotThingSpec {
-  return IOT_THINGS.find(spec => spec.kind === kind) ?? IOT_THINGS[0]
+  return IOT_THINGS.find(spec => spec.kind === kind)
+    ?? COMPONENT_THINGS.find(spec => spec.kind === kind)
+    ?? IOT_THINGS[0]
 }
 
 export function defaultIotState(kind: IotThingKind): IotThingState {
@@ -145,6 +205,12 @@ export function defaultIotState(kind: IotThingKind): IotThingState {
       return { open: false }
     case 'fire-detector':
       return { fire: false }
+    case 'board':
+      return { power: true }
+    case 'actuator':
+      return { power: false }
+    default:
+      return {}
   }
 }
 
@@ -218,6 +284,12 @@ export function iotStateSummary(kind: IotThingKind, state: IotThingState): strin
       return state.open ? 'open' : 'closed'
     case 'fire-detector':
       return state.fire ? 'fire detected' : 'clear'
+    case 'board':
+      return state.power ? 'running' : 'stopped'
+    case 'actuator':
+      return state.power ? 'on' : 'off'
+    default:
+      return 'off'
   }
 }
 
@@ -385,9 +457,126 @@ function reportPdu(device: NetworkDevice, port: { name: string; macAddress: stri
   }
 }
 
-export function prepareIotTick(devices: NetworkDevice[], _links: NetworkLink[], simulationTick: number): { devices: NetworkDevice[]; outbound: IotIntent[] } {
-  const outbound: IotIntent[] = []
+/**
+ * Executes Pin I/O and user script logic on MCU-PT, SBC-PT and Thing boards.
+ * Reads connected sensor inputs across links, executes the script, updates pin states,
+ * and drives attached actuators on output pins.
+ */
+export function executeBoardPinIo(
+  devices: NetworkDevice[],
+  links: NetworkLink[],
+  _simulationTick: number
+): NetworkDevice[] {
+  const isProgrammable = (d: NetworkDevice) =>
+    ['MCU-PT', 'SBC-PT', 'Thing'].includes(d.model) || Boolean(d.config.pinStates) || Boolean(d.config.programCode)
+
+  const programmable = devices.filter(d => isProgrammable(d) && d.power !== false)
+  if (programmable.length === 0) return devices
+
   let updated = devices
+  const edit = (deviceId: string, patcher: (current: NetworkDevice) => NetworkDevice) => {
+    if (updated === devices) updated = [...devices]
+    const idx = updated.findIndex(d => d.id === deviceId)
+    if (idx >= 0) updated[idx] = patcher(updated[idx])
+  }
+
+  for (const board of programmable) {
+    const pinStates: Record<string, { mode: 'INPUT' | 'OUTPUT'; value: number }> = {
+      ...(board.config.pinStates ?? {}),
+    }
+    let programError = board.config.programError
+
+    // 1. Read input sensors connected to pins
+    for (const port of board.ports) {
+      if (!port.connectedLinkId) continue
+      const link = links.find(l => l.id === port.connectedLinkId)
+      if (!link) continue
+      const peerId = link.fromDeviceId === board.id ? link.toDeviceId : link.fromDeviceId
+      const peer = updated.find(d => d.id === peerId)
+      if (!peer || peer.power === false) continue
+
+      const pinName = port.name
+      const isAnalog = pinName.startsWith('A')
+
+      if (isAnalog || pinStates[pinName]?.mode === 'INPUT') {
+        let measured = mapSensorToPin(peer.model, currentEnvironment)
+        if (peer.config.iotState?.reading !== undefined) {
+          measured = Number(peer.config.iotState.reading) || 0
+          if (peer.model === 'Temperature Sensor' && measured <= 125) {
+            measured = Math.round(Math.max(0, Math.min(1023, ((measured - (-40)) / 165) * 1023)))
+          }
+        } else if (peer.config.iotState?.level !== undefined) {
+          measured = Math.round((Number(peer.config.iotState.level) / 100) * 1023)
+        } else if (peer.config.iotState?.power !== undefined) {
+          measured = peer.config.iotState.power ? 1023 : 0
+        }
+        pinStates[pinName] = {
+          mode: 'INPUT',
+          value: measured,
+        }
+      }
+    }
+
+    // 2. Execute the supported board-language subset without evaluating workspace code.
+    const code = board.config.programCode?.trim()
+    const isRunning = board.config.programRunning !== false
+    if (code && isRunning) {
+      const language = board.config.programLanguage ?? (code.includes('def ') ? 'python' : 'javascript')
+      const result = runBoardProgram(code, language, pinStates)
+      if (result.ok) {
+        Object.assign(pinStates, result.pinStates)
+        programError = undefined
+      } else {
+        programError = result.error
+      }
+    }
+
+    // 3. Drive connected actuators from output pins
+    for (const port of board.ports) {
+      if (!port.connectedLinkId) continue
+      const link = links.find(l => l.id === port.connectedLinkId)
+      if (!link) continue
+      const peerId = link.fromDeviceId === board.id ? link.toDeviceId : link.fromDeviceId
+      const peer = updated.find(d => d.id === peerId)
+      if (!peer || peer.power === false) continue
+
+      const pinName = port.name
+      const pinState = pinStates[pinName]
+      if (pinState && pinState.mode === 'OUTPUT') {
+        const patch = mapPinToActuator(peer.model, pinState.value)
+        if (Object.keys(patch).length > 0) {
+          edit(peer.id, current => ({
+            ...current,
+            config: {
+              ...current.config,
+              iotState: {
+                ...(current.config.iotState ?? {}),
+                ...patch,
+              },
+            },
+          }))
+        }
+      }
+    }
+
+    // Update board with updated pinStates
+    edit(board.id, current => ({
+      ...current,
+      config: {
+        ...current.config,
+        pinStates,
+        programError,
+      },
+    }))
+  }
+
+  return updated
+}
+
+export function prepareIotTick(devices: NetworkDevice[], links: NetworkLink[], simulationTick: number): { devices: NetworkDevice[]; outbound: IotIntent[] } {
+  const ioUpdatedDevices = executeBoardPinIo(devices, links, simulationTick)
+  const outbound: IotIntent[] = []
+  let updated = ioUpdatedDevices
   const edit = (deviceId: string, editor: (device: NetworkDevice) => NetworkDevice) => {
     if (updated === devices) updated = [...devices]
     const index = updated.findIndex(device => device.id === deviceId)
@@ -425,4 +614,104 @@ export function prepareIotTick(devices: NetworkDevice[], _links: NetworkLink[], 
     }
   }
   return { devices: updated, outbound }
+}
+
+export interface EnvironmentState {
+  temperature: number
+  humidity: number
+  smoke: number
+  light: number
+  sound: number
+  motion: boolean
+  water: number
+  wind: number
+}
+
+export const DEFAULT_ENVIRONMENT: EnvironmentState = {
+  temperature: 25,
+  humidity: 45,
+  smoke: 0,
+  light: 500,
+  sound: 30,
+  motion: false,
+  water: 0,
+  wind: 0,
+}
+
+let currentEnvironment: EnvironmentState = { ...DEFAULT_ENVIRONMENT }
+
+export function getEnvironmentValue<K extends keyof EnvironmentState>(key: K): EnvironmentState[K] {
+  return currentEnvironment[key]
+}
+
+export function setEnvironmentValue<K extends keyof EnvironmentState>(key: K, value: EnvironmentState[K]): void {
+  currentEnvironment[key] = value
+}
+
+export function resetEnvironment(): void {
+  currentEnvironment = { ...DEFAULT_ENVIRONMENT }
+}
+
+export function mapSensorToPin(model: string, env: EnvironmentState = currentEnvironment): number {
+  switch (model) {
+    case 'Temperature Sensor':
+    case 'Thermostat-PT':
+      return Math.round(Math.max(0, Math.min(1023, ((env.temperature - (-40)) / 165) * 1023)))
+    case 'Humidity Sensor':
+    case 'Humiture Sensor':
+    case 'Humiture Monitor':
+      return Math.round((Math.max(0, Math.min(100, env.humidity)) / 100) * 1023)
+    case 'Photo Sensor':
+    case 'Light-Sensor-PT':
+      return Math.round(Math.max(0, Math.min(1023, env.light)))
+    case 'Sound Sensor':
+    case 'Sound Frequency Detector':
+      return Math.round((Math.max(0, Math.min(120, env.sound)) / 120) * 1023)
+    case 'Smoke Sensor':
+    case 'Smoke-Detector-PT':
+      return env.smoke > 0 ? 1023 : 0
+    case 'Water Sensor':
+    case 'Water Detector':
+    case 'Water-Detector-PT':
+    case 'Water Level Monitor':
+      return Math.round((Math.max(0, Math.min(100, env.water)) / 100) * 1023)
+    case 'Wind Sensor':
+      return Math.round((Math.max(0, Math.min(60, env.wind)) / 60) * 1023)
+    case 'Motion Sensor':
+    case 'Trip Wire':
+    case 'Motion Detector':
+      return env.motion ? 1023 : 0
+    default:
+      return 0
+  }
+}
+
+export function mapPinToActuator(model: string, pinValue: number): Partial<IotThingState> {
+  const isHigh = pinValue > 512
+  switch (model) {
+    case 'LED':
+    case 'Alarm':
+    case 'Ceiling Sprinkler':
+    case 'Floor Sprinkler':
+    case 'Piezo Speaker':
+    case 'Speaker':
+    case 'Air Cooler':
+    case 'Fan-PT':
+    case 'Siren-PT':
+    case 'Lamp-PT':
+    case 'Sprinkler-PT':
+    case 'Smart LED':
+      return { power: isHigh, level: isHigh ? 100 : 0 }
+    case 'Dimmable LED':
+    case 'Motor':
+      return { level: Math.round((pinValue / 1023) * 100), power: isHigh }
+    case 'Servo':
+      return { level: Math.round((pinValue / 1023) * 180) }
+    case 'RGB LED':
+      return { level: Math.round((pinValue / 1023) * 255) }
+    case 'Heating Element':
+      return { temperature: Math.round((pinValue / 1023) * 100), power: isHigh }
+    default:
+      return { power: isHigh }
+  }
 }

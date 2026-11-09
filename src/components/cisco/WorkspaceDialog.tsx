@@ -4,6 +4,8 @@ import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useNetworkStore } from '@/store/networkStore'
 import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
+import {BrandCredit} from '@/components/brand/BrandCredit'
+import {APP_VERSION, SOURCE_URL} from '@/lib/appInfo'
 export function WorkspaceDialog() {
   const {t}=useI18n()
   const [complexProtocol,setComplexProtocol]=useState<'ICMP'|'UDP'>('ICMP')

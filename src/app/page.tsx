@@ -34,6 +34,9 @@ import { initializeWorkspacePersistence, STORAGE_KEY } from '@/store/workspacePe
 import { useActivityStore } from '@/store/activityStore'
 import { WelcomeModal } from '@/components/modals/WelcomeModal'
 import {TrainingCatalog,TrainingPanel,TrainingDock,ConnectionDiagnostics} from '@/components/cisco/CampusTraining'
+import { MidtermMentorHUD } from '@/components/cisco/MidtermMentorHUD'
+import { MidtermCliDock } from '@/components/cisco/MidtermCliDock'
+import { useMidtermQuestStore } from '@/store/midtermQuestStore'
 import {useTrainingStore} from '@/store/trainingStore'
 import {initializeLocale,useI18n} from '@/i18n/useI18n'
 import {initializeTheme} from '@/store/themeStore'
@@ -45,12 +48,34 @@ const WELCOME_DISMISSED_KEY = 'wireforge-welcome-dismissed-v1'
 export default function Home() {
   const activeModal = useNetworkStore(state => state.activeModal)
   const training=useTrainingStore(s=>s.active),{t}=useI18n()
+  const midtermQuest = useMidtermQuestStore(s => s.active)
   const academyOpen=useAcademyStore(s=>s.open)
   const [diagnostics,setDiagnostics]=React.useState(false)
   const [welcomeOpen,setWelcomeOpen]=React.useState(false)
   const [trainingView,setTrainingView]=React.useState<'lesson'|'network'|'cli'>('network')
   const wsDialog = useWorkspaceStore(state => state.dialog)
   const setWsDialog = useWorkspaceStore(state => state.setDialog)
+  const topCollapsed = useWorkspaceStore(state => state.topCollapsed)
+  const bottomCollapsed = useWorkspaceStore(state => state.bottomCollapsed)
+  const toggleTopCollapsed = useWorkspaceStore(state => state.toggleTopCollapsed)
+  const toggleBottomCollapsed = useWorkspaceStore(state => state.toggleBottomCollapsed)
+
+  useEffect(() => {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return
+
+      if (e.altKey && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault()
+        toggleTopCollapsed()
+      } else if (e.altKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault()
+        toggleBottomCollapsed()
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeys)
+    return () => window.removeEventListener('keydown', handleGlobalKeys)
+  }, [toggleTopCollapsed, toggleBottomCollapsed])
   // Reapply the saved language when Fast Refresh replaces the locale store.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>initializeLocale(),[initializeLocale])
@@ -109,23 +134,92 @@ export default function Home() {
 
   return (
     <main className="pt-app">
-      <CiscoTitleBar onDiagnose={training?undefined:()=>setDiagnostics(!diagnostics)} />
+      {!topCollapsed ? (
+        <header className="pt-top-chrome">
+          <CiscoTitleBar onDiagnose={training ? undefined : () => setDiagnostics(!diagnostics)} />
+          <CiscoMenuBar />
+          <CiscoMainToolbar />
+          <CiscoRightPalette />
+          <CiscoWorkspaceHeader />
+          <div className="pt-collapse-strip pt-collapse-strip-top">
+            <button
+              type="button"
+              onClick={toggleTopCollapsed}
+              className="pt-collapse-toggle-btn"
+              title="Collapse top toolbar and menus (Alt+T)"
+              aria-label="Collapse top toolbars"
+            >
+              <span className="pt-collapse-arrow">▲</span>
+              <span>Collapse Top Controls</span>
+            </button>
+          </div>
+        </header>
+      ) : (
+        <div className="pt-collapsed-bar pt-collapsed-bar-top">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="pt-collapsed-title">wireX · Focus Mode</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTopCollapsed}
+            className="pt-collapse-toggle-btn is-collapsed"
+            title="Expand top toolbar and menus (Alt+T)"
+            aria-label="Expand top toolbars"
+          >
+            <span className="pt-collapse-arrow">▼</span>
+            <span>Show Top Controls</span>
+          </button>
+        </div>
+      )}
 
-      <CiscoMenuBar />
+      {training && (
+        <nav className="pt-training-mobile-tabs" aria-label={t('Training')}>
+          {(['lesson', 'network', 'cli'] as const).map(view => (
+            <button key={view} aria-pressed={trainingView === view} onClick={() => setTrainingView(view)}>
+              {t(view === 'lesson' ? 'Lesson' : view === 'network' ? 'Network' : 'CLI')}
+            </button>
+          ))}
+        </nav>
+      )}
 
-      <CiscoMainToolbar />
-      <CiscoRightPalette />
-
-      <CiscoWorkspaceHeader />
-
-      {training&&<nav className="pt-training-mobile-tabs" aria-label={t('Training')}>{(['lesson','network','cli'] as const).map(view=><button key={view} aria-pressed={trainingView===view} onClick={()=>setTrainingView(view)}>{t(view==='lesson'?'Lesson':view==='network'?'Network':'CLI')}</button>)}</nav>}
-      <div className="pt-canvas-area" data-training-view={training?trainingView:undefined}>
-        {training?<TrainingPanel/>:<DeviceNavigator />}
+      <div className="pt-canvas-area" data-training-view={training ? trainingView : midtermQuest ? 'quest' : undefined}>
+        {midtermQuest ? <MidtermMentorHUD /> : training ? <TrainingPanel /> : <DeviceNavigator />}
         <div className="pt-topology-container"><TopologyCanvas /></div>
-        {training?<TrainingDock/>:diagnostics&&<aside className="pt-network-doctor"><ConnectionDiagnostics onClose={()=>setDiagnostics(false)}/></aside>}
+        {midtermQuest ? <MidtermCliDock /> : training ? <TrainingDock /> : diagnostics && <aside className="pt-network-doctor"><ConnectionDiagnostics onClose={() => setDiagnostics(false)} /></aside>}
       </div>
 
-      <CiscoBottomBar />
+      {!bottomCollapsed ? (
+        <div className="pt-bottom-section">
+          <div className="pt-collapse-strip pt-collapse-strip-bottom">
+            <button
+              type="button"
+              onClick={toggleBottomCollapsed}
+              className="pt-collapse-toggle-btn"
+              title="Collapse device shelf and simulation bar (Alt+B)"
+              aria-label="Collapse device shelf"
+            >
+              <span className="pt-collapse-arrow">▼</span>
+              <span>Collapse Device Shelf</span>
+            </button>
+          </div>
+          <CiscoBottomBar />
+        </div>
+      ) : (
+        <div className="pt-collapsed-bar pt-collapsed-bar-bottom">
+          <span className="pt-collapsed-title">Device Shelf & Simulation Dock</span>
+          <button
+            type="button"
+            onClick={toggleBottomCollapsed}
+            className="pt-collapse-toggle-btn is-collapsed"
+            title="Expand device shelf and simulation bar (Alt+B)"
+            aria-label="Expand device shelf"
+          >
+            <span className="pt-collapse-arrow">▲</span>
+            <span>Show Device Shelf</span>
+          </button>
+        </div>
+      )}
       <WorkspaceDialog />
       <TrainingCatalog/>
       {academyOpen && <CcnaAcademy/>}

@@ -1295,3 +1295,5 @@ export function getIotLab(): {
 
   return { devices, links, annotations }
 }
+
+export { getVoiceTelephonyLab } from './pastExamLabs'

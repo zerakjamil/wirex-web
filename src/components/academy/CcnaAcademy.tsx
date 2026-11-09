@@ -8,6 +8,7 @@ import { AcademyHome } from './AcademyHome'
 import { AcademyPractice } from './AcademyPractice'
 import { AcademyReader, AcademyReaderSide } from './AcademyReader'
 import { AcademyRescue } from './AcademyRescue'
+import { MidtermArena } from './MidtermArena'
 import { AcademyIcon } from './AcademyIcons'
 import { ProgressRing } from './ProgressRing'
 
@@ -19,6 +20,14 @@ function CourseRail({ onNavigate, open }: { onNavigate: () => void; open: boolea
   const resetProgress = useAcademyStore(state => state.resetProgress)
   const [query, setQuery] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
+  const [collapsedChapters, setCollapsedChapters] = useState<Record<string, boolean>>(() => {
+    const activeCh = sectionId ? ccnaChapters.find(c => c.sections.some(s => s.id === sectionId))?.id : 'ch1'
+    const init: Record<string, boolean> = {}
+    for (const c of ccnaChapters) {
+      if (c.id !== activeCh) init[c.id] = true
+    }
+    return init
+  })
   const results = useMemo(() => query.trim() ? searchCcnaSections(query) : [], [query])
   const percent = ccnaSections.length ? Math.round((completedSections.length / ccnaSections.length) * 100) : 0
 
@@ -57,12 +66,19 @@ function CourseRail({ onNavigate, open }: { onNavigate: () => void; open: boolea
         </div>
         : ccnaChapters.map(chapter => {
           const read = chapter.sections.filter(section => completedSections.includes(section.id)).length
+          const isCollapsed = Boolean(collapsedChapters[chapter.id])
           return <div className="ccna-rail-group" key={chapter.id}>
-            <div className="ccna-rail-chapter">
+            <button
+              type="button"
+              className="ccna-rail-chapter"
+              onClick={() => setCollapsedChapters(prev => ({ ...prev, [chapter.id]: !prev[chapter.id] }))}
+              style={{ width: '100%', cursor: 'pointer', background: 'transparent', border: 'none', display: 'flex', justifyContent: 'space-between', textAlign: 'inherit' }}
+              title={isCollapsed ? t('Expand chapter') : t('Collapse chapter')}
+            >
               <span>{chapter.id === 'appendix' ? t('Appendix') : `${t('Chapter')} ${chapter.bookNumber}`}</span>
-              <span>{read}/{chapter.sections.length}</span>
-            </div>
-            {chapter.sections.map(section => {
+              <span>{read}/{chapter.sections.length} {isCollapsed ? '▸' : '▾'}</span>
+            </button>
+            {!isCollapsed && chapter.sections.map(section => {
               const done = completedSections.includes(section.id)
               return <button type="button" key={section.id} className="ccna-rail-section" aria-current={sectionId === section.id ? 'page' : undefined} onClick={() => navigate(section.id)} data-testid={`academy-section-${section.id}`}>
                 <span className="ccna-rail-num" dir="ltr">{section.number}</span>
@@ -118,7 +134,7 @@ export function CcnaAcademy() {
 
   const learnSelected = view === 'home' || view === 'reader'
   const selectedTab = view === 'reader' ? 'home' : view
-  const tabOrder = ['home', 'practice', 'rescue'] as const
+  const tabOrder = ['home', 'practice', 'rescue', 'midterm'] as const
   const handleTabKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -155,6 +171,7 @@ export function CcnaAcademy() {
           <button type="button" role="tab" id="academy-tab-home" aria-controls="academy-panel" aria-selected={learnSelected} tabIndex={learnSelected ? 0 : -1} onClick={() => setView('home')} data-testid="academy-view-learn"><AcademyIcon name="book" size={13} />{t('Learn')}</button>
           <button type="button" role="tab" id="academy-tab-practice" aria-controls="academy-panel" aria-selected={view === 'practice'} tabIndex={view === 'practice' ? 0 : -1} onClick={() => setView('practice')} data-testid="academy-view-practice"><AcademyIcon name="target" size={13} />{t('Exam')}</button>
           <button type="button" role="tab" id="academy-tab-rescue" aria-controls="academy-panel" aria-selected={view === 'rescue'} tabIndex={view === 'rescue' ? 0 : -1} onClick={() => setView('rescue')} data-testid="academy-view-rescue"><AcademyIcon name="flame" size={13} />{t('Rescue')}</button>
+          <button type="button" role="tab" id="academy-tab-midterm" aria-controls="academy-panel" aria-selected={view === 'midterm'} tabIndex={view === 'midterm' ? 0 : -1} onClick={() => setView('midterm')} data-testid="academy-view-midterm" className="ccna-tab-midterm"><AcademyIcon name="spark" size={13} />{t('Midterm 2026 Arena')}</button>
         </nav>
         <div className="ccna-top-actions">
           <div className="ccna-top-progress" title={t('Academy progress')} data-testid="academy-progress"><ProgressRing value={percent} size={27} stroke={3} label={`${percent}%`} /><span>{percent}%</span></div>
@@ -171,6 +188,7 @@ export function CcnaAcademy() {
             {view === 'reader' && <AcademyReader />}
             {view === 'practice' && <AcademyPractice />}
             {view === 'rescue' && <AcademyRescue />}
+            {view === 'midterm' && <MidtermArena />}
           </div>
         </main>
         {view === 'reader' && <AcademyReaderSide />}

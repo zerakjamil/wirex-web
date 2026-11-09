@@ -4,6 +4,7 @@ import React, { useId, useState } from 'react'
 import { ccnaChapters, ccnaSections, ccnaStats, getAdjacentSections, getRescuePath, getSection } from '@/content/ccnaCourse'
 import { useAcademyStore } from '@/store/academyStore'
 import { useTrainingStore } from '@/store/trainingStore'
+import { useMidtermQuestStore } from '@/store/midtermQuestStore'
 import { useI18n } from '@/i18n/useI18n'
 import { AcademyIcon } from './AcademyIcons'
 
@@ -77,6 +78,24 @@ export function AcademyHome() {
   }
 
   return <div className="ccna-home" data-testid="academy-home">
+    <div className="ccna-midterm-direct-card">
+      <div className="ccna-midterm-direct-info">
+        <span className="ccna-midterm-badge">⚡ {t("Tomorrow's Midterm Exam · Dr. Reben Kurda")}</span>
+        <h2>{t('Prepare Directly on the Simulator Canvas')}</h2>
+        <p>{t("Skip the reading cards. The predicted 2026 exam network is ready on the canvas with Dr. Kurda's personal mentor HUD guiding every CLI command.")}</p>
+      </div>
+      <button
+        type="button"
+        className="ccna-midterm-launch-btn"
+        onClick={() => {
+          useAcademyStore.getState().closeAcademy()
+          useMidtermQuestStore.getState().startQuest('predicted-2026')
+        }}
+      >
+        🚀 {t('Launch Quest on Canvas')}
+      </button>
+    </div>
+
     <section className="ccna-hero">
       <div className="ccna-hero-copy">
         <span className="ccna-hero-badge"><AcademyIcon name="spark" size={12} />{t('Free study layer · No account')}</span>

@@ -3,17 +3,62 @@ import type { NetworkAnnotation, NetworkCluster, NetworkDevice, NetworkLink } fr
 
 export type NodeMeasurements = Record<string, { width: number; height: number }>
 
+const sameJsonValue = (left: unknown, right: unknown) =>
+  left === right || JSON.stringify(left) === JSON.stringify(right)
+
+function sameCanvasPort(left: NetworkDevice['ports'][number], right: NetworkDevice['ports'][number]) {
+  return left.id === right.id
+    && left.name === right.name
+    && left.shortName === right.shortName
+    && left.type === right.type
+    && left.ipAddress === right.ipAddress
+    && left.macAddress === right.macAddress
+    && left.status === right.status
+    && left.adminStatus === right.adminStatus
+    && left.portMode === right.portMode
+    && left.vlan === right.vlan
+    && left.nativeVlan === right.nativeVlan
+    && sameJsonValue(left.allowedVlans, right.allowedVlans)
+    && left.channelGroup === right.channelGroup
+    && left.channelMode === right.channelMode
+    && left.stpCost === right.stpCost
+    && sameJsonValue(left.mstCost, right.mstCost)
+    && left.stpState === right.stpState
+    && sameJsonValue(left.stpVlanStates, right.stpVlanStates)
+    && sameJsonValue(left.rootInconsistentVlans, right.rootInconsistentVlans)
+}
+
+function sameCanvasDevice(left: NetworkDevice, right: NetworkDevice) {
+  return left.id === right.id
+    && left.name === right.name
+    && left.model === right.model
+    && left.type === right.type
+    && left.x === right.x
+    && left.y === right.y
+    && left.power === right.power
+    && left.macAddress === right.macAddress
+    && left.config.hostname === right.config.hostname
+    && left.config.iotState === right.config.iotState
+    && sameJsonValue(left.config.vlans, right.config.vlans)
+    && left.config.stpMode === right.config.stpMode
+    && sameJsonValue(left.config.stpPriorities, right.config.stpPriorities)
+    && sameJsonValue(left.config.mstPriorities, right.config.mstPriorities)
+    && sameJsonValue(left.config.mstInstances, right.config.mstInstances)
+    && left.stpRuntime === right.stpRuntime
+    && left.ports.length === right.ports.length
+    && left.ports.every((port, index) => sameCanvasPort(port, right.ports[index]))
+}
+
 export function createCanvasDeviceSelector() {
   let previous: NetworkDevice[] = []
   let input: NetworkDevice[] | undefined
-  const visible = ['id', 'name', 'model', 'type', 'x', 'y', 'ports', 'config', 'power', 'modules', 'macAddress'] as const
   return (devices: NetworkDevice[]) => {
     if (devices === input) return previous
     input = devices
     const byId = new Map(previous.map(d => [d.id, d]))
     const next = devices.map(d => {
       const old = byId.get(d.id)
-      return old && visible.every(key => old[key] === d[key]) ? old : d
+      return old && (old === d || sameCanvasDevice(old, d)) ? old : d
     })
     if (next.length === previous.length && next.every((d, i) => d === previous[i])) return previous
     previous = next

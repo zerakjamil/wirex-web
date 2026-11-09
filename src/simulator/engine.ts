@@ -17,10 +17,11 @@ import { prepareEigrpTick, receiveEigrpPacket, hasEigrp, eigrpEnabled } from './
 import type { EigrpOutbound } from './eigrp'
 import { prepareBgpTick, receiveBgpPacket, hasBgp, bgpRuns } from './bgp'
 import type { BgpOutbound } from './bgp'
-import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
+import { prepareCapwapTick, receiveCapwapPacket, isWlcDevice, isLightweightAp, apRuntimeOf, apWiredPort, apWirelessPort, apAdvertisedWlans, wlcRuntimeOf, clientLinkFor, capwapDataPdu, type CapwapIntent } from './capwap'
 import { applyIotControl, iotKindOf, iotServerRuntimeOf, iotStateOf, iotStateSummary, isIotServer, isIotThing, markIotRegistered, prepareIotTick, recordIotClient, touchIotClient, IOT_BROADCAST_ADDRESS, IOT_CLIENT_PORT, IOT_SERVER_PORT, type IotIntent } from './iot'
 import { isValidTftpFileName, MAX_TFTP_FILE_BYTES, TFTP_BLOCK_SIZE, tftpBlockCount, tftpBlockDataHex } from './tftp'
 import { isValidSnmpCommunity, isValidSnmpOid, resolveSnmpSystemObject, type SnmpOperation } from './snmp'
+import { isValidDnsName, normalizeDnsName, resolveDnsMxRecords } from './dnsRecords'
 import { activeHsrpGroup, hsrpVirtualMac, prepareHsrpTick } from './hsrp'
 import { buildSmtpSubmissionTranscript, parseSmtpServerTranscript, processSmtpSubmissionTranscript } from './smtp'
 import { buildPop3DeleteTranscript, buildPop3FetchTranscript, buildPop3ListTranscript, createPop3Session, parsePop3DeleteTranscript, parsePop3FetchTranscript, parsePop3ListTranscript, parsePop3RetrResponse, parsePop3UidlResponse, processPop3Command, processPop3DeleteTranscript, processPop3FetchTranscript, processPop3ListTranscript } from './pop3'
@@ -578,10 +579,9 @@ export function createHttpGetPackets(source: NetworkDevice, devices: NetworkDevi
   return ipFrames(source, route, syn, devices, links, 0)
 }
 
-export function createDnsQueryPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], requestId: string, domain: string): InFlightPacket[] {
-  const normalizedDomain = domain.trim().toLowerCase().replace(/\.$/, '')
-  const labels = normalizedDomain.split('.')
-  if (!normalizedDomain || normalizedDomain.length > 253 || labels.some(label => label.length < 1 || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))) return []
+export function createDnsQueryPackets(source: NetworkDevice, devices: NetworkDevice[], links: NetworkLink[], requestId: string, domain: string, queryType: 'A' | 'MX' = 'A'): InFlightPacket[] {
+  const normalizedDomain = normalizeDnsName(domain)
+  if (!isValidDnsName(normalizedDomain) || (queryType !== 'A' && queryType !== 'MX')) return []
   const resolverIp = source.config.dnsServer
   if (!resolverIp || !isValidIpv4(resolverIp)) return []
   const route = outgoingRoute(source, resolverIp)
@@ -591,10 +591,10 @@ export function createDnsQueryPackets(source: NetworkDevice, devices: NetworkDev
     if (acl && evaluateAcl(acl, { sourceIp: route.port.ipAddress, destIp: resolverIp, protocol: 'DNS', port: 53 }).action === 'deny') return []
   }
   const pdu: PacketPdu = {
-    id: packetId('dns-query'), protocol: 'DNS', summary: `DNS query: ${normalizedDomain} A record`,
+    id: packetId('dns-query'), protocol: 'DNS', summary: `DNS query: ${normalizedDomain} ${queryType} record`,
     sourceMac: route.port.macAddress, destMac: '00:00:00:00:00:00', etherType: '0x0800', sourceIp: route.port.ipAddress, destIp: resolverIp, ttl: 64,
-    payload: { dnsMessageType: 'query', dnsQuery: normalizedDomain, dnsRequestId: requestId, dnsSourceDeviceId: source.id, udpSourcePort: 53000, udpDestinationPort: 53 },
-    explanation: { layer1: `Outbound interface: ${route.port.name}.`, layer2: `Ethernet II: ${route.port.macAddress} to the next hop.`, layer3: `IPv4: ${route.port.ipAddress} to DNS resolver ${resolverIp}, TTL 64.`, layer4AndAbove: `UDP: source port 53000 to destination port 53. DNS query for A ${normalizedDomain}.`, deviceDecision: `${source.name} sends a DNS query to its configured resolver ${resolverIp} through the active route.` },
+    payload: { dnsMessageType: 'query', dnsQuery: normalizedDomain, dnsQueryType: queryType, dnsRequestId: requestId, dnsSourceDeviceId: source.id, udpSourcePort: 53000, udpDestinationPort: 53 },
+    explanation: { layer1: `Outbound interface: ${route.port.name}.`, layer2: `Ethernet II: ${route.port.macAddress} to the next hop.`, layer3: `IPv4: ${route.port.ipAddress} to DNS resolver ${resolverIp}, TTL 64.`, layer4AndAbove: `UDP: source port 53000 to destination port 53. DNS query for ${queryType} ${normalizedDomain}.`, deviceDecision: `${source.name} sends a DNS ${queryType} query to its configured resolver ${resolverIp} through the active route.` },
   }
   return ipFrames(source, route, pdu, devices, links, 0)
 }
@@ -1687,18 +1687,21 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
       const entry = aps.find(candidate => candidate.apId === tunnelTarget.apId)
       if (entry && tunnelInnerToAp(wlc, entry, inner, tunnelHops, nameOf(entry.apId))) return 1
     }
+    const apDevice = byId.get(apId)
+    const clientWlan = apDevice ? apAdvertisedWlans(apDevice)[0] : undefined
+    const vlanId = clientWlan?.vlan && clientWlan.vlan > 0 ? clientWlan.vlan : undefined
     if (!group && !tunnelTarget) {
       const wiredTarget = edited.macTable.find(entry => entry.macAddress.toLowerCase() === lower)
       const port = wiredTarget && wlc.ports.find(candidate => candidate.id === wiredTarget.portId || candidate.shortName === wiredTarget.portId || candidate.name === wiredTarget.portId)
       const outLink = wiredTarget?.linkId ? linksById.get(wiredTarget.linkId) : undefined
-      if (port && outLink && liveLinks.has(outLink.id) && isUp(wlc, port)) { enqueue(onWire(wlc, port, outLink, inner, tunnelHops)); return 0 }
+      if (port && outLink && liveLinks.has(outLink.id) && isUp(wlc, port)) { enqueue(onWire(wlc, port, outLink, inner, tunnelHops, vlanId)); return 0 }
     }
     // Flood toward the wired LAN and the remaining wireless tunnels.
     for (const port of wlc.ports) {
       if (!isUp(wlc, port)) continue
       for (const outLink of linksByPort.get(`${wlc.id}|${port.id}`) ?? []) {
         if (!liveLinks.has(outLink.id)) continue
-        enqueue(onWire(wlc, port, outLink, inner, tunnelHops))
+        enqueue(onWire(wlc, port, outLink, inner, tunnelHops, vlanId))
       }
     }
     let forwarded = 0
@@ -2947,25 +2950,36 @@ export function stepSimulationTick(devices: NetworkDevice[], links: NetworkLink[
             if (!sendTcp(ack)) continue
           }
         } else if (pdu.protocol === 'DNS' && pdu.payload.dnsMessageType === 'query' && pdu.payload.dnsRequestId) {
-          const domain = (pdu.payload.dnsQuery ?? '').toLowerCase()
+          const domain = normalizeDnsName(pdu.payload.dnsQuery ?? '')
+          const queryType = pdu.payload.dnsQueryType === 'MX' ? 'MX' : 'A'
           const record = receiver.type === 'server' && receiver.config.dnsServiceEnabled
             ? receiver.config.dnsRecords?.find(item => item.domain.toLowerCase().replace(/\.$/, '') === domain)
             : undefined
           const resolved = record && isValidIpv4(record.ip) ? record.ip : undefined
+          const resolvedMxRecords = receiver.type === 'server' && receiver.config.dnsServiceEnabled && queryType === 'MX'
+            ? resolveDnsMxRecords(domain, receiver)
+            : []
           const serviceReady = receiver.type === 'server' && receiver.config.dnsServiceEnabled
-          const dnsStatus = resolved ? 'resolved' : serviceReady ? 'not-found' : 'server-failure'
-          const reason = dnsStatus === 'not-found' ? `${domain} does not exist in DNS records on ${receiver.name}.` : dnsStatus === 'server-failure' ? `DNS service is unavailable on ${receiver.name}.` : undefined
+          const hasAnswer = queryType === 'MX' ? resolvedMxRecords.length > 0 : Boolean(resolved)
+          const dnsStatus = hasAnswer ? 'resolved' : serviceReady ? 'not-found' : 'server-failure'
+          const reason = dnsStatus === 'not-found' ? queryType === 'MX' ? `${domain} has no MX record on ${receiver.name}.` : `${domain} does not exist in DNS records on ${receiver.name}.` : dnsStatus === 'server-failure' ? `DNS service is unavailable on ${receiver.name}.` : undefined
+          const answerSummary = queryType === 'MX'
+            ? resolvedMxRecords.map(item => `${item.preference} ${item.exchange}`).join(', ')
+            : resolved ?? ''
           const response: PacketPdu = {
-            ...pdu, id: packetId('dns-response'), summary: `DNS ${dnsStatus}: ${domain}${resolved ? ` -> ${resolved}` : ''}`,
+            ...pdu, id: packetId('dns-response'), summary: `DNS ${dnsStatus}: ${domain}${hasAnswer ? ` -> ${answerSummary}` : ''}`,
             sourceMac: localIp.macAddress, destMac: pdu.sourceMac, sourceIp: localIp.ipAddress!, destIp: pdu.sourceIp, ttl: 64, pendingPacket: undefined,
-            payload: { dnsMessageType: 'response', dnsQuery: domain, dnsResolvedIp: resolved, dnsRequestId: pdu.payload.dnsRequestId, dnsSourceDeviceId: pdu.payload.dnsSourceDeviceId, dnsStatus, udpSourcePort: 53, udpDestinationPort: pdu.payload.udpSourcePort ?? 53000 },
-            explanation: { ...pdu.explanation, layer2: `DNS response from ${localIp.macAddress}.`, layer3: `IPv4: ${localIp.ipAddress} to ${pdu.sourceIp}, TTL 64.`, layer4AndAbove: `UDP: source port 53 to destination port ${pdu.payload.udpSourcePort ?? 53000}. DNS ${dnsStatus.toUpperCase()}${resolved ? `: ${domain} A ${resolved}` : `: ${reason}`}.`, deviceDecision: `${receiver.name} ${serviceReady ? 'checked its configured DNS records' : 'has no enabled DNS service'} and returns a DNS response through the route to the client.` },
+            payload: { dnsMessageType: 'response', dnsQuery: domain, dnsQueryType: queryType, dnsResolvedIp: queryType === 'A' ? resolved : undefined, dnsResolvedMxRecords: queryType === 'MX' ? resolvedMxRecords : undefined, dnsRequestId: pdu.payload.dnsRequestId, dnsSourceDeviceId: pdu.payload.dnsSourceDeviceId, dnsStatus, udpSourcePort: 53, udpDestinationPort: pdu.payload.udpSourcePort ?? 53000 },
+            explanation: { ...pdu.explanation, layer2: `DNS response from ${localIp.macAddress}.`, layer3: `IPv4: ${localIp.ipAddress} to ${pdu.sourceIp}, TTL 64.`, layer4AndAbove: `UDP: source port 53 to destination port ${pdu.payload.udpSourcePort ?? 53000}. DNS ${queryType} ${dnsStatus.toUpperCase()}${hasAnswer ? `: ${domain} ${queryType} ${answerSummary}` : `: ${reason}`}.`, deviceDecision: `${receiver.name} ${serviceReady ? 'checked its configured DNS records' : 'has no enabled DNS service'} and returns a DNS response through the route to the client.` },
           }
           if (!sendIp(byId.get(receiver.id)!, response, 0, packet)) continue
         } else if (pdu.protocol === 'DNS' && pdu.payload.dnsMessageType === 'response' && pdu.payload.dnsSourceDeviceId === receiver.id && pdu.payload.dnsRequestId) {
-          const resolved = pdu.payload.dnsStatus === 'resolved' && pdu.payload.dnsResolvedIp
-          const reason = pdu.payload.dnsStatus === 'not-found' ? `${pdu.payload.dnsQuery ?? 'Name'} does not exist in DNS records.` : pdu.payload.dnsStatus === 'server-failure' ? 'The configured DNS server does not provide DNS service.' : undefined
-          if (!dnsResults.some(result => result.requestId === pdu.payload.dnsRequestId)) dnsResults.push({ requestId: pdu.payload.dnsRequestId, sourceDeviceId: receiver.id, domain: pdu.payload.dnsQuery ?? '', status: resolved ? 'successful' : 'failed', resolvedIp: resolved ? pdu.payload.dnsResolvedIp : undefined, reason })
+          const queryType = pdu.payload.dnsQueryType === 'MX' ? 'MX' : 'A'
+          const resolvedIp = queryType === 'A' && pdu.payload.dnsStatus === 'resolved' && pdu.payload.dnsResolvedIp ? pdu.payload.dnsResolvedIp : undefined
+          const resolvedMxRecords = queryType === 'MX' && pdu.payload.dnsStatus === 'resolved' ? pdu.payload.dnsResolvedMxRecords : undefined
+          const hasAnswer = queryType === 'MX' ? Boolean(resolvedMxRecords?.length) : Boolean(resolvedIp)
+          const reason = pdu.payload.dnsStatus === 'not-found' ? queryType === 'MX' ? `${pdu.payload.dnsQuery ?? 'Name'} has no MX record.` : `${pdu.payload.dnsQuery ?? 'Name'} does not exist in DNS records.` : pdu.payload.dnsStatus === 'server-failure' ? 'The configured DNS server does not provide DNS service.' : undefined
+          if (!dnsResults.some(result => result.requestId === pdu.payload.dnsRequestId)) dnsResults.push({ requestId: pdu.payload.dnsRequestId, sourceDeviceId: receiver.id, domain: pdu.payload.dnsQuery ?? '', queryType, status: hasAnswer ? 'successful' : 'failed', resolvedIp, resolvedMxRecords, reason })
         } else if (pdu.protocol === 'UDP' && pdu.payload.udpMessageType === 'request' && pdu.payload.udpService === 'syslog') {
           const destinationPort = pdu.payload.udpDestinationPort ?? 0
           const severity = pdu.payload.syslogSeverity ?? 5

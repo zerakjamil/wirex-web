@@ -200,7 +200,7 @@ interface NetworkStore {
   sendEmail: (sourceDeviceId: string, to: string, subject: string, body: string) => string | null
   checkEmail: (sourceDeviceId: string) => string | null
   deleteEmail: (sourceDeviceId: string, messageId: string) => string | null
-  requestDns: (sourceDeviceId: string, domain: string) => string | null
+  requestDns: (sourceDeviceId: string, domain: string, queryType?: 'A' | 'MX') => string | null
   requestUdpEcho: (sourceDeviceId: string, targetIp: string, port: number, data: string) => string | null
   requestRawUdp: (sourceDeviceId: string, targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions) => string | null
   requestRawTcp: (sourceDeviceId: string, targetIp: string, destinationPort: number, options: TrafficGeneratorFrameOptions) => string | null
@@ -1957,12 +1957,12 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     return requestId
   },
 
-  requestDns: (sourceDeviceId, domain) => {
+  requestDns: (sourceDeviceId, domain, queryType = 'A') => {
     const { devices, links, inFlightPackets } = get()
     const source = devices.find(device => device.id === sourceDeviceId)
     if (!source) return null
     const requestId = crypto.randomUUID()
-    const packets = createDnsQueryPackets(source, devices, links, requestId, domain)
+    const packets = createDnsQueryPackets(source, devices, links, requestId, domain, queryType)
     if (!packets.length) {
       set({ simulationWarning: 'Cannot send DNS query. Check the hostname, DNS server address, source interface, route, gateway, outbound ACL and link status.' })
       return null
@@ -1973,7 +1973,7 @@ export const useNetworkStore = create<NetworkStore>((set, get) => ({
     }
     set(state => ({
       inFlightPackets: [...state.inFlightPackets, ...packets],
-      dnsTransactions: [...state.dnsTransactions, { requestId, sourceDeviceId, domain: domain.trim().toLowerCase().replace(/\.$/, ''), status: 'pending' as const }].slice(-100),
+      dnsTransactions: [...state.dnsTransactions, { requestId, sourceDeviceId, domain: domain.trim().toLowerCase().replace(/\.$/, ''), queryType, status: 'pending' as const }].slice(-100),
       simulationWarning: null,
     }))
     return requestId

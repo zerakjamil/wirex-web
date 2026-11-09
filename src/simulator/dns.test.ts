@@ -70,6 +70,28 @@ test('DNS query crosses routed topology over UDP and returns the configured A re
   assert.ok(result.results.some(item => item.requestId === 'dns-1' && item.status === 'successful' && 'resolvedIp' in item && item.resolvedIp === '192.168.2.20'), JSON.stringify({ results: result.results, deliveries: result.deliveries }))
 })
 
+test('DNS MX query crosses routed topology and returns mail exchanges in preference order', () => {
+  const { pc, server, devices, links } = topology()
+  server.config.dnsMxRecords = [
+    { domain: 'classroom.test', exchange: 'backup-mail.classroom.test', preference: 20 },
+    { domain: 'classroom.test', exchange: 'mail.classroom.test', preference: 10 },
+  ]
+  const packets = createDnsQueryPackets(pc, devices, links, 'dns-mx-1', 'Classroom.Test', 'MX')
+  assert.equal((packets[0].pdu.pendingPacket ?? packets[0].pdu).payload.dnsQueryType, 'MX')
+  const result = execute(devices, links, packets)
+  assert.equal(result.packets.length, 0)
+  assert.ok(result.results.some(item => item.requestId === 'dns-mx-1' && item.status === 'successful' && 'resolvedMxRecords' in item && JSON.stringify(item.resolvedMxRecords) === JSON.stringify([
+    { exchange: 'mail.classroom.test', preference: 10 },
+    { exchange: 'backup-mail.classroom.test', preference: 20 },
+  ])), JSON.stringify({ results: result.results, deliveries: result.deliveries }))
+})
+
+test('MX lookup does not treat a matching A record as a mail exchanger', () => {
+  const { pc, devices, links } = topology()
+  const result = execute(devices, links, createDnsQueryPackets(pc, devices, links, 'dns-mx-2', 'wirex.test', 'MX'))
+  assert.ok(result.results.some(item => item.requestId === 'dns-mx-2' && item.status === 'failed' && 'reason' in item && /MX record/i.test(item.reason ?? '')), JSON.stringify({ results: result.results, deliveries: result.deliveries }))
+})
+
 test('unknown DNS names return an explicit not-found result through the network', () => {
   const { pc, devices, links } = topology()
   const result = execute(devices, links, createDnsQueryPackets(pc, devices, links, 'dns-2', 'missing.wirex.test'))
@@ -123,6 +145,25 @@ test('DNS result is available through the shared simulation store', () => {
   const transaction = useNetworkStore.getState().dnsTransactions.find(item => item.requestId === requestId)
   assert.equal(transaction?.status, 'successful')
   assert.equal(transaction?.resolvedIp, '192.168.2.20')
+})
+
+test('DNS MX result is retained in the shared simulation transaction', () => {
+  const { pc, server, devices, links } = topology()
+  server.config.dnsMxRecords = [
+    { domain: 'classroom.test', exchange: 'backup-mail.classroom.test', preference: 30 },
+    { domain: 'classroom.test', exchange: 'mail.classroom.test', preference: 5 },
+  ]
+  useNetworkStore.getState().loadLab(devices, links)
+  const requestId = useNetworkStore.getState().requestDns(pc.id, 'Classroom.Test', 'MX')
+  assert.ok(requestId)
+  for (let i = 0; i < 300 && useNetworkStore.getState().inFlightPackets.length; i++) useNetworkStore.getState().tickSimulation()
+  const transaction = useNetworkStore.getState().dnsTransactions.find(item => item.requestId === requestId)
+  assert.equal(transaction?.status, 'successful')
+  assert.equal(transaction?.queryType, 'MX')
+  assert.deepEqual(transaction?.resolvedMxRecords, [
+    { exchange: 'mail.classroom.test', preference: 5 },
+    { exchange: 'backup-mail.classroom.test', preference: 30 },
+  ])
 })
 
 test('DNS resolution can continue into a routed HTTP request using the same browser transaction', () => {

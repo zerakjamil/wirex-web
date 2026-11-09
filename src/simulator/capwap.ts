@@ -68,8 +68,9 @@ export const wlcRuntimeOf = (device: NetworkDevice): WlcRuntime =>
 
 export const AP_CHANNELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const
 
-/** Devices that broadcast a Wi-Fi network. The cell tower is a WWAN model, not an AP. */
-export const isWifiAccessPoint = (device: NetworkDevice) => device.type === 'wireless' && device.model !== 'Cell-Tower'
+/** Devices that broadcast a Wi-Fi network. Cell tower, CO server, and DLC are WWAN/telecom models, not APs. */
+export const isWifiAccessPoint = (device: NetworkDevice) =>
+  device.type === 'wireless' && !['Cell-Tower', 'Central-Office-Server', 'DLC100'].includes(device.model)
 
 /** Radio settings exposed by an autonomous access point's wireless interface. */
 export function apWirelessSettings(device: NetworkDevice) {
@@ -310,6 +311,47 @@ export function prepareCapwapTick(devices: NetworkDevice[], links: NetworkLink[]
         }
         replace(index, { ...device, apRuntime: next })
         return
+      }
+      // Check for Option 43 L3 CAPWAP discovery from DHCP lease
+      const option43Ip = device.config.dhcpLease?.option43WlcIp || device.config.wlcIp
+      if (option43Ip) {
+        const targetWlc = devices.find(d => isWlcDevice(d) && d.ports.some(p => p.ipAddress === option43Ip))
+        if (targetWlc) {
+          const wlcPort = wlcManagementPort(targetWlc)
+          if (wlcPort) {
+            next.state = 'run'
+            next.wlcMac = wlcPort.macAddress
+            next.wlcPortId = wlcPort.id
+            next.selectedWlcId = targetWlc.id
+            next.wlans = wlcWlans(targetWlc)
+            next.lastEchoResponseTick = tick
+            next.lastDiscoveryTick = tick
+            const wlcRuntime = wlcRuntimeOf(targetWlc)
+            const wlcIndex = devices.findIndex(d => d.id === targetWlc.id)
+            if (!wlcRuntime.aps.some(a => a.apId === device.id) && wlcIndex >= 0) {
+              const currentWlc = nextDevices[wlcIndex] ?? targetWlc
+              const currentWlcRuntime = wlcRuntimeOf(currentWlc)
+              const apEntry: WlcApEntry = {
+                apId: device.id,
+                apMac: wired?.macAddress ?? '00:00:00:00:00:00',
+                portId: wlcPort.id,
+                linkId: wired?.connectedLinkId ?? '',
+                state: 'run',
+                joinedAtTick: tick,
+                lastSeenTick: tick,
+              }
+              replace(wlcIndex, {
+                ...currentWlc,
+                wlcRuntime: {
+                  ...currentWlcRuntime,
+                  aps: [...currentWlcRuntime.aps, apEntry],
+                },
+              })
+            }
+            replace(index, { ...device, apRuntime: next })
+            return
+          }
+        }
       }
       if (next.state === 'join' && next.wlcMac && tick - (next.lastJoinTick ?? tick) >= CAPWAP_DISCOVERY_INTERVAL_TICKS) {
         next.lastJoinTick = tick

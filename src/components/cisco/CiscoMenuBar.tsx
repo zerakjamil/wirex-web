@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNetworkStore } from '@/store/networkStore'
 import { useWorkspaceStore, newWorkspace, saveWorkspace } from '@/store/workspaceStore'
-import { generateShareableUrl, exportLabToPktFile } from '@/store/workspacePersistence'
+import { exportLabToPktFile } from '@/store/workspacePersistence'
 import { useShallow } from 'zustand/react/shallow'
 import {useI18n} from '@/i18n/useI18n'
 import {useTrainingStore} from '@/store/trainingStore'
 import {useActivityStore} from '@/store/activityStore'
 import {useAcademyStore} from '@/store/academyStore'
+import {useMidtermQuestStore} from '@/store/midtermQuestStore'
 import { parseWorkspace } from '@/simulator/workspaceSchema'
 export function CiscoMenuBar() {
   const {t}=useI18n()
@@ -36,8 +37,17 @@ export function CiscoMenuBar() {
     ],
     Edit:[{label:'Undo',action:ws.undo,disabled:!ws.past.length},{label:'Redo',action:ws.redo,disabled:!ws.future.length},{label:'Copy',action:ws.copyDevice,disabled:!net.selectedDeviceId},{label:'Paste',action:ws.pasteDevice,disabled:!ws.clipboard},{label:'Delete selected device',action:() => {if(net.selectedDeviceId)ws.requestDeletion({deviceIds:[net.selectedDeviceId]})},disabled:!net.selectedDeviceId}],
     Options:[{label:'Preferences...',action:() => ws.setDialog('preferences')},{label:'Cluster Associations...',action:() => ws.setDialog('associations')}],
-    View:[{label:'Zoom In',action:() => ws.command('zoom-in')},{label:'Zoom Out',action:() => ws.command('zoom-out')},{label:'Reset Zoom',action:() => ws.command('zoom-reset')},{label:'Fit workspace',action:() => ws.command('fit')},{label:'Port labels',action:net.togglePortLabels}],
+    View:[
+      {label:'Zoom In',action:() => ws.command('zoom-in')},
+      {label:'Zoom Out',action:() => ws.command('zoom-out')},
+      {label:'Reset Zoom',action:() => ws.command('zoom-reset')},
+      {label:'Fit workspace',action:() => ws.command('fit')},
+      {label:'Port labels',action:net.togglePortLabels},
+      {label:ws.topCollapsed ? 'Show Top Controls (Alt+T)' : 'Hide Top Controls (Alt+T)', action: ws.toggleTopCollapsed},
+      {label:ws.bottomCollapsed ? 'Show Device Shelf (Alt+B)' : 'Hide Device Shelf (Alt+B)', action: ws.toggleBottomCollapsed},
+    ],
     Tools:[
+      {label:'Midterm 2026 Exam Arena...',action:() => { useMidtermQuestStore.getState().startQuest('predicted-2026') }},
       {label:'CCNA Academy...',action:() => useAcademyStore.getState().openAcademy()},
       {label:'Select',action:() => ws.setTool('select')},
       {label:'Exam Revision & Rollbacks...',action:() => ws.setDialog('revision')},

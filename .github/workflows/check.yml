@@ -5,11 +5,32 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          node-version: 24
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: Build and verify the production container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --build-arg APP_REVISION="$GITHUB_SHA" -t wirex-ci .
+          docker run -d --name wirex-ci -p 127.0.0.1:13003:3003 wirex-ci
+          trap 'docker rm -f wirex-ci >/dev/null' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:13003/ >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then docker logs wirex-ci; exit 1; fi
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:13003/api/sqlite)" = 403

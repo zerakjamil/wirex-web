@@ -1,0 +1,33 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        APP_REVISION: ${APP_REVISION:-local}
+    image: wirex-web:local
+    container_name: wirex-web
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:3003:3003"
+    environment:
+      NODE_ENV: production
+      PORT: "3003"
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+      WIREFORGE_DB_PATH: /data/study_vault.db
+    volumes:
+      - ./.wireforge:/data:rw
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

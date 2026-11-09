@@ -30,12 +30,21 @@ function PortSelectDialog() {
     return null
   }
 
-  const cableType: CableType =
-    activeTool === 'cable-crossover'
-      ? 'crossover'
-      : activeTool === 'cable-fiber'
-      ? 'fiber'
-      : 'straight'
+  const toolCableMap: Record<string, CableType> = {
+    'cable-straight': 'straight',
+    'cable-crossover': 'crossover',
+    'cable-fiber': 'fiber',
+    'cable-serial': 'serial',
+    'cable-serial-dce': 'serial-dce',
+    'cable-console': 'console',
+    'cable-phone': 'phone',
+    'cable-coaxial': 'coaxial',
+    'cable-octal': 'octal',
+    'cable-usb': 'usb',
+    'cable-wireless': 'wireless',
+  }
+
+  const cableType: CableType = (activeTool && toolCableMap[activeTool]) ?? 'straight'
 
   const handleConnect = () => {
     if (!selectedSourcePort || !selectedTargetPort) return

@@ -133,8 +133,9 @@ because they need tag pairing, programming or a historian service.
   there is no TLS.
 - Registration is not authenticated: the credentials are stored and displayed
   (PT's default `admin`/`admin`) but the protocol does not validate them.
-- No MCU/SBC board programming, blockly-style rule editing, condition
-  triggers, Bluetooth pairing or IoT cloud/home-gateway services.
+- MCU/SBC programs use a limited interpreter, not full JavaScript or Python;
+  Blockly rules, general loops, serial output, timers, interrupts, Bluetooth
+  pairing and IoT cloud/home-gateway services are not implemented.
 - Sensors (smoke, water, light) report state but have no remote control; the
   push button is a moment of local state.
 - Discovery uses the limited broadcast because the engine has no IP
@@ -143,6 +144,30 @@ because they need tag pairing, programming or a historian service.
   performed.
 
 ## Verification
+
+### Board program execution boundary (2026-10-23)
+
+`src/simulator/iot.ts` previously passed imported `programCode` to `new
+Function`, which executed in the host JavaScript realm. A regression test
+confirmed that a workspace script could mutate `globalThis`. That evaluator
+has been replaced by `src/simulator/boardProgram.ts`, a deterministic
+allow-list interpreter. It accepts a small set of board pin calls,
+assignments, comparisons and `if/else`; JavaScript `setup`/`loop` and Python
+`main` examples are supported. Source length is capped at 8 KiB, execution at
+256 statements and block nesting at 16 levels. Loops and any unsupported
+syntax are rejected atomically, preserving the prior pin state. The device
+stores an error code and the Programming tab shows the translated rejection
+message. This is a classroom pin-control subset, not a sandbox for arbitrary
+student code; general JS/Python semantics are not supported.
+
+The focused IoT and workspace-schema suites pass 40/40. `npm run check` passes
+737/737 unit tests, TypeScript, optimized build and production dependency audit
+(0 vulnerabilities); `electron:prep` passes; lint reports 0 errors and 31
+warnings. Production-browser IoT and WLC acceptance passes 5/5 against the
+rebuilt preview, including a Programming-tab rejection test for host-code
+input that confirms the visible error and absence of browser-global mutation.
+The full development dependency tree still has five
+high-severity audit findings in the ESLint/fast-glob/micromatch/braces chain.
 
 - `npx tsc --noEmit` clean.
 - `npm test` passes 479/479, including 8 new `iot.test.ts` tests: factory

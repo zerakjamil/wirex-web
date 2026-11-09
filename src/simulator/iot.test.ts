@@ -16,6 +16,7 @@ import {
   iotStateSummary,
   iotThingSpec,
   IOT_THINGS,
+  executeBoardPinIo,
   prepareIotTick,
   sanitizeIotPatch,
   IOT_CLIENT_EXPIRE_TICKS,
@@ -339,4 +340,154 @@ test('server prunes clients that stop reporting for a long time', () => {
   assert.equal(iotServerClients(kept.devices[0]).length, 3, 'clients inside the freshness window are kept')
   const pruned = prepareIotTick([silentServer], [], 100 + IOT_CLIENT_EXPIRE_TICKS + 1)
   assert.equal(iotServerClients(pruned.devices[0]).length, 0, 'stale clients are pruned after the expire window')
+})
+
+test('MCU pin I/O logic: sensor analog read triggers actuator digital write across links', () => {
+  const mcu = createDevice('iot', 0, 0, 'MCU-PT')
+  const tempSensor = createDevice('iot', 0, 0, 'Temperature Sensor')
+  const fan = createDevice('iot', 0, 0, 'Fan-PT')
+
+  // Set temperature to 80 °C (high temperature)
+  tempSensor.config.iotState = { reading: 80, unit: '°C' }
+  fan.config.iotState = { power: false, level: 0 }
+
+  // Connect MCU A0 to tempSensor A0 (or port 1)
+  const a0Port = mcu.ports.find(p => p.id === 'A0')!
+  const tempPort = tempSensor.ports.find(p => p.id === 'A0') ?? tempSensor.ports[0]
+  const link1: NetworkLink = {
+    id: 'link-mcu-temp',
+    type: 'straight',
+    fromDeviceId: mcu.id,
+    fromPortId: a0Port.id,
+    toDeviceId: tempSensor.id,
+    toPortId: tempPort.id,
+    status: 'up',
+  }
+  a0Port.connectedLinkId = link1.id
+  tempPort.connectedLinkId = link1.id
+
+  // Connect MCU D0 to fan D0 (or port 0)
+  const d0Port = mcu.ports.find(p => p.id === 'D0')!
+  const fanPort = fan.ports.find(p => p.id === 'D0') ?? fan.ports[0]
+  const link2: NetworkLink = {
+    id: 'link-mcu-fan',
+    type: 'straight',
+    fromDeviceId: mcu.id,
+    fromPortId: d0Port.id,
+    toDeviceId: fan.id,
+    toPortId: fanPort.id,
+    status: 'up',
+  }
+  d0Port.connectedLinkId = link2.id
+  fanPort.connectedLinkId = link2.id
+
+  // Script: read A0, if > 500 turn D0 HIGH else LOW
+  mcu.config.programCode = `
+    var val = analogRead(A0);
+    if (val > 500) {
+      digitalWrite(D0, HIGH);
+    } else {
+      digitalWrite(D0, LOW);
+    }
+  `
+
+  const devices = [mcu, tempSensor, fan]
+  const links = [link1, link2]
+
+  // Step tick
+  const stepped = executeBoardPinIo(devices, links, 1)
+  const steppedMcu = stepped.find(d => d.id === mcu.id)!
+  const steppedFan = stepped.find(d => d.id === fan.id)!
+
+  assert.ok((steppedMcu.config.pinStates?.['A0']?.value ?? 0) > 500, 'sensor reading was read into A0')
+  assert.equal(steppedMcu.config.pinStates?.['D0']?.value, 1023, 'script wrote HIGH to D0')
+  assert.equal(steppedFan.config.iotState?.power, true, 'fan actuator was turned on via D0 output')
+
+  // Now cool down temperature to 10 °C
+  const cooledTemp = stepped.find(d => d.id === tempSensor.id)!
+  cooledTemp.config.iotState = { reading: 10, unit: '°C' }
+
+  const cooledStepped = executeBoardPinIo(stepped, links, 2)
+  const cooledMcu = cooledStepped.find(d => d.id === mcu.id)!
+  const cooledFan = cooledStepped.find(d => d.id === fan.id)!
+
+  assert.ok((cooledMcu.config.pinStates?.['A0']?.value ?? 0) < 500, 'cooler sensor reading updated A0')
+  assert.equal(cooledMcu.config.pinStates?.['D0']?.value, 0, 'script wrote LOW to D0')
+  assert.equal(cooledFan.config.iotState?.power, false, 'fan actuator was turned off')
+})
+
+test('board programs cannot access or mutate the host JavaScript global scope', () => {
+  const escapeKey = '__wirex_board_program_escape_test__'
+  const host = globalThis as typeof globalThis & Record<string, unknown>
+  delete host[escapeKey]
+
+  try {
+    const mcu = createDevice('iot', 0, 0, 'MCU-PT')
+    mcu.config.programCode = `globalThis.${escapeKey} = 'executed'`
+
+    const updatedBoard = executeBoardPinIo([mcu], [], 1)[0]
+
+    assert.equal(host[escapeKey], undefined, 'workspace code must not execute in the host JavaScript realm')
+    assert.equal(updatedBoard.config.programError, 'unsupported-syntax', 'rejected code is surfaced to the board UI')
+  } finally {
+    delete host[escapeKey]
+  }
+})
+
+test('board runtime supports bounded JavaScript and Python pin-control examples', () => {
+  const jsBoard = createDevice('iot', 0, 0, 'MCU-PT')
+  jsBoard.config.programLanguage = 'javascript'
+  jsBoard.config.pinStates = { A0: { mode: 'INPUT', value: 800 } }
+  jsBoard.config.programCode = `
+    function setup() { pinMode(D0, OUTPUT); }
+    function loop() {
+      var sensorVal = analogRead(A0);
+      if (sensorVal > 500) { digitalWrite(D0, HIGH); }
+      else { digitalWrite(D0, LOW); }
+    }
+  `
+  const jsResult = executeBoardPinIo([jsBoard], [], 1)[0]
+  assert.equal(jsResult.config.pinStates?.D0?.value, 1023)
+  assert.equal(jsResult.config.programError, undefined)
+
+  const pythonBoard = createDevice('iot', 0, 0, 'MCU-PT')
+  pythonBoard.config.programLanguage = 'python'
+  pythonBoard.config.pinStates = { A0: { mode: 'INPUT', value: 800 } }
+  pythonBoard.config.programCode = `
+from gpio import *
+
+def main():
+    pinMode(D0, OUTPUT)
+    val = analogRead(A0)
+    if val > 500:
+        digitalWrite(D0, HIGH)
+    else:
+        digitalWrite(D0, LOW)
+
+if __name__ == "__main__":
+    main()
+`
+  const pythonResult = executeBoardPinIo([pythonBoard], [], 1)[0]
+  assert.equal(pythonResult.config.pinStates?.D0?.value, 1023)
+})
+
+test('board runtime rejects loops and unsupported syntax without changing pin state', () => {
+  const board = createDevice('iot', 0, 0, 'MCU-PT')
+  board.config.pinStates = { D0: { mode: 'OUTPUT', value: 0 } }
+  board.config.programCode = 'while (true) { digitalWrite(D0, HIGH); }'
+
+  const result = executeBoardPinIo([board], [], 1)[0]
+
+  assert.equal(result.config.pinStates?.D0?.value, 0)
+  assert.equal(result.config.programError, 'unsupported-syntax')
+})
+
+test('board analogWrite maps the 8-bit PWM range to the simulated 10-bit pin value', () => {
+  const board = createDevice('iot', 0, 0, 'MCU-PT')
+  board.config.programCode = 'analogWrite(D0, 128)'
+
+  const result = executeBoardPinIo([board], [], 1)[0]
+
+  assert.equal(result.config.pinStates?.D0?.value, Math.round((128 / 255) * 1023))
+  assert.equal(result.config.programError, undefined)
 })

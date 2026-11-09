@@ -3,6 +3,82 @@ import { twofish } from 'twofish'
 import type { NetworkDevice, NetworkLink } from '@/types/network'
 import { ospfConfigLines } from './ospf'
 import { ripConfigLines } from './rip'
+import { isValidIpv4 } from './protocols/ip'
+
+function isModeledOspfDirective(line: string) {
+  const parts = line.split(/\s+/)
+  if (parts[0] === 'network') return parts[3] === 'area' && isValidIpv4(parts[1]) && isValidIpv4(parts[2])
+  if (parts[0] === 'router-id') return isValidIpv4(parts[1])
+  if (parts[0] === 'passive-interface') return parts[1] === 'default' || Boolean(parts[1])
+  return parts[0] === 'no' && parts[1] === 'passive-interface' && Boolean(parts[2])
+}
+
+function isModeledRipDirective(line: string) {
+  const parts = line.split(/\s+/)
+  if (parts[0] === 'network') return isValidIpv4(parts[1])
+  if (parts[0] === 'version') return parts[1] === '1' || parts[1] === '2'
+  if (line === 'auto-summary' || line === 'no auto-summary' || line === 'passive-interface default') return true
+  if (parts[0] === 'passive-interface') return Boolean(parts[1])
+  return parts[0] === 'no' && parts[1] === 'passive-interface' && Boolean(parts[2])
+}
+
+function isModeledOspfInterfaceDirective(line: string) {
+  const parts = line.split(/\s+/)
+  if (parts[0] !== 'ip' || parts[1] !== 'ospf') return false
+  if (parts[2] === 'network') return parts[3] === 'point-to-point' || parts[3] === 'broadcast'
+  return ['cost', 'hello-interval', 'dead-interval', 'priority'].includes(parts[2]) && Number.isFinite(Number(parts[3]))
+}
+
+function preserveUnsupportedRoutingConfig(lines: string[]) {
+  const preserved: string[] = []
+  let process: 'ospf' | 'rip' | 'opaque' | null = null
+  let processHeader = ''
+  let processLines: string[] = []
+  let interfaceHeader = ''
+  let interfaceLines: string[] = []
+
+  const flushProcess = () => {
+    if (processHeader && processLines.length) preserved.push(processHeader, ...processLines, '!')
+    process = null
+    processHeader = ''
+    processLines = []
+  }
+  const flushInterface = () => {
+    if (interfaceHeader && interfaceLines.length) preserved.push(interfaceHeader, ...interfaceLines, '!')
+    interfaceHeader = ''
+    interfaceLines = []
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    const routerHeader = line.match(/^router\s+(ospf|rip)\b/i)
+    if (routerHeader) {
+      flushProcess()
+      flushInterface()
+      processHeader = raw
+      process = /^router\s+ospf\s+\d+$/i.test(line) ? 'ospf' : line.toLowerCase() === 'router rip' ? 'rip' : 'opaque'
+      continue
+    }
+    if (/^router\s+\S+/i.test(line) || /^interface\s+\S+/i.test(line)) {
+      flushProcess()
+      flushInterface()
+      if (/^interface\s+\S+/i.test(line)) interfaceHeader = raw
+      continue
+    }
+    if (line === '!' || line.toLowerCase() === 'end') {
+      flushProcess()
+      flushInterface()
+      continue
+    }
+    if (process === 'opaque' || process === 'ospf' && !isModeledOspfDirective(line) || process === 'rip' && !isModeledRipDirective(line)) {
+      processLines.push(raw)
+    }
+    if (interfaceHeader && /^ip\s+ospf\s+/i.test(line) && !isModeledOspfInterfaceDirective(line)) interfaceLines.push(raw)
+  }
+  flushProcess()
+  flushInterface()
+  return preserved
+}
 
 const xor = (a: Uint8Array, b: Uint8Array) => Uint8Array.from(a, (value, index) => value ^ b[index])
 const double = (block: Uint8Array) => {
@@ -188,7 +264,7 @@ export function generatePktXml(devices: NetworkDevice[], links: NetworkLink[]): 
       if (inOspf && (line === '!' || line === 'end' || !/^\s/.test(raw))) inOspf = false
       return !inOspf && !/^ip ospf\s/.test(line) && line !== 'end'
     })
-    for (const line of [...withoutOspf, '!', ...ospfConfigLines(dev), ...ripConfigLines(dev), 'end']) {
+    for (const line of [...withoutOspf, '!', ...ospfConfigLines(dev), ...ripConfigLines(dev), ...preserveUnsupportedRoutingConfig(configLines), 'end']) {
       runningConfigXml += `\n          <LINE>${sanitize(line)}</LINE>`
     }
 

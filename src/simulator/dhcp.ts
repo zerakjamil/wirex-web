@@ -1,7 +1,7 @@
 import type {NetworkDevice,NetworkLink} from '@/types/network'
 import {getStpTopology,isBridge} from './spanningTree'
 import {ipToNumber,numberToIp,isInSameSubnet,isValidIpv4} from './protocols/ip'
-export interface DhcpLease {serverId:string;portId:string;ipAddress:string;mask:string;gateway?:string;dns?:string;leaseDurationSeconds:number}
+export interface DhcpLease {serverId:string;portId:string;ipAddress:string;mask:string;gateway?:string;dns?:string;leaseDurationSeconds:number;option43WlcIp?:string}
 export function allocateDhcpLease(devices:NetworkDevice[],links:NetworkLink[],clientId:string):{lease?:DhcpLease;reason:string}{
  const client=devices.find(d=>d.id===clientId),cp=client?.ports.find(p=>p.connectedLinkId&&p.adminStatus==='up'&&p.status==='up'),first=links.find(l=>l.id===cp?.connectedLinkId)
  if(!client||client.power===false||!cp||!first)return {reason:'DHCP: no active client link.'}
@@ -74,7 +74,7 @@ export function allocateDhcpLease(devices:NetworkDevice[],links:NetworkLink[],cl
      if(address===undefined)for(let n=Math.max(start,base+1),count=0;n<=Math.min(end,last-1)&&count<65536;n++,count++)if(available(n)){address=n;break}
     }
     if(address===undefined)return {reason:'DHCP: no available address in the reachable pool (allocation scan capped at 65536 addresses).'}
-    return {lease:{serverId:d.id,portId:cp.id,ipAddress:numberToIp(address),mask:pool.hostMask??pool.mask,gateway:pool.defaultRouter,dns:pool.dnsServer,leaseDurationSeconds:pool.leaseDurationSeconds??86400},reason:'DHCP lease assigned through simulated DORA.'}
+    return {lease:{serverId:d.id,portId:cp.id,ipAddress:numberToIp(address),mask:pool.hostMask??pool.mask,gateway:pool.defaultRouter,dns:pool.dnsServer,leaseDurationSeconds:pool.leaseDurationSeconds??86400,option43WlcIp:pool.option43},reason:'DHCP lease assigned through simulated DORA.'}
    }
    if (incoming?.helperAddress) {
      const helperIp = incoming.helperAddress
@@ -110,6 +110,7 @@ export function allocateDhcpLease(devices:NetworkDevice[],links:NetworkLink[],cl
                gateway: pool.defaultRouter || incoming.ipAddress,
                dns: pool.dnsServer,
                leaseDurationSeconds: pool.leaseDurationSeconds ?? 86400,
+               option43WlcIp: pool.option43,
              },
              reason: `DHCP lease assigned via DHCP Relay (${d.name} ${incoming.name} -> ${helperIp}).`,
            }
